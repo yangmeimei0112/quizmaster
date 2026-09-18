@@ -1,0 +1,537 @@
+"use client";
+
+import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  PlusCircle,
+  AlertTriangle,
+  CheckCircle2,
+  HelpCircle,
+  Sparkles,
+  Layers,
+  ArrowLeft,
+  Eye,
+  Check,
+  XCircle,
+  RefreshCw,
+} from "lucide-react";
+import { SimilarMatch, QuestionType } from "@/types/question";
+
+export default function AddQuestionPage() {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  // 表單狀態
+  const [stem, setStem] = useState("");
+  const [type, setType] = useState<QuestionType>("SINGLE");
+  const [optionA, setOptionA] = useState("");
+  const [optionB, setOptionB] = useState("");
+  const [optionC, setOptionC] = useState("");
+  const [optionD, setOptionD] = useState("");
+  const [correctAnswers, setCorrectAnswers] = useState<string[]>(["A"]);
+  const [explanation, setExplanation] = useState("");
+
+  // 防重複比對狀態
+  const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+  const [duplicateMatches, setDuplicateMatches] = useState<SimilarMatch[]>([]);
+  const [hasExactMatch, setHasExactMatch] = useState(false);
+  const [maxSimilarity, setMaxSimilarity] = useState(0);
+
+  // 提交與彈窗防呆狀態
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // 當題幹輸入時，Debounced 即時防重複比對 (350ms)
+  useEffect(() => {
+    if (!stem.trim() || stem.trim().length < 2) {
+      setDuplicateMatches([]);
+      setHasExactMatch(false);
+      setMaxSimilarity(0);
+      setIsCheckingDuplicate(false);
+      return;
+    }
+
+    setIsCheckingDuplicate(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/questions/check-duplicate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stem }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setDuplicateMatches(data.matches || []);
+          setHasExactMatch(data.hasExactMatch || false);
+          setMaxSimilarity(data.maxSimilarity || 0);
+        }
+      } catch (err) {
+        console.error("即時比對失敗:", err);
+      } finally {
+        setIsCheckingDuplicate(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [stem]);
+
+  // 切換題型時的答案處理
+  const handleTypeChange = (newType: QuestionType) => {
+    setType(newType);
+    if (newType === "SINGLE") {
+      // 若轉為單選，只保留第一個選中的答案，若無則預設為 A
+      setCorrectAnswers((prev) => (prev.length > 0 ? [prev[0]] : ["A"]));
+    }
+  };
+
+  // 切換選項正確性
+  const toggleAnswer = (optKey: string) => {
+    if (type === "SINGLE") {
+      setCorrectAnswers([optKey]);
+    } else {
+      setCorrectAnswers((prev) => {
+        if (prev.includes(optKey)) {
+          return prev.filter((k) => k !== optKey);
+        } else {
+          return [...prev, optKey].sort();
+        }
+      });
+    }
+  };
+
+  // 表單驗證與送出
+  const handleSubmit = async (force: boolean = false) => {
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    if (!stem.trim()) {
+      setErrorMsg("請填寫題幹內容");
+      return;
+    }
+    if (!optionA.trim() || !optionB.trim() || !optionC.trim() || !optionD.trim()) {
+      setErrorMsg("A、B、C、D 四個選項皆不可為空白");
+      return;
+    }
+    if (correctAnswers.length === 0) {
+      setErrorMsg("請至少指定一個正確解答");
+      return;
+    }
+
+    // 100% 完全重複直接強制阻擋
+    if (hasExactMatch && !force) {
+      setErrorMsg("題庫中已存在完全相同 (100%) 的題目，禁止重複錄入！請查看下方重複警示。");
+      return;
+    }
+
+    // 若相似度很高 (>= 75%) 且尚未確認過，彈窗要求確認
+    if (maxSimilarity >= 75 && !force) {
+      setShowConfirmModal(true);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch("/api/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stem,
+          type,
+          optionA,
+          optionB,
+          optionC,
+          optionD,
+          correctAnswers,
+          explanation,
+          forceCreate: force,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.requiresConfirmation) {
+          setShowConfirmModal(true);
+        } else {
+          setErrorMsg(data.error || "儲存題目失敗");
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
+      setSuccessMsg("🎉 題目新增成功！");
+      setShowConfirmModal(false);
+
+      // 重置表單但保留分類與題型方便連續錄入
+      setStem("");
+      setOptionA("");
+      setOptionB("");
+      setOptionC("");
+      setOptionD("");
+      setCorrectAnswers(type === "SINGLE" ? ["A"] : ["A"]);
+      setExplanation("");
+      setDuplicateMatches([]);
+      setHasExactMatch(false);
+      setMaxSimilarity(0);
+
+      // 3 秒後自動隱藏成功提示
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err: any) {
+      setErrorMsg("伺服器連線異常: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const optionsList = [
+    { key: "A", value: optionA, setter: setOptionA, label: "選項 A" },
+    { key: "B", value: optionB, setter: setOptionB, label: "選項 B" },
+    { key: "C", value: optionC, setter: setOptionC, label: "選項 C" },
+    { key: "D", value: optionD, setter: setOptionD, label: "選項 D" },
+  ];
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <Link
+            href="/questions"
+            className="inline-flex items-center gap-1.5 text-xs text-foreground-muted hover:text-foreground mb-2.5 transition-colors duration-200 ease-expo-out group"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+            <span>返回題庫清單</span>
+          </Link>
+          <h1 className="text-2xl font-bold font-game text-foreground flex items-center gap-2.5">
+            <PlusCircle className="w-6 h-6 text-accent" />
+            單題手動錄入
+          </h1>
+          <p className="text-xs text-foreground-muted mt-1">
+            支援 4 選項單選與複選題，打字時系統將以演算法即時偵測重複題目。
+          </p>
+        </div>
+
+        {/* Nintendo Switch Glowing Capsule Switcher */}
+        <div className="bg-[#020203] p-1.5 rounded-2xl flex items-center gap-1.5 border border-white/[0.08] shadow-inner self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => handleTypeChange("SINGLE")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold font-game transition-all duration-200 ease-expo-out flex items-center gap-1.5 ${
+              type === "SINGLE"
+                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                : "text-foreground-muted hover:text-foreground border border-transparent"
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>單選題</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTypeChange("MULTIPLE")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold font-game transition-all duration-200 ease-expo-out flex items-center gap-1.5 ${
+              type === "MULTIPLE"
+                ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.3)]"
+                : "text-foreground-muted hover:text-foreground border border-transparent"
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>複選題</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Success Banner */}
+      {successMsg && (
+        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-sm font-medium flex items-center justify-between shadow-[0_0_24px_rgba(16,185,129,0.15)] animate-in fade-in slide-in-from-top-2 duration-200 ease-expo-out">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <span className="font-semibold">{successMsg}</span>
+          </div>
+          <Link
+            href="/questions"
+            className="text-xs text-emerald-300 underline font-semibold hover:text-white transition-colors"
+          >
+            前往題庫查看
+          </Link>
+        </div>
+      )}
+
+      {/* Error Banner */}
+      {errorMsg && (
+        <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-sm font-medium flex items-center gap-2.5 shadow-[0_0_24px_rgba(244,63,94,0.15)] animate-in fade-in duration-200 ease-expo-out">
+          <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {/* Main Form Box */}
+      <div className="bg-[#0a0a0c]/90 rounded-3xl border border-white/[0.06] shadow-linear-card p-6 sm:p-8 space-y-6 backdrop-blur-md">
+        {/* 1. 題幹輸入 */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-bold font-game text-foreground flex items-center gap-1.5">
+              <span>題幹內容</span>
+              <span className="text-rose-400">*</span>
+            </label>
+            <div className="flex items-center gap-2.5">
+              {isCheckingDuplicate && (
+                <span className="text-[11px] text-[#9AA5FF] flex items-center gap-1.5 bg-accent/15 px-2.5 py-0.5 rounded-full font-medium border border-accent/30 shadow-sm">
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  防重複比對中...
+                </span>
+              )}
+              <span className="text-xs text-foreground-muted">
+                {stem.length} 字
+              </span>
+            </div>
+          </div>
+
+          <textarea
+            value={stem}
+            onChange={(e) => setStem(e.target.value)}
+            rows={3}
+            placeholder="請輸入題目完整描述..."
+            className="w-full px-4 py-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-sm text-foreground transition-all duration-200 ease-expo-out placeholder:text-white/30 shadow-inner"
+          />
+
+          {/* 即時防重複比對警告區塊 */}
+          {hasExactMatch && (
+            <div className="p-5 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-xs space-y-3 shadow-[0_0_24px_rgba(244,63,94,0.15)] animate-in fade-in duration-200 ease-expo-out">
+              <div className="flex items-center gap-2 font-bold text-sm text-rose-300 font-game">
+                <AlertTriangle className="w-4.5 h-4.5 text-rose-400" />
+                <span>⚠️ 題庫中已有完全相同 (100%) 的題目！</span>
+              </div>
+              <p className="text-rose-200/90 leading-relaxed">
+                系統已偵測到完全吻合的題幹，系統已禁止送出以防止重複收錄：
+              </p>
+              {duplicateMatches.slice(0, 1).map((m) => (
+                <div
+                  key={m.id}
+                  className="bg-black/50 p-3 rounded-xl border border-rose-500/20 flex items-center justify-between gap-3"
+                >
+                  <span className="text-foreground font-medium truncate">
+                    「{m.stem}」
+                  </span>
+                  <Link
+                    href={`/questions?q=${encodeURIComponent(m.stem)}`}
+                    target="_blank"
+                    className="text-rose-300 font-bold hover:text-white flex items-center gap-1 whitespace-nowrap text-[11px] transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    查看該題
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!hasExactMatch && duplicateMatches.length > 0 && maxSimilarity >= 70 && (
+            <div className="p-5 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs space-y-3 shadow-[0_0_24px_rgba(245,158,11,0.15)] animate-in fade-in duration-200 ease-expo-out">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-sm text-amber-300 font-game">
+                  <AlertTriangle className="w-4.5 h-4.5 text-amber-400" />
+                  <span>
+                    系統偵測到可能重複的相似題目 (最高相似度 {maxSimilarity}%)
+                  </span>
+                </div>
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 font-bold text-amber-300 border border-amber-500/30">
+                  共找到 {duplicateMatches.length} 筆相似
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {duplicateMatches.map((m) => (
+                  <div
+                    key={m.id}
+                    className="bg-black/50 p-2.5 rounded-xl border border-amber-500/20 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        {m.similarity}% 相似
+                      </span>
+                      <span className="text-foreground text-xs truncate">
+                        {m.stem}
+                      </span>
+                    </div>
+                    <Link
+                      href={`/questions?q=${encodeURIComponent(m.stem)}`}
+                      target="_blank"
+                      className="text-amber-300 font-semibold hover:text-white flex items-center gap-1 whitespace-nowrap text-[11px] transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      比對
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 2. 四個選項輸入 (A, B, C, D) */}
+        <div className="space-y-3.5 pt-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-bold font-game text-foreground flex items-center gap-1.5">
+              <span>四個選項 (A、B、C、D)</span>
+              <span className="text-rose-400">*</span>
+            </label>
+            <span className="text-xs text-foreground-muted">
+              {type === "SINGLE" ? "請點擊按鈕指定 1 個正確解答" : "請點擊按鈕勾選 1~4 個正確解答"}
+            </span>
+          </div>
+
+          <div className="grid gap-3">
+            {optionsList.map((opt) => {
+              const isCorrect = correctAnswers.includes(opt.key);
+              return (
+                <div
+                  key={opt.key}
+                  className={`flex items-center gap-3.5 p-3 rounded-2xl border transition-all duration-200 ease-expo-out ${
+                    isCorrect
+                      ? "border-emerald-500/60 bg-emerald-950/30 text-emerald-100 ring-1 ring-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.18)]"
+                      : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04] text-foreground"
+                  }`}
+                >
+                  {/* 正確解答勾選切換按鈕 */}
+                  <button
+                    type="button"
+                    onClick={() => toggleAnswer(opt.key)}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm font-game transition-all duration-200 ease-expo-out flex-shrink-0 ${
+                      isCorrect
+                        ? "bg-emerald-500 text-slate-950 font-black shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                        : "bg-white/[0.05] border border-white/[0.10] text-foreground-muted hover:border-accent hover:text-white"
+                    }`}
+                    title={`點擊將選項 ${opt.key} 設為正確解答`}
+                  >
+                    {isCorrect ? (
+                      <Check className="w-5 h-5 stroke-[2.5]" />
+                    ) : (
+                      opt.key
+                    )}
+                  </button>
+
+                  {/* 選項文字輸入框 */}
+                  <input
+                    type="text"
+                    value={opt.value}
+                    onChange={(e) => opt.setter(e.target.value)}
+                    placeholder={`請輸入選項 ${opt.key} 的內容...`}
+                    className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-white/30"
+                  />
+
+                  {/* 標籤顯示 */}
+                  {isCorrect && (
+                    <span className="font-game text-[11px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm">
+                      正解 {opt.key}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3. 題目解析 (選填) */}
+        <div className="pt-4 border-t border-white/[0.06] space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-bold font-game text-foreground flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>題目解析 / 詳解說明</span>
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/[0.05] text-foreground-muted border border-white/[0.08]">
+                選填 (Optional)
+              </span>
+            </label>
+            <span className="text-[11px] text-foreground-muted">
+              匯出 Google 文件時可自由勾選是否要包含此解析
+            </span>
+          </div>
+          <textarea
+            value={explanation}
+            onChange={(e) => setExplanation(e.target.value)}
+            rows={3}
+            placeholder="請輸入解題思路、相關公式、觀念或考點說明（非必填，若不填寫可直接留空）..."
+            className="w-full px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-xs sm:text-sm text-foreground placeholder:text-white/30 shadow-inner transition-all duration-200 ease-expo-out"
+          />
+        </div>
+
+        {/* 4. 送出按鈕與狀態摘要 */}
+        <div className="pt-5 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-xs text-foreground-muted flex items-center gap-2">
+            <span className="font-semibold text-foreground">目前題型：</span>
+            <span className="font-medium text-foreground">{type === "SINGLE" ? "單選題" : "複選題"}</span>
+            <span className="text-white/20">|</span>
+            <span className="font-semibold text-foreground">正解：</span>
+            <span className="font-bold text-emerald-400 font-game">
+              {correctAnswers.join(", ") || "未指定"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => handleSubmit(false)}
+              disabled={isSubmitting || hasExactMatch}
+              className={`flex-1 sm:flex-initial px-7 py-3 rounded-xl text-sm font-bold font-game shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2 ${
+                hasExactMatch
+                  ? "bg-rose-950/40 text-rose-400/50 border border-rose-800/30 cursor-not-allowed shadow-none"
+                  : "bg-accent hover:bg-accent-bright text-white shadow-glow active:scale-95"
+              }`}
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>{isSubmitting ? "儲存中..." : "儲存題目至題庫"}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 高度相似題目防呆確認視窗 (Confirm Modal) */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0a0a0c]/95 max-w-lg w-full rounded-3xl p-7 shadow-2xl border border-white/[0.10] space-y-5 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200 ease-expo-out">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold font-game text-foreground">
+                發現高度相似題目 (相似度 {maxSimilarity}%)
+              </h3>
+              <p className="text-xs text-foreground-muted mt-1.5 leading-relaxed">
+                題庫中已存在與您輸入極為相似的題目，請確認是否為不同變形題或確定需要重複錄入：
+              </p>
+            </div>
+
+            {duplicateMatches.length > 0 && (
+              <div className="bg-white/[0.03] p-4 rounded-2xl border border-white/[0.08] text-xs space-y-1.5">
+                <span className="font-semibold text-amber-300">已存在之相似題目：</span>
+                <p className="text-foreground font-medium">「{duplicateMatches[0].stem}」</p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.06]">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="px-5 py-2.5 rounded-xl border border-white/[0.10] text-foreground text-xs font-semibold hover:bg-white/[0.05] transition-colors duration-200 ease-expo-out"
+              >
+                取消並檢查
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSubmit(true)}
+                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold font-game shadow-[0_0_20px_rgba(217,119,6,0.35)] transition-all duration-200 ease-expo-out active:scale-95"
+              >
+                仍要新增此題
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
