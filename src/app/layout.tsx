@@ -1,22 +1,6 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Zen_Maru_Gothic } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-plus-jakarta",
-  display: "swap",
-});
-
-const zenMaruGothic = Zen_Maru_Gothic({
-  subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
-  variable: "--font-zen-maru",
-  display: "swap",
-  preload: false,
-});
 
 export const metadata: Metadata = {
   title: "QuizMaster - 個人題庫管理與防重複系統",
@@ -29,7 +13,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-TW" className={`${plusJakarta.variable} ${zenMaruGothic.variable} dark`}>
+    <html lang="zh-TW" className="dark">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="bg-background-base text-foreground antialiased min-h-screen flex flex-col font-sans relative selection:bg-accent/30 selection:text-white">
         {/* Four-Layer Background System */}
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">

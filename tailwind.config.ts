@@ -42,18 +42,26 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "var(--font-plus-jakarta)",
-          "var(--font-zen-maru)",
-          "Zen Maru Gothic",
-          "Plus Jakarta Sans",
-          "system-ui",
-          "sans-serif",
+          '"Noto Sans TC"',
+          '"Plus Jakarta Sans"',
+          'system-ui',
+          '-apple-system',
+          'sans-serif',
         ],
         game: [
-          "var(--font-zen-maru)",
-          "Zen Maru Gothic",
-          "var(--font-plus-jakarta)",
-          "sans-serif",
+          '"Huninn"',
+          '"Noto Sans TC"',
+          '"Plus Jakarta Sans"',
+          'sans-serif',
+        ],
+        huninn: [
+          '"Huninn"',
+          '"Noto Sans TC"',
+          'sans-serif',
+        ],
+        noto: [
+          '"Noto Sans TC"',
+          'sans-serif',
         ],
       },
       transitionTimingFunction: {
