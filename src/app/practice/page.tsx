@@ -137,9 +137,6 @@ export default function PracticePage() {
             <GraduationCap className="w-6 h-6 text-accent" />
             個人自測刷題
           </h1>
-          <p className="text-xs text-foreground-muted mt-1">
-            智慧隨機抽題測驗體驗，隨機抽題、即時回饋、智慧計分與詳細考點解析。
-          </p>
         </div>
 
         {quizStarted && !quizCompleted && (

@@ -44,7 +44,6 @@ export default function Navbar() {
                 個人題庫
               </span>
             </span>
-            <p className="text-xs text-foreground-muted">智慧防重複 · 4選單複選管理</p>
           </div>
         </Link>
 

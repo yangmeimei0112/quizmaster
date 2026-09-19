@@ -47,7 +47,7 @@ export default async function HomePage() {
           </h1>
 
           <p className="mt-4 text-foreground-muted text-sm sm:text-base leading-relaxed max-w-2xl font-sans">
-            專為個人學習與自測設計，支援標準 4 選項單選與複選題型。內建字串演算法即時偵測重複題目，在送出前預先攔截，讓每道題目都有條不紊。
+            內建字串演算法即時偵測重複題目，在送出前預先攔截，讓每道題目都有條不紊。
           </p>
 
           {/* Hero CTAs */}
