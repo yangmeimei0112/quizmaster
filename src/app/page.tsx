@@ -5,9 +5,7 @@ import {
   Search,
   GraduationCap,
   Sparkles,
-  Layers,
   CheckCircle2,
-  AlertTriangle,
   ArrowRight,
   BookMarked,
   FileDown,
@@ -170,38 +168,6 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Feature Highlights Grid */}
-      <div className="grid md:grid-cols-3 gap-5">
-        <div className="bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-6 shadow-linear-card transition-all duration-200 ease-expo-out space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.2)]">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <h3 className="font-game font-bold text-foreground text-base">智慧即時防重複</h3>
-          <p className="text-xs text-foreground-muted leading-relaxed">
-            打字時系統以 350ms 防抖即時比對題幹。透過文字正規化、Levenshtein 編輯距離與 2-gram 演算法，預先攔截完全重複或高度相似題目。
-          </p>
-        </div>
-
-        <div className="bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-6 shadow-linear-card transition-all duration-200 ease-expo-out space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-accent/15 border border-accent/30 text-[#8B96F8] flex items-center justify-center shadow-[0_0_12px_rgba(94,106,210,0.2)]">
-            <Layers className="w-5 h-5" />
-          </div>
-          <h3 className="font-game font-bold text-foreground text-base">標準 4 選項與單複選</h3>
-          <p className="text-xs text-foreground-muted leading-relaxed">
-            固定 A、B、C、D 四個選項，單選自動限制單一答案，複選支援任意勾選 1~4 個正確答案，並支援題目詳細解析與分類標籤。
-          </p>
-        </div>
-
-        <div className="bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-6 shadow-linear-card transition-all duration-200 ease-expo-out space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-            <FileDown className="w-5 h-5" />
-          </div>
-          <h3 className="font-game font-bold text-foreground text-base">Google 文件試卷匯出</h3>
-          <p className="text-xs text-foreground-muted leading-relaxed">
-            支援「含解析解答卷」與「不含解析（有答案，隱藏解析）」兩種模式。一鍵下載 Google Docs 專用 .docx 或複製排版文字。
-          </p>
-        </div>
-      </div>
 
       {/* Recent Questions Section */}
       <div className="bg-[#0a0a0c]/90 border border-white/[0.06] rounded-3xl p-6 sm:p-8 shadow-linear-card space-y-5 backdrop-blur-md">
