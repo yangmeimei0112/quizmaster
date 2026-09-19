@@ -42,12 +42,6 @@ export default async function HomePage() {
         <div className="absolute -left-10 top-1/2 w-64 h-64 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 max-w-3xl">
-          {/* Nintendo Switch Gamified Capsule Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/[0.04] text-[#9AA5FF] text-xs font-semibold backdrop-blur-md mb-5 border border-[#5E6AD2]/30 shadow-[0_0_15px_rgba(94,106,210,0.25)]">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span className="font-game">任天堂 Switch 遊戲手感 · 個人專屬智慧題庫系統</span>
-          </div>
-
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight font-game bg-clip-text text-transparent bg-gradient-to-r from-white via-[#EDEDEF] to-[#8A8F98]">
             收錄題目、杜絕重複，<br />打造高效個人複習題庫
           </h1>
