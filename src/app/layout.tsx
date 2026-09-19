@@ -42,7 +42,7 @@ export default function RootLayout({
             {children}
           </main>
           <footer className="border-t border-white/[0.06] bg-[#050506]/80 backdrop-blur-md py-6 text-center text-xs text-[#8A8F98]">
-            QuizMaster 個人題庫系統 · 智慧題目比對與儲存
+            QuizMaster 個人題庫系統
           </footer>
         </div>
       </body>
