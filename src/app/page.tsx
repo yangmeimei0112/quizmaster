@@ -55,7 +55,7 @@ export default async function HomePage() {
           <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-3.5">
             <Link
               href="/add"
-              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white font-bold text-sm shadow-glow touch-tactile animate-fade-in-up stagger-1"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white font-bold text-sm shadow-glow touch-manipulation touch-tactile active:scale-95 animate-fade-in-up stagger-1"
             >
               <PlusCircle className="w-4 h-4" />
               <span>開始錄入題目</span>
@@ -63,7 +63,7 @@ export default async function HomePage() {
 
             <Link
               href="/questions"
-              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-foreground font-semibold text-sm border border-white/[0.08] hover:border-white/[0.16] backdrop-blur-md touch-tactile animate-fade-in-up stagger-2 shadow-sm"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-foreground font-semibold text-sm border border-white/[0.08] hover:border-white/[0.16] backdrop-blur-md touch-manipulation touch-tactile active:scale-95 animate-fade-in-up stagger-2 shadow-sm"
             >
               <Search className="w-4 h-4 text-slate-400" />
               <span>搜尋題庫 ({total})</span>
@@ -71,7 +71,7 @@ export default async function HomePage() {
 
             <Link
               href="/practice"
-              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold text-sm border border-amber-500/30 hover:border-amber-500/50 backdrop-blur-md touch-tactile animate-fade-in-up stagger-3 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold text-sm border border-amber-500/30 hover:border-amber-500/50 backdrop-blur-md touch-manipulation touch-tactile active:scale-95 animate-fade-in-up stagger-3 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
             >
               <GraduationCap className="w-4 h-4 text-amber-400" />
               <span>隨機刷題練習</span>
@@ -79,7 +79,7 @@ export default async function HomePage() {
 
             <Link
               href="/questions"
-              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 font-semibold text-sm border border-blue-500/30 hover:border-blue-500/50 backdrop-blur-md touch-tactile animate-fade-in-up stagger-4 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 font-semibold text-sm border border-blue-500/30 hover:border-blue-500/50 backdrop-blur-md touch-manipulation touch-tactile active:scale-95 animate-fade-in-up stagger-4 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
             >
               <FileDown className="w-4 h-4 text-blue-400" />
               <span>匯出 Google 文件</span>
@@ -181,7 +181,7 @@ export default async function HomePage() {
           </h2>
           <Link
             href="/questions"
-            className="text-xs font-semibold text-[#8B96F8] hover:text-accent-bright flex items-center gap-1 group transition-colors duration-180"
+            className="min-h-[44px] text-xs font-semibold text-[#8B96F8] hover:text-accent-bright inline-flex items-center gap-1 group transition-colors duration-180 touch-manipulation"
           >
             <span>查看所有題目</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-180" />
@@ -227,7 +227,7 @@ export default async function HomePage() {
                 </div>
                 <Link
                   href={`/questions?q=${encodeURIComponent(q.stem)}`}
-                  className="text-xs text-[#8B96F8] hover:text-accent-bright font-semibold whitespace-nowrap pt-1 flex items-center gap-1 transition-colors"
+                  className="min-h-[44px] px-2 text-xs text-[#8B96F8] hover:text-accent-bright font-semibold whitespace-nowrap inline-flex items-center gap-1 transition-colors touch-manipulation shrink-0"
                 >
                   <span>檢視詳情</span>
                   <ArrowRight className="w-3 h-3" />

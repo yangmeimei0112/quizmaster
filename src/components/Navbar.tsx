@@ -93,7 +93,8 @@ export default function Navbar() {
                   type="button"
                   onClick={logout}
                   title="登出帳號"
-                  className="p-2 rounded-xl text-foreground-muted hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all duration-200"
+                  aria-label="登出帳號"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-xl text-foreground-muted hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all duration-200 touch-tactile touch-manipulation"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -102,7 +103,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => openAuthModal("login")}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold font-game bg-accent hover:bg-accent-bright text-white shadow-glow transition-all duration-200 active:scale-95"
+                className="min-h-[44px] flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold font-game bg-accent hover:bg-accent-bright text-white shadow-glow transition-all duration-200 active:scale-95 touch-manipulation touch-tactile"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>登入 / 註冊</span>
@@ -165,7 +166,7 @@ export default function Navbar() {
                     setMobileMenuOpen(false);
                     logout();
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20"
+                  className="min-h-[44px] flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 touch-tactile"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>登出</span>

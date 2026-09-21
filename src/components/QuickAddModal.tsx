@@ -855,7 +855,7 @@ export default function QuickAddModal({
       aria-labelledby="quick-add-modal-title"
     >
       <div
-        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl backdrop-blur-2xl max-h-[92dvh] sm:max-h-[88vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground transform-gpu will-change-transform"
+        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground transform-gpu will-change-transform"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. Mobile Drag Handle Indicator */}
@@ -895,7 +895,7 @@ export default function QuickAddModal({
         </div>
 
         {/* 3. Scrollable Body */}
-        <div className="overflow-y-auto overscroll-contain flex-1 p-4 sm:p-6 space-y-5 text-xs">
+        <div className="overflow-y-auto overscroll-contain scroll-touch flex-1 p-4 sm:p-6 space-y-5 text-xs">
           {/* 區塊 1: 文本貼入區 */}
           <div className="space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -909,7 +909,7 @@ export default function QuickAddModal({
                 <button
                   type="button"
                   onClick={handleReadClipboard}
-                  className="min-h-[36px] px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-foreground-muted hover:text-foreground border border-white/[0.08] text-[11px] font-medium transition-all duration-180 flex items-center gap-1.5 touch-tactile"
+                  className="min-h-[44px] sm:min-h-[36px] px-3.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-foreground-muted hover:text-foreground border border-white/[0.08] text-xs sm:text-[11px] font-medium transition-all duration-180 flex items-center gap-1.5 touch-manipulation touch-tactile"
                 >
                   <ClipboardPaste className="w-3.5 h-3.5" />
                   <span>貼上剪貼簿</span>
@@ -919,7 +919,7 @@ export default function QuickAddModal({
                   <button
                     type="button"
                     onClick={() => setRawText("")}
-                    className="min-h-[36px] px-2.5 py-1.5 rounded-lg text-foreground-muted hover:text-rose-400 hover:bg-rose-500/10 text-[11px] font-medium transition-all"
+                    className="min-h-[44px] sm:min-h-[36px] min-w-[44px] sm:min-w-[36px] px-2.5 py-1.5 rounded-lg text-foreground-muted hover:text-rose-400 hover:bg-rose-500/10 text-xs sm:text-[11px] font-medium transition-all flex items-center justify-center touch-manipulation touch-tactile"
                     title="清空文字"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
@@ -942,7 +942,7 @@ export default function QuickAddModal({
               onChange={(e) => setRawText(e.target.value)}
               rows={4}
               placeholder={`支援單題或多題一次貼入，例如：\n11. 發展專案團隊的產出為下列哪一項？\n(A) 團隊績效評估\n(B) 績效評鑑投入\n(C) 績效改善\n(D) 工作成果\n正確解答：A\n\n12. 下列哪一項指的是工作結果滿意度確認？\n(A) 控制品質\n(B) 確認範疇\n(C) 控制成本\n(D) 控制風險\n正確解答：B`}
-              className="w-full px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-xs text-foreground placeholder:text-white/25 leading-relaxed shadow-inner transition-all"
+              className="w-full px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-sm text-foreground placeholder:text-white/25 leading-relaxed shadow-inner transition-all"
             />
           </div>
 
@@ -1135,7 +1135,7 @@ export default function QuickAddModal({
                   <button
                     type="button"
                     onClick={() => handleTypeChange("SINGLE")}
-                    className={`min-h-[32px] px-3 py-1 rounded-lg font-game text-[11px] font-bold transition-all ${
+                    className={`min-h-[44px] sm:min-h-[36px] px-3.5 py-1.5 rounded-lg font-game text-xs sm:text-[11px] font-bold transition-all touch-manipulation touch-tactile flex items-center justify-center ${
                       currentItem.type === "SINGLE"
                         ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
                         : "text-foreground-muted hover:text-foreground"
@@ -1146,7 +1146,7 @@ export default function QuickAddModal({
                   <button
                     type="button"
                     onClick={() => handleTypeChange("MULTIPLE")}
-                    className={`min-h-[32px] px-3 py-1 rounded-lg font-game text-[11px] font-bold transition-all ${
+                    className={`min-h-[44px] sm:min-h-[36px] px-3.5 py-1.5 rounded-lg font-game text-xs sm:text-[11px] font-bold transition-all touch-manipulation touch-tactile flex items-center justify-center ${
                       currentItem.type === "MULTIPLE"
                         ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm"
                         : "text-foreground-muted hover:text-foreground"
@@ -1239,13 +1239,13 @@ export default function QuickAddModal({
                       {currentItem.stem.length} 字
                     </span>
                   </div>
-                  <textarea
+                    <textarea
                     value={currentItem.stem}
                     onChange={(e) =>
                       updateCurrentItem((q) => ({ ...q, stem: e.target.value }))
                     }
                     rows={2}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-xs text-foreground placeholder:text-white/20 transition-all leading-relaxed"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-sm text-foreground placeholder:text-white/20 transition-all leading-relaxed"
                   />
                 </div>
 
@@ -1277,7 +1277,7 @@ export default function QuickAddModal({
                           <button
                             type="button"
                             onClick={() => toggleAnswer(opt.key)}
-                            className={`w-10 h-10 min-w-[40px] min-h-[40px] rounded-lg flex items-center justify-center font-bold text-sm font-game transition-all duration-180 flex-shrink-0 touch-tactile ${
+                            className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center font-bold text-sm font-game transition-all duration-180 flex-shrink-0 touch-manipulation touch-tactile ${
                               isCorrect
                                 ? "bg-emerald-500 text-slate-950 font-black shadow-[0_0_12px_rgba(16,185,129,0.5)]"
                                 : "bg-white/[0.05] border border-white/[0.10] text-foreground-muted hover:border-accent hover:text-white"
@@ -1297,7 +1297,7 @@ export default function QuickAddModal({
                             value={opt.value}
                             onChange={(e) => opt.setter(e.target.value)}
                             placeholder={`選項 ${opt.key} 內容...`}
-                            className="flex-1 min-w-0 bg-transparent border-none outline-none text-base sm:text-xs text-foreground placeholder:text-white/20 py-1"
+                            className="flex-1 min-w-0 bg-transparent border-none outline-none text-base sm:text-sm text-foreground placeholder:text-white/20 py-1"
                           />
 
                           {/* 正解標記 */}
@@ -1330,7 +1330,7 @@ export default function QuickAddModal({
                     }
                     rows={2}
                     placeholder="解題思路或相關觀念說明（若無解析可留空）..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-xs text-foreground placeholder:text-white/20 transition-all leading-relaxed"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-sm text-foreground placeholder:text-white/20 transition-all leading-relaxed"
                   />
                 </div>
               </div>

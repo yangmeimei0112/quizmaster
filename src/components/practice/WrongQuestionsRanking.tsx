@@ -209,7 +209,7 @@ export default function WrongQuestionsRanking({
           <button
             type="button"
             onClick={() => setActiveTab("personal")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold font-game transition-all duration-200 ${
+            className={`min-h-[44px] flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold font-game transition-all duration-200 touch-tactile ${
               activeTab === "personal"
                 ? "bg-accent text-white shadow-glow"
                 : "text-foreground-muted hover:text-foreground hover:bg-white/[0.04]"
@@ -226,7 +226,7 @@ export default function WrongQuestionsRanking({
           <button
             type="button"
             onClick={() => setActiveTab("global")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold font-game transition-all duration-200 ${
+            className={`min-h-[44px] flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold font-game transition-all duration-200 touch-tactile ${
               activeTab === "global"
                 ? "bg-accent text-white shadow-glow"
                 : "text-foreground-muted hover:text-foreground hover:bg-white/[0.04]"
@@ -342,16 +342,16 @@ export default function WrongQuestionsRanking({
                               type="button"
                               onClick={() => onQuickPractice(q)}
                               title="立即重測本題"
-                              className="px-2.5 py-1.5 rounded-xl bg-accent/15 hover:bg-accent/25 text-[#9AA5FF] border border-accent/30 text-xs font-bold font-game transition-all flex items-center gap-1"
+                              className="min-h-[44px] px-3 py-2 rounded-xl bg-accent/15 hover:bg-accent/25 text-[#9AA5FF] border border-accent/30 text-xs font-bold font-game transition-all flex items-center gap-1 touch-tactile"
                             >
-                              <RotateCcw className="w-3 h-3" />
+                              <RotateCcw className="w-3.5 h-3.5" />
                               <span className="hidden sm:inline">單題重測</span>
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => toggleExplanation(q.id)}
-                            className="p-1.5 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.06] transition-colors"
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.06] transition-colors touch-tactile"
                             aria-label={isExpanded ? "收合選項與詳解" : "展開選項與詳解"}
                           >
                             {isExpanded ? (
@@ -514,16 +514,16 @@ export default function WrongQuestionsRanking({
                               type="button"
                               onClick={() => onQuickPractice(q)}
                               title="立即重測本題"
-                              className="px-2.5 py-1.5 rounded-xl bg-accent/15 hover:bg-accent/25 text-[#9AA5FF] border border-accent/30 text-xs font-bold font-game transition-all flex items-center gap-1"
+                              className="min-h-[44px] px-3 py-2 rounded-xl bg-accent/15 hover:bg-accent/25 text-[#9AA5FF] border border-accent/30 text-xs font-bold font-game transition-all flex items-center gap-1 touch-tactile"
                             >
-                              <RotateCcw className="w-3 h-3" />
+                              <RotateCcw className="w-3.5 h-3.5" />
                               <span className="hidden sm:inline">單題重測</span>
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => toggleExplanation(q.id)}
-                            className="p-1.5 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.06] transition-colors"
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.06] transition-colors touch-tactile"
                             aria-label={isExpanded ? "收合選項與詳解" : "展開選項與詳解"}
                           >
                             {isExpanded ? (
@@ -593,22 +593,27 @@ export default function WrongQuestionsRanking({
         </div>
       )}
 
-      {/* 看更多錯題 Modal 彈窗 */}
+      {/* 看更多錯題 Modal 彈窗 (Mobile Bottom Sheet & Desktop Frosted Glass Modal) */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md animate-fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsModalOpen(false);
           }}
           role="dialog"
           aria-modal="true"
         >
-          <div className="relative w-full max-w-3xl max-h-[85vh] bg-[#0c0c10]/95 border border-white/[0.12] rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl animate-scale-in text-foreground flex flex-col overflow-hidden">
+          <div className="relative w-full max-w-3xl max-h-[90dvh] sm:max-h-[85vh] bg-[#0c0c10]/95 border-t sm:border border-white/[0.12] rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl animate-sheet-up sm:animate-scale-in text-foreground flex flex-col overflow-hidden pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] transform-gpu will-change-transform">
+            {/* 頂部拖曳指示條 (僅手機端顯示) */}
+            <div className="pt-2 pb-1 sm:hidden flex justify-center shrink-0" aria-hidden="true">
+              <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+            </div>
+
             {/* Modal Header */}
-            <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/[0.08] shrink-0">
+            <div className="flex items-center justify-between gap-4 pb-3 sm:pb-4 border-b border-white/[0.08] shrink-0">
               <div className="flex items-center gap-2.5">
                 <Flame className="w-5 h-5 text-rose-400" />
-                <h3 className="text-lg font-bold font-game text-foreground">
+                <h3 className="text-base sm:text-lg font-bold font-game text-foreground">
                   {activeTab === "personal"
                     ? "個人專屬錯題本 · 全部錯題排行"
                     : "全站高頻錯題 · 全部排行清單"}
@@ -617,15 +622,15 @@ export default function WrongQuestionsRanking({
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.08] transition-colors"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.08] transition-colors touch-tactile"
                 aria-label="關閉"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Search Input */}
-            <div className="py-4 shrink-0">
+            {/* Search Input (iOS safe text-base sm:text-sm) */}
+            <div className="py-3 sm:py-4 shrink-0">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" />
                 <input
@@ -633,13 +638,13 @@ export default function WrongQuestionsRanking({
                   value={modalSearchQuery}
                   onChange={(e) => setModalSearchQuery(e.target.value)}
                   placeholder="搜尋錯題題幹關鍵字、分類或考點..."
-                  className="w-full min-h-[44px] pl-10 pr-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.10] text-sm text-foreground placeholder-white/30 focus:outline-none focus:border-accent"
+                  className="w-full min-h-[44px] pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.10] text-base sm:text-sm text-foreground placeholder-white/30 focus:outline-none focus:border-accent shadow-inner"
                 />
               </div>
             </div>
 
             {/* List Container */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            <div className="flex-1 overflow-y-auto overscroll-contain scroll-touch space-y-3 pr-1">
               {isModalLoading ? (
                 <div className="py-12 text-center text-xs text-foreground-muted">
                   載入錯題排行榜中...
@@ -687,7 +692,8 @@ export default function WrongQuestionsRanking({
                         <button
                           type="button"
                           onClick={() => toggleExplanation(q.id)}
-                          className="p-1 rounded-lg text-foreground-muted hover:text-foreground shrink-0"
+                          className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-lg text-foreground-muted hover:text-foreground shrink-0 touch-tactile"
+                          aria-label={isExpanded ? "收合解析" : "展開解析"}
                         >
                           {isExpanded ? (
                             <ChevronUp className="w-4 h-4" />
@@ -735,7 +741,7 @@ export default function WrongQuestionsRanking({
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] text-xs font-semibold text-foreground transition-all"
+                className="min-h-[44px] px-6 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] text-xs font-semibold text-foreground transition-all touch-manipulation active:scale-95 flex items-center justify-center"
               >
                 關閉清單
               </button>

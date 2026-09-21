@@ -311,8 +311,9 @@ export default function MockExamView({
             <button
               type="button"
               onClick={onExit}
-              className="p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.06] transition-colors"
+              className="min-w-[44px] min-h-[44px] p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.06] transition-colors flex items-center justify-center touch-manipulation"
               title="離開考試回到大廳"
+              aria-label="離開考試回到大廳"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -352,7 +353,7 @@ export default function MockExamView({
             <button
               type="button"
               onClick={() => setShowSubmitModal(true)}
-              className="min-h-[42px] px-5 py-2 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow transition-all duration-200 flex items-center gap-1.5 active:scale-95"
+              className="min-h-[44px] px-5 py-2 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow transition-all duration-200 flex items-center gap-1.5 active:scale-95 touch-manipulation"
             >
               <Send className="w-3.5 h-3.5" />
               <span>交卷結算</span>
@@ -403,7 +404,7 @@ export default function MockExamView({
                   key={q.id}
                   type="button"
                   onClick={() => setCurrentIndex(idx)}
-                  className={`h-8 sm:h-9 rounded-xl border text-xs font-mono font-medium flex items-center justify-center transition-all duration-150 touch-manipulation active:scale-95 ${btnStyle}`}
+                  className={`h-8 sm:h-9 rounded-xl border text-xs font-mono font-medium flex items-center justify-center transition-all duration-150 touch-manipulation active:scale-95 relative before:absolute before:-inset-1 before:content-[''] ${btnStyle}`}
                   title={`第 ${idx + 1} 題 (${isAnswered ? "已填答" : "未填答"})`}
                 >
                   {idx + 1}
@@ -414,7 +415,7 @@ export default function MockExamView({
         </div>
 
         {/* 作答主卡片 */}
-        <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-6 sm:p-8 space-y-6 backdrop-blur-xl relative overflow-hidden">
+        <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-4 sm:p-8 space-y-6 backdrop-blur-xl relative overflow-hidden">
           {/* 題號與題型狀態標籤 */}
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.06]">
             <div className="flex items-center gap-2.5">
@@ -549,17 +550,22 @@ export default function MockExamView({
           </div>
         </div>
 
-        {/* 提前交卷防呆確認彈窗 */}
+        {/* 提前交卷防呆確認彈窗 (Mobile Bottom Sheet & Desktop Dialog) */}
         {showSubmitModal && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md animate-fade-in"
             onClick={(e) => {
               if (e.target === e.currentTarget) setShowSubmitModal(false);
             }}
             role="dialog"
             aria-modal="true"
           >
-            <div className="w-full max-w-md bg-[#0c0c10]/95 border border-white/[0.12] rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl text-center space-y-5 animate-scale-in text-foreground">
+            <div className="w-full sm:max-w-md bg-[#0c0c10]/95 border-t sm:border border-white/[0.12] rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl text-center space-y-5 animate-sheet-up sm:animate-scale-in text-foreground max-h-[90dvh] overflow-y-auto overscroll-contain scroll-touch pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] transform-gpu will-change-transform">
+              {/* Mobile Drag Handle Indicator */}
+              <div className="pt-1 pb-1 sm:hidden flex justify-center shrink-0" aria-hidden="true">
+                <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+              </div>
+
               <div
                 className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto border ${
                   unansweredCount > 0
@@ -595,14 +601,14 @@ export default function MockExamView({
                 <button
                   type="button"
                   onClick={() => setShowSubmitModal(false)}
-                  className="min-h-[44px] py-2.5 rounded-xl border border-white/[0.10] text-xs sm:text-sm font-semibold text-foreground hover:bg-white/[0.05] transition-colors"
+                  className="min-h-[44px] py-2.5 rounded-xl border border-white/[0.10] text-xs sm:text-sm font-semibold text-foreground hover:bg-white/[0.05] transition-colors flex items-center justify-center touch-manipulation"
                 >
                   繼續作答
                 </button>
                 <button
                   type="button"
                   onClick={executeSubmission}
-                  className="min-h-[44px] py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow transition-all"
+                  className="min-h-[44px] py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow transition-all flex items-center justify-center touch-manipulation active:scale-95"
                 >
                   {unansweredCount > 0 ? "確認提前交卷" : "確認交卷結算"}
                 </button>
@@ -620,7 +626,7 @@ export default function MockExamView({
   return (
     <div className="space-y-8 animate-fade-in max-w-4xl mx-auto">
       {/* 結算大卡片 */}
-      <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-6 sm:p-10 text-center space-y-6 backdrop-blur-xl relative overflow-hidden">
+      <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-4 sm:p-10 text-center space-y-6 backdrop-blur-xl relative overflow-hidden">
         {/* 背景氛圍光 */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
@@ -814,11 +820,11 @@ export default function MockExamView({
             return (
               <div
                 key={q.id}
-                className={`p-5 rounded-2xl border transition-all space-y-3.5 ${
+                className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-3.5 ${
                   isCorrect
                     ? "bg-emerald-950/15 border-emerald-500/25"
                     : "bg-rose-950/15 border-rose-500/25"
-                }`}
+                } ${originalIndex > 10 ? "card-deferred-render" : ""}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">

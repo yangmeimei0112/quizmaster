@@ -335,7 +335,7 @@ export default function AddQuestionPage() {
         <div>
           <Link
             href="/questions"
-            className="inline-flex items-center gap-1.5 text-xs text-foreground-muted hover:text-foreground mb-2.5 transition-colors duration-200 ease-expo-out group"
+            className="min-h-[44px] inline-flex items-center gap-1.5 text-xs text-foreground-muted hover:text-foreground mb-1 transition-colors duration-200 ease-expo-out touch-manipulation group"
           >
             <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
             <span>返回題庫清單</span>
@@ -404,7 +404,7 @@ export default function AddQuestionPage() {
           </div>
           <Link
             href="/questions"
-            className="text-xs text-emerald-300 underline font-semibold hover:text-white transition-colors"
+            className="min-h-[44px] inline-flex items-center px-2 text-xs text-emerald-300 underline font-semibold hover:text-white transition-colors touch-manipulation"
           >
             前往題庫查看
           </Link>
@@ -434,7 +434,7 @@ export default function AddQuestionPage() {
                   推薦
                 </span>
               </div>
-              <p className="text-foreground-muted text-[11px] truncate mt-0.5">
+              <p className="text-foreground-muted text-[11px] truncate min-w-0 mt-0.5">
                 一鍵貼上整道題目，演算法自動分離題號、題幹、四個選項、答案與解析，核對後帶入表單。
               </p>
             </div>
@@ -442,7 +442,7 @@ export default function AddQuestionPage() {
           <button
             type="button"
             onClick={() => setShowQuickAddModal(true)}
-            className="min-h-[40px] px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-500/40 text-xs font-bold font-game shrink-0 flex items-center justify-center gap-1.5 transition-all duration-200 ease-expo-out touch-tactile shadow-sm self-stretch sm:self-auto"
+            className="min-h-[44px] px-4 py-2.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-500/40 text-xs font-bold font-game shrink-0 flex items-center justify-center gap-1.5 transition-all duration-200 ease-expo-out touch-manipulation touch-tactile shadow-sm self-stretch sm:self-auto"
           >
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
             <span>開啟快速新增</span>
@@ -498,7 +498,7 @@ export default function AddQuestionPage() {
                   <Link
                     href={`/questions?q=${encodeURIComponent(m.stem)}`}
                     target="_blank"
-                    className="text-rose-300 font-bold hover:text-white flex items-center gap-1 whitespace-nowrap text-[11px] transition-colors shrink-0 touch-tactile"
+                    className="min-h-[44px] px-2.5 text-rose-300 font-bold hover:text-white inline-flex items-center gap-1 whitespace-nowrap text-[11px] transition-colors shrink-0 touch-manipulation touch-tactile"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     查看該題
@@ -539,7 +539,7 @@ export default function AddQuestionPage() {
                     <Link
                       href={`/questions?q=${encodeURIComponent(m.stem)}`}
                       target="_blank"
-                      className="text-amber-300 font-semibold hover:text-white flex items-center gap-1 whitespace-nowrap text-[11px] transition-colors shrink-0"
+                      className="min-h-[44px] px-2.5 text-amber-300 font-semibold hover:text-white inline-flex items-center gap-1 whitespace-nowrap text-[11px] transition-colors shrink-0 touch-manipulation touch-tactile"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       比對
@@ -674,7 +674,7 @@ export default function AddQuestionPage() {
           onClick={(e) => { if (e.target === e.currentTarget) setShowConfirmModal(false); }}
         >
           <div 
-            className="bg-[#0a0a0c]/95 max-w-lg w-full max-h-[90dvh] rounded-t-3xl sm:rounded-3xl p-6 sm:p-7 shadow-2xl border-t sm:border border-white/[0.10] space-y-5 backdrop-blur-2xl animate-sheet-up sm:animate-scale-in pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]"
+            className="bg-[#0a0a0c]/95 max-w-lg w-full max-h-[90dvh] rounded-t-3xl sm:rounded-3xl p-5 sm:p-7 shadow-2xl border-t sm:border border-white/[0.10] space-y-5 backdrop-blur-2xl animate-sheet-up sm:animate-scale-in pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-contain scroll-touch transform-gpu will-change-transform"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Drag Handle Indicator */}
@@ -707,14 +707,14 @@ export default function AddQuestionPage() {
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
-                className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl border border-white/[0.10] text-foreground text-xs font-semibold hover:bg-white/[0.05] transition-colors duration-200 ease-expo-out flex items-center justify-center"
+                className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl border border-white/[0.10] text-foreground text-xs font-semibold hover:bg-white/[0.05] transition-colors duration-200 ease-expo-out flex items-center justify-center touch-manipulation touch-tactile"
               >
                 取消並檢查
               </button>
               <button
                 type="button"
                 onClick={() => handleSubmit(true)}
-                className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold font-game shadow-[0_0_20px_rgba(217,119,6,0.35)] transition-all duration-200 ease-expo-out active:scale-95 flex items-center justify-center"
+                className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold font-game shadow-[0_0_20px_rgba(217,119,6,0.35)] transition-all duration-200 ease-expo-out active:scale-95 flex items-center justify-center touch-manipulation touch-tactile"
               >
                 仍要新增此題
               </button>

@@ -573,7 +573,7 @@ export default function QuestionsPage() {
           <button
             type="button"
             onClick={toggleExpandAllCards}
-            className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl border border-white/[0.10] text-xs font-semibold text-foreground bg-white/[0.04] hover:bg-white/[0.08] transition-all duration-200 ease-expo-out flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+            className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl border border-white/[0.10] text-xs font-semibold text-foreground bg-white/[0.04] hover:bg-white/[0.08] transition-all duration-200 ease-expo-out flex items-center justify-center gap-1.5 shadow-sm active:scale-95 touch-manipulation touch-tactile"
           >
             <ChevronsUpDown className="w-3.5 h-3.5 text-accent shrink-0" />
             <span>{isAllCardsExpanded ? "收合全部" : "展開全部"}</span>
@@ -583,7 +583,7 @@ export default function QuestionsPage() {
           <button
             type="button"
             onClick={() => setShowAnswersGlobal((v) => !v)}
-            className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl border border-white/[0.10] text-xs font-semibold text-foreground bg-white/[0.04] hover:bg-white/[0.08] transition-all duration-200 ease-expo-out flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+            className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl border border-white/[0.10] text-xs font-semibold text-foreground bg-white/[0.04] hover:bg-white/[0.08] transition-all duration-200 ease-expo-out flex items-center justify-center gap-1.5 shadow-sm active:scale-95 touch-manipulation touch-tactile"
           >
             {showAnswersGlobal ? (
               <>
@@ -602,7 +602,7 @@ export default function QuestionsPage() {
           <button
             type="button"
             onClick={() => setIsExportModalOpen(true)}
-            className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-bold font-game border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all duration-200 ease-expo-out active:scale-95 flex items-center justify-center gap-1.5"
+            className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-bold font-game border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all duration-200 ease-expo-out active:scale-95 flex items-center justify-center gap-1.5 touch-manipulation touch-tactile"
           >
             <FileDown className="w-4 h-4 text-blue-400 shrink-0" />
             <span>匯出文件</span>
@@ -611,7 +611,7 @@ export default function QuestionsPage() {
           {/* 按鈕 4: 新增題目 */}
           <Link
             href="/add"
-            className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs font-bold font-game shadow-glow transition-all duration-200 ease-expo-out active:scale-95 flex items-center justify-center gap-1.5"
+            className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs font-bold font-game shadow-glow transition-all duration-200 ease-expo-out active:scale-95 flex items-center justify-center gap-1.5 touch-manipulation touch-tactile"
           >
             <PlusCircle className="w-4 h-4 shrink-0" />
             <span>新增題目</span>
@@ -759,7 +759,7 @@ export default function QuestionsPage() {
           onClick={(e) => { if (e.target === e.currentTarget) setEditingQuestion(null); }}
         >
           <div 
-            className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground"
+            className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground transform-gpu will-change-transform"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 頂部拖曳提示飾條 (僅手機端顯示) */}
@@ -776,7 +776,7 @@ export default function QuestionsPage() {
               <button
                 type="button"
                 onClick={() => setEditingQuestion(null)}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-muted hover:text-foreground rounded-xl hover:bg-white/[0.05] transition-colors"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-muted hover:text-foreground rounded-xl hover:bg-white/[0.05] transition-colors touch-tactile"
                 aria-label="關閉編輯視窗"
               >
                 <X className="w-5 h-5" />
@@ -784,7 +784,7 @@ export default function QuestionsPage() {
             </div>
 
             {/* 平滑內部滾動區塊 */}
-            <div className="overflow-y-auto overscroll-contain flex-1 px-5 sm:px-7 py-4 space-y-4 pr-3 sm:pr-6">
+            <div className="overflow-y-auto overscroll-contain scroll-touch flex-1 px-5 sm:px-7 py-4 space-y-4 pr-3 sm:pr-6">
               {/* 題型選擇 */}
               <div className="flex items-center gap-3">
                 <label className="text-xs font-bold font-game text-foreground">題型：</label>

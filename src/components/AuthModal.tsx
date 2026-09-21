@@ -114,14 +114,19 @@ export default function AuthModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md animate-fade-in overflow-y-auto overscroll-contain"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeAuthModal();
       }}
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-md bg-[#0c0c10]/95 border border-white/[0.12] rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl animate-scale-in text-foreground overflow-hidden">
+      <div className="relative w-full sm:max-w-md bg-[#0c0c10]/95 border-t sm:border border-white/[0.12] rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl animate-sheet-up sm:animate-scale-in text-foreground overflow-y-auto overscroll-contain scroll-touch max-h-[90dvh] sm:max-h-[85vh] pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] transform-gpu will-change-transform">
+        {/* Mobile Drag Handle Indicator */}
+        <div className="pt-1 pb-1 sm:hidden flex justify-center shrink-0" aria-hidden="true">
+          <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+        </div>
+
         {/* Ambient Top Glow */}
         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#5E6AD2] to-transparent opacity-80" />
         <div className="absolute -top-20 -right-20 w-48 h-48 bg-[#5E6AD2]/15 rounded-full blur-3xl pointer-events-none" />
@@ -130,7 +135,7 @@ export default function AuthModal() {
         <button
           type="button"
           onClick={closeAuthModal}
-          className="absolute top-5 right-5 p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.08] transition-colors"
+          className="absolute top-4 right-4 min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.08] transition-colors touch-manipulation"
           aria-label="關閉彈窗"
         >
           <X className="w-5 h-5" />
@@ -145,7 +150,7 @@ export default function AuthModal() {
                 setMode("login");
                 setErrorMsg("");
               }}
-              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs sm:text-sm font-bold font-game transition-all duration-200 ${
+              className={`min-h-[44px] flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-xs sm:text-sm font-bold font-game transition-all duration-200 touch-manipulation ${
                 mode === "login"
                   ? "bg-accent text-white shadow-glow"
                   : "text-foreground-muted hover:text-foreground hover:bg-white/[0.04]"
@@ -160,7 +165,7 @@ export default function AuthModal() {
                 setMode("register");
                 setErrorMsg("");
               }}
-              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs sm:text-sm font-bold font-game transition-all duration-200 ${
+              className={`min-h-[44px] flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-xs sm:text-sm font-bold font-game transition-all duration-200 touch-manipulation ${
                 mode === "register"
                   ? "bg-accent text-white shadow-glow"
                   : "text-foreground-muted hover:text-foreground hover:bg-white/[0.04]"
@@ -286,29 +291,29 @@ export default function AuthModal() {
 
         <div className="mt-6 pt-4 border-t border-white/[0.06] text-center text-xs text-foreground-muted">
           {mode === "login" ? (
-            <p>
-              還沒有帳號嗎？{" "}
+            <p className="flex items-center justify-center flex-wrap gap-1">
+              <span>還沒有帳號嗎？</span>
               <button
                 type="button"
                 onClick={() => {
                   setMode("register");
                   setErrorMsg("");
                 }}
-                className="text-[#9AA5FF] hover:underline font-semibold"
+                className="text-[#9AA5FF] hover:underline font-semibold min-h-[44px] inline-flex items-center px-2 touch-manipulation"
               >
                 立即註冊
               </button>
             </p>
           ) : (
-            <p>
-              已經有帳號？{" "}
+            <p className="flex items-center justify-center flex-wrap gap-1">
+              <span>已經有帳號？</span>
               <button
                 type="button"
                 onClick={() => {
                   setMode("login");
                   setErrorMsg("");
                 }}
-                className="text-[#9AA5FF] hover:underline font-semibold"
+                className="text-[#9AA5FF] hover:underline font-semibold min-h-[44px] inline-flex items-center px-2 touch-manipulation"
               >
                 點此登入
               </button>

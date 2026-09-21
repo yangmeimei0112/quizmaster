@@ -343,7 +343,7 @@ export default function PracticePage() {
         {/* 做題卡片 */}
         <div
           key={`question-${currentQ.id || currentIndex}`}
-          className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-6 sm:p-8 space-y-6 backdrop-blur-xl relative overflow-hidden animate-fade-in-up"
+          className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-4 sm:p-8 space-y-6 backdrop-blur-xl relative overflow-hidden animate-fade-in-up"
         >
           {/* 進度條 */}
           <div className="space-y-2">
@@ -546,7 +546,7 @@ export default function PracticePage() {
   if (quizMode === "INSTANT" && quizCompleted) {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-6 sm:p-12 text-center space-y-6 backdrop-blur-xl animate-scale-in relative overflow-hidden">
+        <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-4 sm:p-12 text-center space-y-6 backdrop-blur-xl animate-scale-in relative overflow-hidden">
           <div className="w-20 h-20 rounded-3xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-[0_0_35px_rgba(245,158,11,0.35)] relative z-10 animate-fade-in-up">
             <Award className="w-10 h-10" />
           </div>
@@ -580,7 +580,7 @@ export default function PracticePage() {
             <button
               type="button"
               onClick={handleRestart}
-              className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200"
+              className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200 touch-manipulation touch-tactile active:scale-95"
             >
               <RotateCcw className="w-4 h-4" />
               <span>再來一次</span>
@@ -588,7 +588,7 @@ export default function PracticePage() {
             <button
               type="button"
               onClick={() => setQuizMode("NONE")}
-              className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl border border-white/[0.10] text-foreground text-sm font-semibold hover:bg-white/[0.05] transition-colors flex items-center justify-center text-center"
+              className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl border border-white/[0.10] text-foreground text-sm font-semibold hover:bg-white/[0.05] transition-colors flex items-center justify-center text-center touch-manipulation touch-tactile active:scale-95"
             >
               返回刷題大廳
             </button>
@@ -680,7 +680,7 @@ export default function PracticePage() {
             data-start-btn="true"
             onClick={handleStartQuiz}
             disabled={filteredQuestions.length === 0}
-            className={`w-full min-h-[48px] py-3.5 rounded-2xl font-bold font-game text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
+            className={`w-full min-h-[48px] py-3.5 rounded-2xl font-bold font-game text-sm shadow-md transition-all flex items-center justify-center gap-2 touch-manipulation touch-tactile active:scale-95 ${
               filteredQuestions.length > 0
                 ? "bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.35)]"
                 : "bg-white/[0.04] text-white/30 border border-white/[0.06] cursor-not-allowed"
@@ -748,7 +748,7 @@ export default function PracticePage() {
               type="button"
               onClick={handleStartMockExam}
               disabled={!isMockExamAvailable}
-              className={`w-full min-h-[48px] py-3.5 px-4 rounded-2xl font-bold font-game text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
+              className={`w-full min-h-[48px] py-3.5 px-4 rounded-2xl font-bold font-game text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 touch-manipulation touch-tactile active:scale-95 ${
                 isMockExamAvailable
                   ? "bg-accent hover:bg-accent-bright text-white shadow-glow"
                   : "bg-white/[0.04] text-white/30 border border-white/[0.06] cursor-not-allowed"
@@ -766,7 +766,7 @@ export default function PracticePage() {
               type="button"
               onClick={() => setIsExportModalOpen(true)}
               disabled={allQuestions.length === 0}
-              className="w-full min-h-[48px] py-3.5 px-4 rounded-2xl font-bold font-game text-xs sm:text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40"
+              className="w-full min-h-[48px] py-3.5 px-4 rounded-2xl font-bold font-game text-xs sm:text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all flex items-center justify-center gap-1.5 touch-manipulation touch-tactile active:scale-95 disabled:opacity-40"
             >
               <FileDown className="w-4 h-4 text-blue-400 shrink-0" />
               <span>匯出 50 題考卷 (Docx/PDF)</span>

@@ -600,7 +600,7 @@ export default function ExportModal({
       aria-modal="true"
     >
       <div
-        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl backdrop-blur-2xl max-h-[92dvh] sm:max-h-[88vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground"
+        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground transform-gpu will-change-transform"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. Mobile Drag Handle Indicator */}
@@ -635,7 +635,7 @@ export default function ExportModal({
         </div>
 
         {/* 3. Smooth Scrollable Body */}
-        <div className="overflow-y-auto overscroll-contain flex-1 p-4 sm:p-6 space-y-4 text-xs">
+        <div className="overflow-y-auto overscroll-contain scroll-touch flex-1 p-4 sm:p-6 space-y-4 text-xs">
           {/* 核心需求：匯出模式切換（目前清單 vs 隨機抓50題全真試卷） */}
           <div className="space-y-2 p-3.5 sm:p-4 rounded-2xl bg-white/[0.02] border border-white/[0.08]">
             <div className="flex items-center justify-between">
@@ -734,7 +734,7 @@ export default function ExportModal({
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-base sm:text-xs text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent font-medium transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-base sm:text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent font-medium transition-all"
               />
             </div>
             <div className="space-y-1.5">
@@ -743,7 +743,7 @@ export default function ExportModal({
                 type="text"
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-base sm:text-xs text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-base sm:text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
               />
             </div>
           </div>
@@ -913,7 +913,7 @@ export default function ExportModal({
               href="https://docs.google.com/document/create"
               target="_blank"
               rel="noopener noreferrer"
-              className="min-h-[38px] py-1 px-3 inline-flex items-center justify-center gap-1.5 text-xs text-[#8B96F8] hover:text-accent-bright font-semibold hover:underline transition-colors duration-180"
+              className="min-h-[44px] py-2.5 px-3 inline-flex items-center justify-center gap-1.5 text-xs text-[#8B96F8] hover:text-accent-bright font-semibold hover:underline transition-colors duration-180 touch-tactile"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>直接前往 Google 文件開新文件 (Google Docs)</span>

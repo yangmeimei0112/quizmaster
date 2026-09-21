@@ -58,37 +58,37 @@ export default function GuidePage() {
           <div className="pt-2 flex flex-wrap items-center gap-2 text-xs">
             <a
               href="#feature-add"
-              className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground-muted hover:text-foreground transition-colors"
+              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground-muted hover:text-foreground transition-colors inline-flex items-center touch-tactile"
             >
               1. 快速新增題目
             </a>
             <a
               href="#feature-manage"
-              className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground-muted hover:text-foreground transition-colors"
+              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground-muted hover:text-foreground transition-colors inline-flex items-center touch-tactile"
             >
               2. 題庫管理搜尋
             </a>
             <a
               href="#feature-mock"
-              className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground-muted hover:text-foreground transition-colors"
+              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground-muted hover:text-foreground transition-colors inline-flex items-center touch-tactile"
             >
               3. 60分鐘模擬考
             </a>
             <a
               href="#feature-wrong"
-              className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground-muted hover:text-foreground transition-colors"
+              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground-muted hover:text-foreground transition-colors inline-flex items-center touch-tactile"
             >
               4. 錯題排行榜
             </a>
             <a
               href="#feature-export"
-              className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground-muted hover:text-foreground transition-colors"
+              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground-muted hover:text-foreground transition-colors inline-flex items-center touch-tactile"
             >
               5. 試卷與錯題報告匯出
             </a>
             <a
               href="#feature-shortcuts"
-              className="px-3 py-1.5 rounded-xl bg-accent/20 hover:bg-accent/30 border border-accent/30 text-[#C5CCFF] transition-colors font-bold"
+              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-accent/20 hover:bg-accent/30 border border-accent/30 text-[#C5CCFF] transition-colors font-bold inline-flex items-center touch-tactile"
             >
               6. 快捷鍵一覽
             </a>
@@ -197,7 +197,7 @@ export default function GuidePage() {
 
             <Link
               href="/add"
-              className="min-h-[42px] px-4 py-2 rounded-xl bg-accent/20 hover:bg-accent/30 text-[#C5CCFF] text-xs font-bold font-game border border-accent/40 flex items-center justify-center gap-1.5 transition-all"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-accent/20 hover:bg-accent/30 text-[#C5CCFF] text-xs font-bold font-game border border-accent/40 flex items-center justify-center gap-1.5 transition-all touch-manipulation touch-tactile active:scale-95"
             >
               <span>立即試試文字智慧新增</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -646,21 +646,21 @@ export default function GuidePage() {
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           <Link
             href="/practice"
-            className="min-h-[46px] px-6 py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow transition-all flex items-center gap-2"
+            className="min-h-[46px] px-6 py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow transition-all flex items-center gap-2 touch-manipulation touch-tactile active:scale-95"
           >
             <GraduationCap className="w-4 h-4" />
             <span>前往刷題測驗中心</span>
           </Link>
           <Link
             href="/questions"
-            className="min-h-[46px] px-6 py-2.5 rounded-xl border border-white/[0.10] text-foreground text-xs sm:text-sm font-semibold hover:bg-white/[0.05] transition-colors flex items-center gap-2"
+            className="min-h-[46px] px-6 py-2.5 rounded-xl border border-white/[0.10] text-foreground text-xs sm:text-sm font-semibold hover:bg-white/[0.05] transition-colors flex items-center gap-2 touch-manipulation touch-tactile active:scale-95"
           >
             <Search className="w-4 h-4" />
             <span>查詢題庫與匯出文件</span>
           </Link>
           <Link
             href="/add"
-            className="min-h-[46px] px-6 py-2.5 rounded-xl border border-white/[0.10] text-foreground text-xs sm:text-sm font-semibold hover:bg-white/[0.05] transition-colors flex items-center gap-2"
+            className="min-h-[46px] px-6 py-2.5 rounded-xl border border-white/[0.10] text-foreground text-xs sm:text-sm font-semibold hover:bg-white/[0.05] transition-colors flex items-center gap-2 touch-manipulation touch-tactile active:scale-95"
           >
             <PlusCircle className="w-4 h-4" />
             <span>快速新增考題</span>
