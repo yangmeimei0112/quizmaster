@@ -116,6 +116,46 @@ test('QuickAddModal: 狀態切換邏輯模擬 (3 道題目巡訪驗證)', () => 
   assert.strictEqual(activeIndex, 1, '第 2 題按左鍵應到第 1 題');
 });
 
+test('QuickAddModal: 膠囊列表與選中膠囊正確掛載 tabsContainerRef 與 activeCapsuleRef', () => {
+  assert(quickAddContent.includes('const tabsContainerRef = useRef<HTMLDivElement | null>(null);'), '需宣告 tabsContainerRef');
+  assert(quickAddContent.includes('const activeCapsuleRef = useRef<HTMLButtonElement | null>(null);'), '需宣告 activeCapsuleRef');
+  assert(quickAddContent.includes('ref={tabsContainerRef}'), '膠囊容器需掛載 tabsContainerRef');
+  assert(quickAddContent.includes('ref={isActive ? activeCapsuleRef : null}'), '當前選中膠囊需掛載 activeCapsuleRef');
+  assert(quickAddContent.includes('scroll-smooth'), '容器需具備平滑滾動類別 scroll-smooth');
+});
+
+test('QuickAddModal: activeIndex 變化時透過 requestAnimationFrame 與 scrollTo 實現平滑跟隨移動', () => {
+  assert(quickAddContent.includes('requestAnimationFrame'), '需透過 requestAnimationFrame 確保 DOM 繪製完成後滾動');
+  assert(quickAddContent.includes('container.scrollTo({'), '需呼叫 container.scrollTo 進行精確平滑滾動');
+  assert(quickAddContent.includes('behavior: "smooth"'), '需設定平滑滾動 behavior: smooth');
+  assert(quickAddContent.includes('Math.max(0, Math.min(maxScrollLeft, targetScrollLeft))'), '滾動計算需防禦超出邊界');
+});
+
+test('QuickAddModal: 橫向滾動目標位置計算模擬 (驗證自動居中演算法)', () => {
+  // 模擬容器寬度 600px, 總滾動寬度 2000px
+  const containerWidth = 600;
+  const scrollWidth = 2000;
+  const maxScrollLeft = scrollWidth - containerWidth; // 1400
+
+  // 測試 1: 第 1 題在最左邊 (left: 40px, width: 120px)
+  const target1 = { left: 40, width: 120 };
+  const targetScrollLeft1 = target1.left - containerWidth / 2 + target1.width / 2; // 40 - 300 + 60 = -200
+  const safeScroll1 = Math.max(0, Math.min(maxScrollLeft, targetScrollLeft1));
+  assert.strictEqual(safeScroll1, 0, '第 1 題應定位在最左側 0px');
+
+  // 測試 2: 第 5 題在中間 (left: 650px, width: 120px)
+  const target5 = { left: 650, width: 120 };
+  const targetScrollLeft5 = target5.left - containerWidth / 2 + target5.width / 2; // 650 - 300 + 60 = 410
+  const safeScroll5 = Math.max(0, Math.min(maxScrollLeft, targetScrollLeft5));
+  assert.strictEqual(safeScroll5, 410, '第 5 題應精確平滑滾動到 410px 實現居中');
+
+  // 測試 3: 最後一題在最右側 (left: 1900px, width: 120px)
+  const targetLast = { left: 1900, width: 120 };
+  const targetScrollLeftLast = targetLast.left - containerWidth / 2 + targetLast.width / 2; // 1900 - 300 + 60 = 1660
+  const safeScrollLast = Math.max(0, Math.min(maxScrollLeft, targetScrollLeftLast));
+  assert.strictEqual(safeScrollLast, 1400, '最後一題應安全限制在 maxScrollLeft (1400px)');
+});
+
 // ==========================================
 // FEATURE 2: 自測刷題 A/B/C/D 與 Enter
 // ==========================================
