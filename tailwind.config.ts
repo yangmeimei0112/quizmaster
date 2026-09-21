@@ -91,7 +91,7 @@ const config: Config = {
         "fade-in-down": "fadeInDown 240ms cubic-bezier(0.16, 1, 0.3, 1) both",
         "scale-in": "scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both",
         "sheet-up": "sheetUp 260ms cubic-bezier(0.16, 1, 0.3, 1) both",
-        "card-stagger": "cardEntrance 340ms cubic-bezier(0.16, 1, 0.3, 1) both",
+        "card-stagger": "cardEntrance 280ms cubic-bezier(0.16, 1, 0.3, 1) both",
         "pulse-subtle": "pulseSubtle 2.5s ease-in-out infinite",
       },
       keyframes: {
@@ -126,7 +126,7 @@ const config: Config = {
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         cardEntrance: {
-          "0%": { opacity: "0", transform: "translateY(14px)" },
+          "0%": { opacity: "0", transform: "translateY(8px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         pulseSubtle: {

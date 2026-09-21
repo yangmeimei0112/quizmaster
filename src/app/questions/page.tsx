@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Question, QuestionType } from "@/types/question";
 import ExportModal from "@/components/ExportModal";
+import { getCachedQuestions, setCachedQuestions } from "@/lib/questionsCache";
 
 // 骨架屏載入卡片元件，保持卡片版面高度穩定，消除頁面切換瞬態白閃與抽動
 function QuestionCardSkeleton({ index }: { index: number }) {
@@ -32,7 +33,7 @@ function QuestionCardSkeleton({ index }: { index: number }) {
     <div
       className="bg-[#0a0a0c] border border-white/[0.06] rounded-2xl p-4 sm:p-6 shadow-linear-card space-y-3.5 animate-card-stagger select-none"
       style={{
-        animationDelay: `${index * 45}ms`,
+        animationDelay: `${Math.min(index, 6) * 30 + 100}ms`,
       }}
       aria-hidden="true"
     >
@@ -101,14 +102,21 @@ const QuestionCardItem = memo(function QuestionCardItem({
     [q.optionA, q.optionB, q.optionC, q.optionD]
   );
 
+  // 僅針對首屏可視範圍內卡片啟用交錯入場動態，避免視野外延遲渲染元素重排抖動
+  const shouldAnimate = !isDeferred && idx < 8;
+
   return (
     <div
-      style={{
-        animationDelay: `${Math.min(idx, 10) * 45}ms`,
-      }}
-      className={`bg-[#0a0a0c] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-4 sm:p-6 transition-all duration-200 ease-expo-out shadow-linear-card animate-card-stagger ${
-        isDeferred ? "card-deferred-render" : ""
-      }`}
+      style={
+        shouldAnimate
+          ? {
+              animationDelay: `${Math.min(idx, 6) * 30 + 100}ms`,
+            }
+          : undefined
+      }
+      className={`bg-[#0a0a0c] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-4 sm:p-6 transition-[border-color,box-shadow,background-color] duration-200 ease-expo-out shadow-linear-card ${
+        shouldAnimate ? "animate-card-stagger" : ""
+      } ${isDeferred ? "card-deferred-render" : ""}`}
     >
       {/* 題目卡片標頭 (點擊切換折疊手風琴) */}
       <div
@@ -276,9 +284,9 @@ const QuestionCardItem = memo(function QuestionCardItem({
 });
 
 export default function QuestionsPage() {
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<Question[]>(() => getCachedQuestions() || []);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !getCachedQuestions());
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("ALL");
 
@@ -318,7 +326,11 @@ export default function QuestionsPage() {
         : await fetch(`/api/questions?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setQuestions(data.questions || []);
+        const incoming = data.questions || [];
+        setQuestions(incoming);
+        if (!searchTerm.trim() && selectedType === "ALL") {
+          setCachedQuestions(incoming);
+        }
       }
     } catch (err: any) {
       if (err.name !== "AbortError") {
@@ -395,14 +407,20 @@ export default function QuestionsPage() {
     try {
       const res = await fetch(`/api/questions/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setQuestions((prev) => prev.filter((q) => q.id !== id));
+        setQuestions((prev) => {
+          const next = prev.filter((q) => q.id !== id);
+          if (!searchTerm.trim() && selectedType === "ALL") {
+            setCachedQuestions(next);
+          }
+          return next;
+        });
       }
     } catch (err) {
       alert("刪除失敗");
     } finally {
       setDeletingId(null);
     }
-  }, []);
+  }, [searchTerm, selectedType]);
 
   // 開啟編輯 Modal
   const handleOpenEdit = useCallback((q: Question) => {
@@ -445,9 +463,13 @@ export default function QuestionsPage() {
 
       if (res.ok) {
         const updated = await res.json();
-        setQuestions((prev) =>
-          prev.map((item) => (item.id === updated.id ? updated : item))
-        );
+        setQuestions((prev) => {
+          const next = prev.map((item) => (item.id === updated.id ? updated : item));
+          if (!searchTerm.trim() && selectedType === "ALL") {
+            setCachedQuestions(next);
+          }
+          return next;
+        });
         setEditingQuestion(null);
       } else {
         alert("更新失敗");

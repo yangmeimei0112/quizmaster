@@ -86,7 +86,7 @@ body {
 @keyframes cardEntrance {
   0% {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(8px);
   }
   100% {
     opacity: 1;
@@ -95,8 +95,7 @@ body {
 }
 
 .animate-card-stagger {
-  animation: cardEntrance 340ms var(--ease-expo-out) both;
-  will-change: transform, opacity;
+  animation: cardEntrance 280ms var(--ease-expo-out) both;
 }
 
 /* Stagger animation delay utilities for smooth sequential entry */

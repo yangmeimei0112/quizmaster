@@ -16,11 +16,12 @@ import {
   Zap,
 } from "lucide-react";
 import { Question } from "@/types/question";
+import { getCachedQuestions, setCachedQuestions } from "@/lib/questionsCache";
 
 export default function PracticePage() {
-  const [allQuestions, setAllQuestions] = useState<Question[]>([]);
+  const [allQuestions, setAllQuestions] = useState<Question[]>(() => getCachedQuestions() || []);
   const [quizQueue, setQuizQueue] = useState<Question[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !getCachedQuestions());
 
   // 測驗設定
   const [selectedType, setSelectedType] = useState<string>("ALL");
@@ -41,7 +42,9 @@ export default function PracticePage() {
         const res = await fetch("/api/questions");
         if (res.ok) {
           const data = await res.json();
-          setAllQuestions(data.questions || []);
+          const list = data.questions || [];
+          setAllQuestions(list);
+          setCachedQuestions(list);
         }
       } catch (err) {
         console.error("載入題庫失敗:", err);

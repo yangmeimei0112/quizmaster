@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { SimilarMatch, QuestionType } from "@/types/question";
 import QuickAddModal from "@/components/QuickAddModal";
+import { invalidateQuestionsCache } from "@/lib/questionsCache";
 
 export default function AddQuestionPage() {
   const router = useRouter();
@@ -283,6 +284,7 @@ export default function AddQuestionPage() {
 
       setSuccessMsg("🎉 題目新增成功！");
       setShowConfirmModal(false);
+      invalidateQuestionsCache();
 
       // 重置表單但保留分類與題型方便連續錄入
       setStem("");
@@ -672,7 +674,7 @@ export default function AddQuestionPage() {
           onClick={(e) => { if (e.target === e.currentTarget) setShowConfirmModal(false); }}
         >
           <div 
-            className="bg-[#0a0a0c]/95 max-w-lg w-full rounded-t-3xl sm:rounded-3xl p-6 sm:p-7 shadow-2xl border-t sm:border border-white/[0.10] space-y-5 backdrop-blur-2xl animate-sheet-up sm:animate-scale-in pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]"
+            className="bg-[#0a0a0c]/95 max-w-lg w-full max-h-[90dvh] rounded-t-3xl sm:rounded-3xl p-6 sm:p-7 shadow-2xl border-t sm:border border-white/[0.10] space-y-5 backdrop-blur-2xl animate-sheet-up sm:animate-scale-in pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Drag Handle Indicator */}
