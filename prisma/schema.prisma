@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Question {
-  id             String   @id @default(cuid())
+  id             String                @id @default(cuid())
   stem           String
   normalizedStem String
   type           String
@@ -19,12 +19,44 @@ model Question {
   correctAnswers String
   explanation    String?
   category       String?
-  difficulty     String   @default("MEDIUM")
+  difficulty     String                @default("MEDIUM")
   tags           String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  wrongCount     Int                   @default(0)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  wrongRecords   WrongQuestionRecord[]
 
   @@index([normalizedStem])
   @@index([type])
   @@index([category])
+  @@index([wrongCount])
+}
+
+model User {
+  id           String                @id @default(cuid())
+  username     String                @unique
+  password     String
+  name         String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  wrongRecords WrongQuestionRecord[]
+}
+
+model WrongQuestionRecord {
+  id             String   @id @default(cuid())
+  userId         String
+  questionId     String
+  wrongCount     Int      @default(1)
+  lastUserAnswer String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question       Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId])
+  @@index([questionId])
 }

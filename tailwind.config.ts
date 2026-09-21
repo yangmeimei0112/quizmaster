@@ -49,6 +49,7 @@ const config: Config = {
           'sans-serif',
         ],
         game: [
+          '"Zen Maru Gothic"',
           '"Huninn"',
           '"Noto Sans TC"',
           '"Plus Jakarta Sans"',

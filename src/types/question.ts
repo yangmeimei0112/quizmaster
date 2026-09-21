@@ -15,8 +15,27 @@ export interface Question {
   category?: string | null;
   difficulty: Difficulty;
   tags?: string | null;
+  wrongCount?: number;
   createdAt: string | Date;
   updatedAt: string | Date;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  name?: string | null;
+  createdAt?: string | Date;
+}
+
+export interface WrongQuestionRecordItem {
+  id: string;
+  userId: string;
+  questionId: string;
+  wrongCount: number;
+  lastUserAnswer?: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  question: Question;
 }
 
 export interface QuestionFormData {
