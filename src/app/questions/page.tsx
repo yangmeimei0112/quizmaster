@@ -289,6 +289,7 @@ export default function QuestionsPage() {
   const [isLoading, setIsLoading] = useState(() => !getCachedQuestions());
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("ALL");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // R4 智慧手風琴卡片展開狀態管理 (預設收合)
   const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(new Set());
@@ -367,6 +368,60 @@ export default function QuestionsPage() {
       controller.abort();
     };
   }, [fetchQuestions]);
+
+  // 鍵盤快捷鍵：/ 鍵聚焦搜尋框、Esc 取消聚焦/清除搜尋/關閉彈窗
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+
+      // 1. Esc 快捷鍵
+      if (e.key === "Escape") {
+        if (editingQuestion) {
+          e.preventDefault();
+          setEditingQuestion(null);
+          return;
+        }
+        if (isExportModalOpen) {
+          e.preventDefault();
+          setIsExportModalOpen(false);
+          return;
+        }
+        if (document.activeElement === searchInputRef.current) {
+          e.preventDefault();
+          if (searchTerm) {
+            setSearchTerm("");
+          }
+          searchInputRef.current?.blur();
+          return;
+        }
+        if (searchTerm) {
+          e.preventDefault();
+          setSearchTerm("");
+          return;
+        }
+        return;
+      }
+
+      // 2. / 鍵聚焦搜尋框
+      if (e.key === "/") {
+        const target = e.target as HTMLElement | null;
+        const isTyping =
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            (target as HTMLElement).isContentEditable);
+
+        if (!isTyping) {
+          e.preventDefault();
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editingQuestion, isExportModalOpen, searchTerm]);
 
   // R4 智慧手風琴卡片展開/收合控制
   const isAllCardsExpanded = questions.length > 0 && expandedCardIds.size === questions.length;
@@ -559,25 +614,37 @@ export default function QuestionsPage() {
       {/* 搜尋與過濾篩選器浮動面板 */}
       <div className="bg-[#0a0a0c]/80 border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-linear-card space-y-4 animate-fade-in-up stagger-1">
         {/* 關鍵字搜尋輸入框 */}
-        <div className="relative">
+        <div className="relative flex items-center">
           <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
+            ref={searchInputRef}
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="搜尋題幹、選項文字、詳解關鍵字..."
-            className="w-full pl-10 pr-12 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-sm text-foreground placeholder:text-white/30 transition-all duration-200 ease-expo-out shadow-inner"
+            className="w-full pl-10 pr-20 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-sm text-foreground placeholder:text-white/30 transition-all duration-200 ease-expo-out shadow-inner"
           />
-          {searchTerm && (
-            <button
-              type="button"
-              onClick={() => setSearchTerm("")}
-              className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-white/40 hover:text-white absolute right-1 top-1/2 -translate-y-1/2 touch-tactile"
-              aria-label="清除搜尋關鍵字"
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-auto">
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm("");
+                  searchInputRef.current?.focus();
+                }}
+                className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-white/40 hover:text-white touch-tactile rounded-lg"
+                aria-label="清除搜尋關鍵字"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+            <kbd
+              className="hidden sm:inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-[10px] font-mono text-foreground-muted bg-white/[0.06] border border-white/[0.1] rounded select-none pointer-events-none"
+              title="按 / 鍵聚焦搜尋"
             >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+              /
+            </kbd>
+          </div>
         </div>
 
         {/* 篩選標籤區 */}

@@ -16,6 +16,8 @@ import {
   HelpCircle,
   ListPlus,
   Send,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { QuestionType } from "@/types/question";
 import { parseMultipleQuestions, ParsedQuestionResult } from "@/lib/questionParser";
@@ -129,15 +131,6 @@ export default function QuickAddModal({
   const [clipboardNotice, setClipboardNotice] = useState("");
   const [batchNotice, setBatchNotice] = useState("");
 
-  // 監聽 ESC 鍵關閉
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
 
   // 當貼入文本變更時，防抖 120ms + useTransition 即時多題切分與解析
   useEffect(() => {
@@ -430,6 +423,66 @@ export default function QuickAddModal({
     }
   }, [parsedList, onClose, onBatchSaved]);
 
+  // 監聽快捷鍵：ESC 關閉、左右鍵切換題目 (ArrowLeft / ArrowRight)、Ctrl+Enter / Cmd+Enter 快速送出
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. ESC 關閉視窗
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      // 2. Ctrl+Enter 或 Cmd+Enter: 送出儲存
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        if (parsedList.length > 1) {
+          handleBatchSaveAll();
+        } else if (parsedList.length === 1) {
+          if (onDirectSave) {
+            handleConfirmAndDirectSave();
+          } else {
+            handleConfirmAndApply();
+          }
+        }
+        return;
+      }
+
+      // 3. 左右鍵切換題目 (ArrowLeft / ArrowRight)
+      if (parsedList.length > 1) {
+        const target = e.target as HTMLElement | null;
+        const isTyping =
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            (target as HTMLElement).isContentEditable);
+
+        if (!isTyping || e.altKey) {
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            setActiveIndex((prev) => (prev > 0 ? prev - 1 : parsedList.length - 1));
+          } else if (e.key === "ArrowRight") {
+            e.preventDefault();
+            setActiveIndex((prev) => (prev < parsedList.length - 1 ? prev + 1 : 0));
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    isOpen,
+    onClose,
+    parsedList.length,
+    handleBatchSaveAll,
+    handleConfirmAndDirectSave,
+    handleConfirmAndApply,
+    onDirectSave,
+  ]);
+
   const optionsList = useMemo(() => {
     if (!currentItem) return [];
     return [
@@ -609,15 +662,29 @@ export default function QuickAddModal({
                   <div className="flex items-center justify-between">
                     <span className="font-game font-bold text-foreground text-xs flex items-center gap-1.5">
                       <ListPlus className="w-4 h-4 text-purple-400" />
-                      <span>✨ 成功偵測到 {parsedList.length} 道題目（點擊切換檢查各題）：</span>
+                      <span>✨ 成功偵測到 {parsedList.length} 道題目（點擊或按 ← / → 切換）：</span>
                     </span>
-                    <span className="text-[11px] font-semibold text-purple-300 bg-purple-500/20 border border-purple-500/30 px-2 py-0.5 rounded-full">
-                      正在檢查第 {activeIndex + 1} 題
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-purple-300/80 bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 rounded-full font-mono">
+                        <kbd>←</kbd> / <kbd>→</kbd> 切換
+                      </span>
+                      <span className="text-[11px] font-semibold text-purple-300 bg-purple-500/20 border border-purple-500/30 px-2 py-0.5 rounded-full">
+                        正在檢查第 {activeIndex + 1} 題
+                      </span>
+                    </div>
                   </div>
 
                   {/* 題目切換膠囊列 */}
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none pt-1">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setActiveIndex((prev) => (prev > 0 ? prev - 1 : parsedList.length - 1))}
+                      className="min-h-[38px] min-w-[36px] px-2 rounded-xl bg-white/[0.04] text-foreground-muted hover:text-foreground border border-white/[0.08] hover:bg-white/[0.08] flex items-center justify-center shrink-0 transition-colors"
+                      title="上一題 (← 鍵)"
+                      aria-label="上一題"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
                     {parsedList.map((item, idx) => {
                       const isActive = idx === activeIndex;
                       const isItemValid =
@@ -659,6 +726,15 @@ export default function QuickAddModal({
                         </button>
                       );
                     })}
+                    <button
+                      type="button"
+                      onClick={() => setActiveIndex((prev) => (prev < parsedList.length - 1 ? prev + 1 : 0))}
+                      className="min-h-[38px] min-w-[36px] px-2 rounded-xl bg-white/[0.04] text-foreground-muted hover:text-foreground border border-white/[0.08] hover:bg-white/[0.08] flex items-center justify-center shrink-0 transition-colors"
+                      title="下一題 (→ 鍵)"
+                      aria-label="下一題"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               )}
@@ -885,6 +961,7 @@ export default function QuickAddModal({
                       ? "bg-emerald-800 text-white/50 cursor-wait"
                       : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.35)]"
                   }`}
+                  title="批次新增全部題目 (Ctrl+Enter)"
                 >
                   <ListPlus className="w-4 h-4" />
                   <span>
@@ -892,6 +969,9 @@ export default function QuickAddModal({
                       ? "批次儲存中..."
                       : `檢查無誤，全部新增 (${parsedList.length} 題)`}
                   </span>
+                  <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 text-white rounded">
+                    Ctrl+Enter
+                  </kbd>
                 </button>
               </>
             ) : (
@@ -906,9 +986,15 @@ export default function QuickAddModal({
                       ? "bg-white/[0.05] text-white/30 border border-white/[0.08] cursor-not-allowed"
                       : "bg-accent hover:bg-accent-bright text-white shadow-glow"
                   }`}
+                  title={!onDirectSave ? "帶入表單 (Ctrl+Enter)" : undefined}
                 >
                   <ArrowRight className="w-4 h-4" />
                   <span>檢查無誤，帶入表單</span>
+                  {!onDirectSave && (
+                    <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 text-white rounded">
+                      Ctrl+Enter
+                    </kbd>
+                  )}
                 </button>
 
                 {onDirectSave && (
@@ -921,9 +1007,13 @@ export default function QuickAddModal({
                         ? "bg-white/[0.03] text-white/25 border border-white/[0.06] cursor-not-allowed"
                         : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_18px_rgba(16,185,129,0.3)]"
                     }`}
+                    title="直接新增題目 (Ctrl+Enter)"
                   >
                     <PlusCircle className="w-4 h-4" />
                     <span>{isDirectSubmitting ? "儲存中..." : "檢查無誤，直接新增"}</span>
+                    <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 text-white rounded">
+                      Ctrl+Enter
+                    </kbd>
                   </button>
                 )}
               </>

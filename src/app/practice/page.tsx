@@ -146,6 +146,76 @@ export default function PracticePage() {
     setScore(0);
   }, []);
 
+  // 鍵盤快捷鍵：自測刷題 A/B/C/D 選擇選項、Enter 送出作答或進入下一題
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 忽略輸入法組字中
+      if (e.isComposing) return;
+
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          (target as HTMLElement).isContentEditable);
+
+      if (isTyping) return;
+
+      // 1. Enter 快捷鍵
+      if (e.key === "Enter") {
+        if (quizStarted && !quizCompleted) {
+          if (!isAnswerSubmitted) {
+            if (selectedAnswers.length > 0) {
+              e.preventDefault();
+              handleSubmitAnswer();
+            }
+          } else {
+            e.preventDefault();
+            handleNextQuestion();
+          }
+        } else if (!quizStarted && filteredQuestions.length > 0) {
+          e.preventDefault();
+          handleStartQuiz();
+        } else if (quizCompleted) {
+          e.preventDefault();
+          handleRestart();
+        }
+        return;
+      }
+
+      // 2. A / B / C / D (及 1 / 2 / 3 / 4) 選擇選項
+      if (quizStarted && !quizCompleted && !isAnswerSubmitted) {
+        const keyUpper = e.key.toUpperCase();
+        const numMap: Record<string, string> = {
+          "1": "A",
+          "2": "B",
+          "3": "C",
+          "4": "D",
+        };
+        const resolvedKey = numMap[e.key] || keyUpper;
+
+        if (["A", "B", "C", "D"].includes(resolvedKey)) {
+          e.preventDefault();
+          handleSelectOption(resolvedKey);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    quizStarted,
+    quizCompleted,
+    isAnswerSubmitted,
+    selectedAnswers.length,
+    filteredQuestions.length,
+    handleSelectOption,
+    handleSubmitAnswer,
+    handleNextQuestion,
+    handleStartQuiz,
+    handleRestart,
+  ]);
+
   const totalQuestionsCount = quizStarted ? quizQueue.length : filteredQuestions.length;
   const progressPercent = totalQuestionsCount > 0
     ? Math.round(((currentIndex + (isAnswerSubmitted ? 1 : 0)) / totalQuestionsCount) * 100)
@@ -245,6 +315,9 @@ export default function PracticePage() {
           >
             <GraduationCap className="w-5 h-5" />
             <span>開始隨機抽題測驗</span>
+            <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 text-white rounded">
+              Enter
+            </kbd>
           </button>
         </div>
       )}
@@ -279,6 +352,17 @@ export default function PracticePage() {
                 >
                   {currentQ.type === "SINGLE" ? "單選題" : "複選題"}
                 </span>
+              </div>
+
+              {/* 鍵盤快捷鍵操作提示 */}
+              <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-foreground-muted bg-white/[0.03] border border-white/[0.06] px-2.5 py-1 rounded-xl">
+                <span>快捷鍵：</span>
+                <span className="font-mono text-[#9AA5FF] font-bold">A / B / C / D</span>
+                <span>選取 ·</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-white/[0.08] border border-white/[0.12] text-foreground font-mono text-[10px]">
+                  Enter
+                </kbd>
+                <span>送出</span>
               </div>
 
               <div className="font-semibold text-foreground-muted flex items-center gap-1.5">
@@ -339,6 +423,7 @@ export default function PracticePage() {
                   type="button"
                   onClick={() => handleSelectOption(opt.key)}
                   disabled={isAnswerSubmitted}
+                  title={`按鍵盤 [${opt.key}] 快速選取`}
                   className={`p-4 min-h-[52px] rounded-2xl border text-left text-xs sm:text-sm flex items-center justify-between gap-3.5 transition-all duration-200 ease-expo-out touch-manipulation touch-tactile ${cardStyle}`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
@@ -379,6 +464,9 @@ export default function PracticePage() {
                 }`}
               >
                 <span>確認送出答案</span>
+                <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 text-white rounded">
+                  Enter
+                </kbd>
               </button>
             </div>
           ) : (
@@ -425,6 +513,9 @@ export default function PracticePage() {
                       ? "下一題"
                       : "查看測驗結算"}
                   </span>
+                  <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 text-white rounded">
+                    Enter
+                  </kbd>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -481,6 +572,9 @@ export default function PracticePage() {
             >
               <RotateCcw className="w-4 h-4" />
               <span>再來一次</span>
+              <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 text-white rounded">
+                Enter
+              </kbd>
             </button>
             <Link
               href="/questions"
