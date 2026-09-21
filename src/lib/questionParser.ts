@@ -92,8 +92,12 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
   }
 
   // 3. 提取解析 (Explanation)
+  // 支援格式 A：【各選項詳細解析】、【觀念說明】、【考試記憶重點】等結構化區塊（完整保留標籤）
+  // 支援格式 B：傳統前綴（解析：...、詳解：... 等）
+  let capturedExplanation = "";
   const explanationRegex =
-    /(?:(?:^|\n)\s*(?:【?\s*(?:題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明|備註|Explanation|Note)\s*】?)\s*(?:[:：]|為|是)?\s*|【\s*(?:題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】)([\s\S]*)$/i;
+    /(?:(?:^|\n)\s*(?=(?:【\s*(?:各選項詳細解析|各選項解析|選項詳細解析|選項解析|詳細解析|觀念說明|考試記憶重點|重點整理|破題速記)\s*】))|(?:^|\n)\s*(?:【?\s*(?:題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明|備註|Explanation|Note)\s*】?)\s*(?:[:：]|為|是)?\s*|(?:^|\n)\s*【\s*(?:題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】)([\s\S]*)$/i;
+
   const explanationMatch = workingText.match(explanationRegex);
   if (explanationMatch && explanationMatch.index !== undefined) {
     let rawExp = explanationMatch[1].trim();
@@ -112,6 +116,7 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
       rawExp = rawExp.replace(innerAnsMatch[0], "").trim();
     }
 
+    capturedExplanation = rawExp;
     result.explanation = rawExp;
     result.detectedExplanation = true;
     workingText = workingText.substring(0, explanationMatch.index).trim();
@@ -147,8 +152,41 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
     result.optionC = cleanOption(parsedOptions.optionC);
     result.optionD = cleanOption(parsedOptions.optionD);
   } else {
-    result.stem = cleanStem(workingText);
-    result.warnings.push("未能完全辨識 A、B、C、D 四個選項，請檢查文字格式或手動調整");
+    // 容錯提取策略：若題幹部分無常規選項，嘗試從詳細解析中回退提取選項（例如【各選項詳細解析】中的 A. B. C. D.）
+    const fallbackOptions = capturedExplanation
+      ? extractOptionsFromExplanation(capturedExplanation)
+      : null;
+
+    if (fallbackOptions) {
+      result.stem = cleanStem(workingText);
+      result.optionA = cleanOption(fallbackOptions.optionA);
+      result.optionB = cleanOption(fallbackOptions.optionB);
+      result.optionC = cleanOption(fallbackOptions.optionC);
+      result.optionD = cleanOption(fallbackOptions.optionD);
+
+      // 若尚未偵測到答案，但選項文字或解析中帶有「（正確）」標記，自動推導答案
+      if (!result.detectedAnswer) {
+        const inferredAnswers: string[] = [];
+        const matchA = capturedExplanation.match(/(?:^|\n)\s*A[\.．:：\、\s]\s*([^:\n\r]+?)\s*[:：]/i);
+        const matchB = capturedExplanation.match(/(?:^|\n)\s*B[\.．:：\、\s]\s*([^:\n\r]+?)\s*[:：]/i);
+        const matchC = capturedExplanation.match(/(?:^|\n)\s*C[\.．:：\、\s]\s*([^:\n\r]+?)\s*[:：]/i);
+        const matchD = capturedExplanation.match(/(?:^|\n)\s*D[\.．:：\、\s]\s*([^:\n\r]+?)\s*[:：]/i);
+
+        if (matchA && /正確|正解/.test(matchA[1])) inferredAnswers.push("A");
+        if (matchB && /正確|正解/.test(matchB[1])) inferredAnswers.push("B");
+        if (matchC && /正確|正解/.test(matchC[1])) inferredAnswers.push("C");
+        if (matchD && /正確|正解/.test(matchD[1])) inferredAnswers.push("D");
+
+        if (inferredAnswers.length > 0) {
+          result.correctAnswers = inferredAnswers;
+          result.detectedAnswer = true;
+          if (inferredAnswers.length > 1) result.type = "MULTIPLE";
+        }
+      }
+    } else {
+      result.stem = cleanStem(workingText);
+      result.warnings.push("未能完全辨識 A、B、C、D 四個選項，請檢查文字格式或手動調整");
+    }
   }
 
   // 若尚未偵測到答案，預設為 A 並發出提示
@@ -167,7 +205,41 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
 }
 
 /**
+ * 輔助函式：若題幹部分無常規選項，嘗試從「【各選項詳細解析】」中提取 A, B, C, D 選項
+ */
+function extractOptionsFromExplanation(expText: string): ExtractedOptions | null {
+  const matchA = expText.match(/(?:^|\n)\s*A[\.．:：\、\s]\s*([^:\n\r]+?)\s*[:：]/i);
+  const matchB = expText.match(/(?:^|\n)\s*B[\.．:：\、\s]\s*([^:\n\r]+?)\s*[:：]/i);
+  const matchC = expText.match(/(?:^|\n)\s*C[\.．:：\、\s]\s*([^:\n\r]+?)\s*[:：]/i);
+  const matchD = expText.match(/(?:^|\n)\s*D[\.．:：\、\s]\s*([^:\n\r]+?)\s*[:：]/i);
+
+  if (matchA && matchB && matchC && matchD) {
+    const cleanOptName = (str: string) => {
+      let s = str.trim();
+      // 移除內部的「，正確」或「, 正確」等標籤（在括號前）
+      s = s.replace(/[,，、]\s*(?:正確|常見誤選|誤選|正解|解答)\s*(?=[）\)])/g, "");
+      // 移除尾部括號註記如「（正確）」、「（常見誤選）」、「（常見干擾項）」、「（正解）」等
+      s = s.replace(/[（\(]\s*(?:正確|常見誤選|誤選|正解|解答|常見干擾項|干擾項)\s*[）\)]/g, "");
+      // 移除尾部逗號與註記如「，正確」
+      s = s.replace(/[,，、]\s*(?:正確|常見誤選|誤選|正解)\s*$/g, "");
+      return s.trim();
+    };
+
+    return {
+      stem: "",
+      optionA: cleanOptName(matchA[1]),
+      optionB: cleanOptName(matchB[1]),
+      optionC: cleanOptName(matchC[1]),
+      optionD: cleanOptName(matchD[1]),
+    };
+  }
+
+  return null;
+}
+
+/**
  * 輔助函式：從字串中擷取選項字母 A, B, C, D 或數字 1~4
+ * 加強防止提取後面選項文字中的英文字母（如 Team Performance Assessment 中的 a, c）
  */
 function extractAnswerKeys(str: string): string[] {
   if (/全|皆是|全部/.test(str)) {
@@ -178,6 +250,30 @@ function extractAnswerKeys(str: string): string[] {
     String.fromCharCode(ch.charCodeAt(0) - 0xfee0)
   );
 
+  // 1. 若為括號標籤形式（支援單個或多個連續括號，如 (A)、【A】【B】【D】、[A][C]）
+  const bracketMatches = Array.from(
+    normalized.matchAll(/[\(（\[【]\s*([A-Da-d1-4])\s*[\)）\]】]/g)
+  ).map((m) => m[1]);
+  if (bracketMatches.length > 0) {
+    const numMap: Record<string, string> = { "1": "A", "2": "B", "3": "C", "4": "D" };
+    const mapped = bracketMatches.map((l) => numMap[l] || l.toUpperCase());
+    return Array.from(new Set(mapped)).sort();
+  }
+
+  // 2. 若開頭緊接著答案字母（如「A，團隊...」或「A (團隊...」或「A. 團隊...」或「A、B...」）
+  // 優先只在開頭抓取合法答案標記，防止後面英文敘述（如 Team Performance Assessment）裡的字母 a, c 被誤抓
+  const prefixMatch = normalized.match(
+    /^\s*([A-Da-d](?:[\s,、與和及/]+[A-Da-d])*|[A-Da-d]{1,4})(?:[，,。：:\s（\(、\.]|$)/
+  );
+  if (prefixMatch && prefixMatch[1]) {
+    const letters = prefixMatch[1].match(/[A-Da-d]/g);
+    if (letters && letters.length > 0) {
+      const unique = Array.from(new Set(letters.map((m) => m.toUpperCase())));
+      return unique.sort();
+    }
+  }
+
+  // 3. 一般回退比對
   const letters = normalized.match(/[A-Da-d]/g);
   if (letters && letters.length > 0) {
     const unique = Array.from(new Set(letters.map((m) => m.toUpperCase())));
@@ -195,35 +291,38 @@ function extractAnswerKeys(str: string): string[] {
 }
 
 /**
- * 輔助函式：清理題幹前綴（去除「8. 」、「8、」、「第8題：」、「Q1: 」等前綴）
- * 注意：僅清除題目前置題號，絕不破壞題幹內部換行列表（如「1. 條件一 \n 2. 條件二」）
+ * 輔助函式：清理題幹前綴（去除「【題號】...」、「【題目】」、「8. 」、「8、」、「第8題：」、「Q1: 」等前綴）
+ * 注意：僅清除題目前置題號與標籤，絕不破壞題幹內部換行列表（如「1. 條件一 \n 2. 條件二」）
  */
 function cleanStem(rawStem: string): string {
   let s = rawStem.trim();
 
-  // 1. 移除開頭之「題目：」或「題目:」
-  s = s.replace(/^\s*題目\s*[:：]\s*/i, "");
+  // 1. 移除開頭可能存在的【題號】行（例如「【題號】TNO : F3040113」）
+  s = s.replace(/^\s*【\s*題號\s*】[^\n]*\n?/i, "");
 
-  // 2. 移除開頭可能存在的題型標籤
+  // 2. 移除開頭之「【題目】」或「題目：」或「題目:」
+  s = s.replace(/^\s*(?:【\s*題目\s*】|題目\s*[:：])\s*/i, "");
+
+  // 3. 移除開頭可能存在的題型標籤
   s = s.replace(
     /^\s*(?:【\s*(?:單選(?:題)?|複選(?:題)?|多選(?:題)?)\s*】|[\(（]\s*(?:單選(?:題)?|複選(?:題)?|多選(?:題)?)\s*[\)）]|\[\s*(?:單選(?:題)?|複選(?:題)?|多選(?:題)?)\s*\])\s*/i,
     ""
   );
 
-  // 3. 僅移除最開頭的題號前綴（避免誤刪題幹中間的編號列表 1. 2. 3.）
+  // 4. 僅移除最開頭的題號前綴（避免誤刪題幹中間的編號列表 1. 2. 3.）
   s = s.replace(
     /^\s*(?:第\s*\d{1,4}\s*[題题]\s*[:：\.、\s]*|Q(?:uestion)?\s*[\d]{1,4}\s*[:：\.、\s]*|\(?\d{1,4}\)?[\.、\s]|\d{1,4}[\.、\)]|[\(（\[【]\s*\d{1,4}\s*[\)）\]】]\s*[:：\.、\s]*)\s*/i,
     ""
   );
 
-  // 4. 若題幹中間某行單獨帶有顯式「第 X 題：」或「Q X:」（例如前有多行情境說明），僅移除顯式「第 X 題」標籤
+  // 5. 若題幹中間某行單獨帶有顯式「第 X 題：」或「Q X:」（例如前有多行情境說明），僅移除顯式「第 X 題」標籤
   s = s.replace(
     /(?:^|\n)\s*(?:第\s*\d{1,4}\s*[題题]\s*[:：\.、\s]*|Q(?:uestion)?\s*[\d]{1,4}\s*[:：\.、\s]+)\s*/gi,
     (m, offset) => (offset === 0 ? "" : "\n")
   );
 
-  // 5. 再次移除開頭殘留之「題目：」
-  s = s.replace(/^\s*題目\s*[:：]\s*/i, "");
+  // 6. 再次移除開頭殘留之「【題目】」或「題目：」
+  s = s.replace(/^\s*(?:【\s*題目\s*】|題目\s*[:：])\s*/i, "");
 
   return s.trim();
 }
@@ -581,7 +680,12 @@ function findMarkerMatch(
  * 4. 同時相容以空行區隔且每題皆具備選項標記的試題。
  */
 export function splitQuestionChunks(rawText: string): string[] {
-  const text = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  // 容錯預處理：若中間帶有「或長這樣 【」等連接語，自動斷行以利分割
+  let text = rawText
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/(?:或長這樣|或長得像|或者長這樣)\s*(?=【)/gi, "\n\n")
+    .trim();
   if (!text) return [];
 
   const lines = text.split("\n");
@@ -601,11 +705,11 @@ export function splitQuestionChunks(rawText: string): string[] {
 
   // 答案或解析行偵測
   const answerOrExpRegex =
-    /^\s*(?:(?:【?\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解|Ans(?:wer)?|Key|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明|備註)\s*】?)\s*(?:[:：]|為|是|選|\.|\s)?|【\s*(?:標準答案|標準解答|正確答案|正確解答|答案|解答|正解|解析|詳解)\s*】)/i;
+    /^\s*(?:(?:【?\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解|Ans(?:wer)?|Key|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明|備註|各選項詳細解析|各選項解析|選項詳細解析|觀念說明|考試記憶重點|重點整理|破題速記)\s*】?)\s*(?:[:：]|為|是|選|\.|\s)?|【\s*(?:標準答案|標準解答|正確答案|正確解答|答案|解答|正解|解析|詳解|各選項詳細解析|各選項解析|觀念說明|考試記憶重點)\s*】)/i;
 
-  // 題號開頭標記（例如 11.、11、第11題：、Q11:、[11]、【11】、(11)、以及【單選題】、【複選題】等）
+  // 題號開頭標記（例如 11.、11、第11題：、Q11:、[11]、【11】、(11)、【題號】、【題目】、以及【單選題】、【複選題】等）
   const questionHeaderRegex =
-    /^\s*(?:第\s*\d{1,4}\s*[題题]\s*[:：\.、\s]*|Q(?:uestion)?\s*[\d]{1,4}\s*[:：\.、\s]*|\d{1,4}[\.、]\s*|\d{1,4}\s*[\:：\)\）\]】]\s*|\d{1,4}\s+(?=[^\d\.\s])|[\(（\[【]\s*\d{1,4}\s*[\)）\]】]\s*[:：\.、\s]*|【\s*(?:單選(?:題)?|複選(?:題)?|多選(?:題)?|第\s*\d+\s*題)[\s\S]*?】)/i;
+    /^\s*(?:第\s*\d{1,4}\s*[題题]\s*[:：\.、\s]*|Q(?:uestion)?\s*[\d]{1,4}\s*[:：\.、\s]*|\d{1,4}[\.、]\s*|\d{1,4}\s*[\:：\)\）\]】]\s*|\d{1,4}\s+(?=[^\d\.\s])|[\(（\[【]\s*\d{1,4}\s*[\)）\]】]\s*[:：\.、\s]*|【\s*(?:題號|題目|單選(?:題)?|複選(?:題)?|多選(?:題)?|第\s*\d+\s*題)[\s\S]*?】)/i;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];

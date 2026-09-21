@@ -91,6 +91,26 @@ const SAMPLE_TEXT_MULTI = `11. 發展專案團隊（Develop Project Team）的�
 
 正確解答：B`;
 
+const SAMPLE_TEXT_TAGGED_EXPLANATION = `【題號】TNO : F3040113
+【題目】發展專案團隊（Develop Project Team）的產出（Output）為下列哪一項？
+【正確解答】A，團隊績效評估（Team Performance Assessment）。
+
+【各選項詳細解析】
+A. 團隊績效評估（Team Performance Assessment，正確）：發展專案團隊的核心產出即為「團隊績效評估」。在實施培訓、團隊建立活動與激勵機制後，專案經理需藉由評估團隊的整體效能、技術能力提升、離職率降低及凝聚力增強等指標，來衡量團隊發展措施的成效。
+B. 績效評鑑的投入（Input）與表揚獎勵系統：表揚與獎勵系統屬於發展團隊過程中所使用的「工具與技術（Tools & Techniques）」，並非產出文件；此選項混雜投入（Input）等非正式專有名詞，純屬干擾項。
+C. 績效改善、績效評鑑的投入（Input）與績效報告（Performance Report）：績效報告屬於專案監控流程群組（如報告績效或監控專案工作）的產出，並非發展專案團隊的產出。
+D. 工作成果、績效評鑑的投入（Input）與績效報告（Performance Report，常見誤選）：工作成果（Deliverables / Work Performance Data）是「指導與管理專案執行」的產出，績效報告則屬於監控流程群組，皆非發展團隊之產出。
+
+【觀念說明】
+在專案管理（PMBOK 人力資源管理 / 資源管理）中，「發展專案團隊（Develop Project Team）」屬於執行流程群組：
+* 流程核心目標：提升團隊成員的個人技能、增進團隊成員間的互動互信、改善整體團隊氛圍，進而強化專案整體的執行績效。
+* 工具與技術（Tools & Techniques）：培訓、集中辦公、團隊建立活動、認可與獎勵等。
+* 產出（Outputs）：團隊績效評估（Team Performance Assessments）、事業環境因素更新。
+
+【考試記憶重點】
+* 發展團隊核心產出唯一指名：「團隊績效評估（Team Performance Assessment）」。
+* 破題速記：題目問「發展專案團隊」的產出 ＝ 發展好不好要「評估」＝ 秒選「團隊績效評估」。`;
+
 export default function QuickAddModal({
   isOpen,
   onClose,
@@ -215,6 +235,11 @@ export default function QuickAddModal({
   // 貼入多題範例 (第 11 題 + 第 12 題)
   const handlePasteSampleMulti = useCallback(() => {
     setRawText(SAMPLE_TEXT_MULTI);
+  }, []);
+
+  // 貼入含標籤之各選項詳細解析範例
+  const handlePasteSampleTagged = useCallback(() => {
+    setRawText(SAMPLE_TEXT_TAGGED_EXPLANATION);
   }, []);
 
   // 讀取剪貼簿
@@ -526,6 +551,15 @@ export default function QuickAddModal({
                 >
                   <ListPlus className="w-3.5 h-3.5 text-purple-400" />
                   <span>多題範例 (11 & 12)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePasteSampleTagged}
+                  className="min-h-[36px] px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[11px] font-medium transition-all duration-180 flex items-center gap-1.5 touch-tactile shadow-sm"
+                  title="帶入含【各選項詳細解析】與【觀念說明】之詳解範例"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>詳解版範例</span>
                 </button>
                 <button
                   type="button"

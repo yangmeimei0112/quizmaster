@@ -318,6 +318,82 @@ D. 易於向利害關係人報告時程
       type: "SINGLE",
     },
   },
+  {
+    name: "19. User Detailed Explanation Example 1 (F3040113)",
+    input: `【題號】TNO : F3040113
+【題目】發展專案團隊（Develop Project Team）的產出（Output）為下列哪一項？
+【正確解答】A，團隊績效評估（Team Performance Assessment）。
+
+【各選項詳細解析】
+A. 團隊績效評估（Team Performance Assessment，正確）：發展專案團隊的核心產出即為「團隊績效評估」。在實施培訓、團隊建立活動與激勵機制後，專案經理需藉由評估團隊的整體效能、技術能力提升、離職率降低及凝聚力增強等指標，來衡量團隊發展措施的成效。
+B. 績效評鑑的投入（Input）與表揚獎勵系統：表揚與獎勵系統屬於發展團隊過程中所使用的「工具與技術（Tools & Techniques）」，並非產出文件；此選項混雜投入（Input）等非正式專有名詞，純屬干擾項。
+C. 績效改善、績效評鑑的投入（Input）與績效報告（Performance Report）：績效報告屬於專案監控流程群組（如報告績效或監控專案工作）的產出，並非發展專案團隊的產出。
+D. 工作成果、績效評鑑的投入（Input）與績效報告（Performance Report，常見誤選）：工作成果（Deliverables / Work Performance Data）是「指導與管理專案執行」的產出，績效報告則屬於監控流程群組，皆非發展團隊之產出。
+
+【觀念說明】
+在專案管理（PMBOK 人力資源管理 / 資源管理）中，「發展專案團隊（Develop Project Team）」屬於執行流程群組：
+* 流程核心目標：提升團隊成員的個人技能、增進團隊成員間的互動互信、改善整體團隊氛圍，進而強化專案整體的執行績效。
+
+【考試記憶重點】
+* 發展團隊核心產出唯一指名：「團隊績效評估（Team Performance Assessment）」。`,
+    expected: {
+      stem: "發展專案團隊（Develop Project Team）的產出（Output）為下列哪一項？",
+      optionA: "團隊績效評估（Team Performance Assessment）",
+      optionB: "績效評鑑的投入（Input）與表揚獎勵系統",
+      optionC: "績效改善、績效評鑑的投入（Input）與績效報告（Performance Report）",
+      optionD: "工作成果、績效評鑑的投入（Input）與績效報告（Performance Report）",
+      correctAnswers: ["A"],
+      type: "SINGLE",
+    },
+  },
+  {
+    name: "20. User Detailed Explanation Example 2 (Float = -5)",
+    input: `【題號】TNO : F3040063
+【題目】專案中某項工作浮時（Float）=-5時，下列哪一項處置是最適宜的方式？
+【正確解答】D，對此工作項目投入（Input）更多資源。
+
+【各選項詳細解析】
+A. 使用資源撫平（Resource Leveling）技術（常見誤選）：資源撫平主要用於解決資源過度分配或資源受限問題，其手段通常是順延活動，往往會「延長專案總工期」。
+B. 立即採用新的技術：未經評估冒然採用新技術，會帶來極高的技術風險。
+C. 當風險增高時再處置：浮時為負值代表時程「已經實質落後」。
+D. 對此工作項目投入（Input）更多資源（正確）：此處置屬於時程壓縮技術中的「趕工（Crashing）」。
+
+【觀念說明】
+在專案時程管理中...`,
+    expected: {
+      stem: "專案中某項工作浮時（Float）=-5時，下列哪一項處置是最適宜的方式？",
+      optionA: "使用資源撫平（Resource Leveling）技術",
+      optionB: "立即採用新的技術",
+      optionC: "當風險增高時再處置",
+      optionD: "對此工作項目投入（Input）更多資源",
+      correctAnswers: ["D"],
+      type: "SINGLE",
+    },
+  },
+  {
+    name: "21. Standard Question + Tagged Explanation Combination",
+    input: `12. 下列哪一項指的是工作結果的滿意度確認？
+(A) 控制品質（Control Quality）
+(B) 確認範疇（Validate Scope）
+(C) 控制成本（Control Costs）
+(D) 控制風險（Control Risks）
+【正確解答】B，確認範疇（Validate Scope）。
+
+【各選項詳細解析】
+A. 控制品質：確認技術指標。
+B. 確認範疇：確認客戶滿意度與成果驗收。
+C. 控制成本：預算控制。
+D. 控制風險：應對不確定性。`,
+    expected: {
+      stem: "下列哪一項指的是工作結果的滿意度確認？",
+      optionA: "控制品質（Control Quality）",
+      optionB: "確認範疇（Validate Scope）",
+      optionC: "控制成本（Control Costs）",
+      optionD: "控制風險（Control Risks）",
+      correctAnswers: ["B"],
+      type: "SINGLE",
+    },
+  },
 ];
 
 let failed = 0;
@@ -413,6 +489,94 @@ if (multiResults.length !== 2) {
     console.log("✅ PASS: Multi-Question Q2 (第12題) verified correctly");
   } else {
     console.error("❌ Q2 Mismatch:", q2);
+    failed++;
+  }
+}
+
+// 測試使用者提供的 3 道標籤解析題目連續貼入（支援「或長這樣 【題號】...」）
+const taggedMultiInput = `【題號】TNO : F3040113
+【題目】發展專案團隊（Develop Project Team）的產出（Output）為下列哪一項？
+【正確解答】A，團隊績效評估（Team Performance Assessment）。
+
+【各選項詳細解析】
+A. 團隊績效評估（Team Performance Assessment，正確）：發展專案團隊的核心產出即為「團隊績效評估」。
+B. 績效評鑑的投入（Input）與表揚獎勵系統：干擾項。
+C. 績效改善、績效評鑑的投入（Input）與績效報告（Performance Report）：監控產出。
+D. 工作成果、績效評鑑的投入（Input）與績效報告（Performance Report，常見誤選）：指導產出。
+
+【觀念說明】
+觀念內容...
+
+【考試記憶重點】
+記憶內容... 或長這樣  【題號】TNO : F3040063
+【題目】專案中某項工作浮時（Float）=-5時，下列哪一項處置是最適宜的方式？
+【正確解答】D，對此工作項目投入（Input）更多資源。
+
+【各選項詳細解析】
+A. 使用資源撫平（Resource Leveling）技術（常見誤選）：會延長總工期。
+B. 立即採用新的技術：風險高。
+C. 當風險增高時再處置：不可拖延。
+D. 對此工作項目投入（Input）更多資源（正確）：趕工技術。
+
+【觀念說明】
+浮時說明... 或長這樣  【題號】TNO : F3020002
+【題目】專案工作說明書（Statement of Work, SOW）主要是由下列哪一方提供？
+【正確解答】A，需求者、業主或委託人。
+
+【各選項詳細解析】
+A. 需求者、業主或委託人（正確）：SOW 主要由需求端提出。
+B. 專案贊助者（Project Sponsor）：提供資金。
+C. 主承包商（Contractor）：賣方承攬。
+D. 專案經理（Project Manager，常見誤選）：編寫專案範疇說明書。`;
+
+console.log("\n🧪 執行使用者三道標籤解析多題同時解析測試...");
+const taggedResults = parseMultipleQuestions(taggedMultiInput);
+
+if (taggedResults.length !== 3) {
+  console.error(`❌ Tagged Multi-Question Count Mismatch: expected 3 but got ${taggedResults.length}`);
+  failed++;
+} else {
+  console.log(`✅ PASS: Successfully split 3 tagged questions!`);
+
+  // 驗證第 1 題
+  const tq1 = taggedResults[0];
+  if (
+    tq1.stem.includes("發展專案團隊") &&
+    tq1.correctAnswers.includes("A") &&
+    tq1.optionA.includes("團隊績效評估") &&
+    tq1.explanation.includes("【各選項詳細解析】")
+  ) {
+    console.log("✅ PASS: Tagged Q1 verified correctly");
+  } else {
+    console.error("❌ Tagged Q1 Mismatch:", tq1);
+    failed++;
+  }
+
+  // 驗證第 2 題
+  const tq2 = taggedResults[1];
+  if (
+    tq2.stem.includes("浮時（Float）=-5") &&
+    tq2.correctAnswers.includes("D") &&
+    tq2.optionD.includes("對此工作項目投入") &&
+    tq2.explanation.includes("【各選項詳細解析】")
+  ) {
+    console.log("✅ PASS: Tagged Q2 verified correctly");
+  } else {
+    console.error("❌ Tagged Q2 Mismatch:", tq2);
+    failed++;
+  }
+
+  // 驗證第 3 題
+  const tq3 = taggedResults[2];
+  if (
+    tq3.stem.includes("專案工作說明書") &&
+    tq3.correctAnswers.includes("A") &&
+    tq3.optionA.includes("需求者、業主或委託人") &&
+    tq3.explanation.includes("【各選項詳細解析】")
+  ) {
+    console.log("✅ PASS: Tagged Q3 verified correctly");
+  } else {
+    console.error("❌ Tagged Q3 Mismatch:", tq3);
     failed++;
   }
 }
