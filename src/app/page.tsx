@@ -41,7 +41,8 @@ export default async function HomePage() {
 
         <div className="relative z-10 max-w-3xl">
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight font-game bg-clip-text text-transparent bg-gradient-to-r from-white via-[#EDEDEF] to-[#8A8F98]">
-            收錄題目、杜絕重複，<br className="hidden sm:inline" />打造高效個人複習題庫
+            <span className="block sm:inline">專案管理概論 </span>
+            <span>個人複習題庫</span>
           </h1>
 
           {/* Hero CTAs */}
