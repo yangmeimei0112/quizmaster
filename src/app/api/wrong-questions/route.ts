@@ -2,33 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
-// GET: 取得錯題列表（個人專屬錯題本 或 全站高頻錯題排行）
+// GET: 取得錯題列表（個人專屬錯題本 或 全站高頻錯題排行，依要求均需登入方可查看）
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
     const user = await getCurrentUser(req);
 
-    // 預設模式：已登入預設 personal，未登入預設 global
+    // 嚴格落實需求：「查看錯題功能我想要使用者登入才可以使用」
+    if (!user) {
+      return NextResponse.json(
+        {
+          error: "查看錯題功能需登入後方可使用",
+          requiresAuth: true,
+          records: [],
+          questions: [],
+          totalCount: 0,
+        },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
     const requestedMode = searchParams.get("mode");
-    const mode = requestedMode || (user ? "personal" : "global");
+    const mode = requestedMode === "global" ? "global" : "personal";
 
     const limitParam = searchParams.get("limit");
     const isAll = limitParam === "all" || limitParam === "-1";
     const limit = isAll ? undefined : Math.max(1, parseInt(limitParam || "10", 10));
 
     if (mode === "personal") {
-      if (!user) {
-        return NextResponse.json(
-          {
-            error: "請先登入以查看個人專屬錯題本",
-            requiresAuth: true,
-            records: [],
-            totalCount: 0,
-          },
-          { status: 401 }
-        );
-      }
-
       const [records, totalCount] = await Promise.all([
         prisma.wrongQuestionRecord.findMany({
           where: { userId: user.id },
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // mode === "global": 全站高頻錯題排行
+    // mode === "global": 全站高頻錯題排行 (已登入使用者亦可橫向參考全站陷阱題)
     const [questions, totalCount] = await Promise.all([
       prisma.question.findMany({
         where: { wrongCount: { gt: 0 } },
@@ -76,7 +77,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: 記錄做錯的題目（支援單題或批次交卷時寫入）
+// POST: 記錄做錯的題目（支援單題或批次交卷時並行高效寫入）
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
@@ -94,50 +95,54 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "無題目需要記錄" }, { status: 400 });
     }
 
-    // 1. 全域累計：更新 Question 表上的 wrongCount (不論是否登入均列入全站統計)
-    for (const item of items) {
-      if (!item.questionId) continue;
-      try {
-        await prisma.question.update({
-          where: { id: item.questionId },
-          data: {
-            wrongCount: { increment: 1 },
-          },
-        });
-      } catch (e) {
-        // 題目若不存在則忽略
-      }
-    }
-
-    // 2. 若使用者已登入，將錯題寫入或累計至其個人專屬錯題本
-    let savedToPersonal = false;
-    if (user) {
-      for (const item of items) {
-        if (!item.questionId) continue;
+    // 1. 全域累計：並行更新 Question 表上的 wrongCount
+    await Promise.all(
+      items.map(async (item) => {
+        if (!item.questionId) return;
         try {
-          await prisma.wrongQuestionRecord.upsert({
-            where: {
-              userId_questionId: {
-                userId: user.id,
-                questionId: item.questionId,
-              },
-            },
-            update: {
+          await prisma.question.update({
+            where: { id: item.questionId },
+            data: {
               wrongCount: { increment: 1 },
-              lastUserAnswer: item.userAnswer || null,
-              updatedAt: new Date(),
-            },
-            create: {
-              userId: user.id,
-              questionId: item.questionId,
-              wrongCount: 1,
-              lastUserAnswer: item.userAnswer || null,
             },
           });
-        } catch (err) {
-          console.error("Upsert wrong record error:", err);
+        } catch {
+          // 題目若已被刪除則忽略
         }
-      }
+      })
+    );
+
+    // 2. 若使用者已登入，將錯題並行寫入或累計至其個人專屬錯題本
+    let savedToPersonal = false;
+    if (user) {
+      await Promise.all(
+        items.map(async (item) => {
+          if (!item.questionId) return;
+          try {
+            await prisma.wrongQuestionRecord.upsert({
+              where: {
+                userId_questionId: {
+                  userId: user.id,
+                  questionId: item.questionId,
+                },
+              },
+              update: {
+                wrongCount: { increment: 1 },
+                lastUserAnswer: item.userAnswer || null,
+                updatedAt: new Date(),
+              },
+              create: {
+                userId: user.id,
+                questionId: item.questionId,
+                wrongCount: 1,
+                lastUserAnswer: item.userAnswer || null,
+              },
+            });
+          } catch (err) {
+            console.error("Upsert wrong record error:", err);
+          }
+        })
+      );
       savedToPersonal = true;
     }
 

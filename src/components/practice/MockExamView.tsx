@@ -40,6 +40,10 @@ export default function MockExamView({
 
   // 每題使用者的作答紀錄：questionId -> string[]
   const [userAnswers, setUserAnswers] = useState<Record<string, string[]>>({});
+  const userAnswersRef = useRef<Record<string, string[]>>(userAnswers);
+  useEffect(() => {
+    userAnswersRef.current = userAnswers;
+  }, [userAnswers]);
 
   // 測驗狀態
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -47,27 +51,103 @@ export default function MockExamView({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
+  // 狀態防禦 Refs (防 stale closure 與防重複交卷)
+  const isSubmittedRef = useRef(false);
+  const isSubmittingRef = useRef(false);
+  const startTimeRef = useRef<number>(Date.now());
+  const endTimeRef = useRef<number>(Date.now() + TOTAL_TIME_SECONDS * 1000);
+
   // 覆盤篩選狀態
   const [reviewFilter, setReviewFilter] = useState<"ALL" | "WRONG" | "CORRECT">("ALL");
 
-  // 計時器
+  // 提交交卷 (以 userAnswersRef 為準，徹底根除計時超時自動交卷的 stale closure 缺陷)
+  const executeSubmission = useCallback(async () => {
+    if (isSubmittedRef.current || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    isSubmittedRef.current = true;
+    setIsSubmitted(true);
+    setShowSubmitModal(false);
+
+    const now = Date.now();
+    const finalElapsed = Math.min(
+      TOTAL_TIME_SECONDS,
+      Math.max(1, Math.floor((now - startTimeRef.current) / 1000))
+    );
+    setElapsedSeconds(finalElapsed);
+
+    const currentAnswers = userAnswersRef.current;
+    // 收集所有做錯的題目
+    const wrongItems: Array<{ questionId: string; userAnswer?: string }> = [];
+
+    questions.forEach((q) => {
+      const userAns = (currentAnswers[q.id] || []).sort().join(",");
+      const correctAns = q.correctAnswers.split(",").sort().join(",");
+      if (userAns !== correctAns) {
+        wrongItems.push({
+          questionId: q.id,
+          userAnswer: userAns || "未填答",
+        });
+      }
+    });
+
+    // 自動同步錯題至後端 API
+    if (wrongItems.length > 0) {
+      try {
+        const res = await fetch("/api/wrong-questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: wrongItems }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSyncStatus(
+            data.savedToPersonal
+              ? `已將 ${wrongItems.length} 道錯題自動同步至您的個人錯題本！`
+              : `已記錄 ${wrongItems.length} 道錯題至全站統計（登入後可同步至個人錯題本）`
+          );
+        }
+      } catch (err) {
+        console.error("同步錯題失敗:", err);
+      }
+    }
+  }, [questions, TOTAL_TIME_SECONDS]);
+
+  // 高精度真實時間戳計時器 (防背景分頁節流與作業系統睡眠漂移)
   useEffect(() => {
     if (isSubmitted) return;
 
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleAutoSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
+    const checkTimer = () => {
+      if (isSubmittedRef.current) return;
+      const now = Date.now();
+      const remaining = Math.max(0, Math.ceil((endTimeRef.current - now) / 1000));
+      const elapsed = Math.min(
+        TOTAL_TIME_SECONDS,
+        Math.floor((now - startTimeRef.current) / 1000)
+      );
 
-    return () => clearInterval(timer);
-  }, [isSubmitted]);
+      setTimeRemaining(remaining);
+      setElapsedSeconds(elapsed);
+
+      if (remaining <= 0) {
+        executeSubmission();
+      }
+    };
+
+    checkTimer();
+    const timer = setInterval(checkTimer, 1000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkTimer();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isSubmitted, executeSubmission, TOTAL_TIME_SECONDS]);
 
   // 當前題目
   const currentQ = questions[currentIndex];
@@ -111,52 +191,6 @@ export default function MockExamView({
 
   const unansweredCount = questions.length - answeredCount;
 
-  // 提交交卷
-  const executeSubmission = useCallback(async () => {
-    setIsSubmitted(true);
-    setShowSubmitModal(false);
-
-    // 收集所有做錯的題目
-    const wrongItems: Array<{ questionId: string; userAnswer?: string }> = [];
-
-    questions.forEach((q) => {
-      const userAns = (userAnswers[q.id] || []).sort().join(",");
-      const correctAns = q.correctAnswers.split(",").sort().join(",");
-      if (userAns !== correctAns) {
-        wrongItems.push({
-          questionId: q.id,
-          userAnswer: userAns || "未填答",
-        });
-      }
-    });
-
-    // 自動同步錯題至後端 API
-    if (wrongItems.length > 0) {
-      try {
-        const res = await fetch("/api/wrong-questions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: wrongItems }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setSyncStatus(
-            data.savedToPersonal
-              ? `已將 ${wrongItems.length} 道錯題自動同步至您的個人錯題本！`
-              : `已記錄 ${wrongItems.length} 道錯題至全站統計（登入後可同步至個人錯題本）`
-          );
-        }
-      } catch (err) {
-        console.error("同步錯題失敗:", err);
-      }
-    }
-  }, [questions, userAnswers]);
-
-  // 時間到自動交卷
-  const handleAutoSubmit = useCallback(() => {
-    executeSubmission();
-  }, [executeSubmission]);
-
   // 鍵盤快捷鍵：A/B/C/D 與 1/2/3/4 選取選項，左右箭頭切換題目
   useEffect(() => {
     if (isSubmitted) return;
@@ -170,6 +204,15 @@ export default function MockExamView({
           target.tagName === "TEXTAREA" ||
           target.isContentEditable);
       if (isTyping) return;
+
+      // 若交卷防呆彈窗開啟中，只監聽 Escape 關閉，避免背後誤按選題或跳題
+      if (showSubmitModal) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setShowSubmitModal(false);
+        }
+        return;
+      }
 
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         const numMap: Record<string, string> = {
@@ -196,7 +239,7 @@ export default function MockExamView({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSubmitted, questions.length, handleSelectOption]);
+  }, [isSubmitted, showSubmitModal, questions.length, handleSelectOption]);
 
   // 時間格式化 MM:SS
   const formatTime = (secs: number) => {

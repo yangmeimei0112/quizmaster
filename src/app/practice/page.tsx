@@ -27,6 +27,7 @@ export default function PracticePage() {
   const [allQuestions, setAllQuestions] = useState<Question[]>(() => getCachedQuestions() || []);
   const [quizQueue, setQuizQueue] = useState<Question[]>([]);
   const [mockExamQueue, setMockExamQueue] = useState<Question[]>([]);
+  const [mockExamKey, setMockExamKey] = useState(1);
   const [isLoading, setIsLoading] = useState(() => !getCachedQuestions());
 
   // 模式：NONE (大廳) | INSTANT (即時隨機練習) | MOCK_EXAM (60分鐘模擬考)
@@ -87,8 +88,39 @@ export default function PracticePage() {
   // 開始 60 分鐘模擬考試 (單複選混合隨機抽 50 題)
   const handleStartMockExam = useCallback(() => {
     if (allQuestions.length < 50) return;
-    const shuffled = [...allQuestions].sort(() => Math.random() - 0.5).slice(0, 50);
-    setMockExamQueue(shuffled);
+
+    // 嚴格確保「單、複選混合隨機抽出共50題」
+    const singleList = allQuestions.filter((q) => q.type === "SINGLE");
+    const multipleList = allQuestions.filter((q) => q.type === "MULTIPLE");
+
+    let selected: Question[] = [];
+    if (singleList.length > 0 && multipleList.length > 0) {
+      // 兩類題型均存在時，打散並混合抽取
+      const shuffledSingle = [...singleList].sort(() => Math.random() - 0.5);
+      const shuffledMulti = [...multipleList].sort(() => Math.random() - 0.5);
+
+      // 各自抽樣，其餘從綜合題庫補齊至 50 題
+      const minSingle = Math.min(shuffledSingle.length, 25);
+      const minMulti = Math.min(shuffledMulti.length, 50 - minSingle);
+
+      const partSingle = shuffledSingle.slice(0, minSingle);
+      const partMulti = shuffledMulti.slice(0, minMulti);
+
+      const remainingPool = [
+        ...shuffledSingle.slice(minSingle),
+        ...shuffledMulti.slice(minMulti),
+      ].sort(() => Math.random() - 0.5);
+
+      const needed = 50 - (partSingle.length + partMulti.length);
+      selected = [...partSingle, ...partMulti, ...remainingPool.slice(0, needed)];
+    } else {
+      selected = [...allQuestions].sort(() => Math.random() - 0.5).slice(0, 50);
+    }
+
+    // 再次全隨機洗牌題目順序
+    selected.sort(() => Math.random() - 0.5);
+    setMockExamQueue(selected.slice(0, 50));
+    setMockExamKey((k) => k + 1);
     setQuizMode("MOCK_EXAM");
   }, [allQuestions]);
 
@@ -275,6 +307,7 @@ export default function PracticePage() {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <MockExamView
+          key={`mock-exam-${mockExamKey}`}
           questions={mockExamQueue}
           onExit={() => setQuizMode("NONE")}
           onRestart={handleStartMockExam}

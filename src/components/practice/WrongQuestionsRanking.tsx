@@ -53,19 +53,28 @@ export default function WrongQuestionsRanking({
   const [isModalLoading, setIsModalLoading] = useState(false);
 
   const fetchTopRankings = useCallback(async () => {
+    if (!user) {
+      setPersonalRecords([]);
+      setPersonalTotal(0);
+      setGlobalQuestions([]);
+      setGlobalTotal(0);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      if (user) {
-        const res = await fetch("/api/wrong-questions?mode=personal&limit=10");
-        if (res.ok) {
-          const data = await res.json();
-          setPersonalRecords(data.records || []);
-          setPersonalTotal(data.totalCount || 0);
-        }
+      const [personalRes, globalRes] = await Promise.all([
+        fetch("/api/wrong-questions?mode=personal&limit=10"),
+        fetch("/api/wrong-questions?mode=global&limit=10"),
+      ]);
+
+      if (personalRes.ok) {
+        const data = await personalRes.json();
+        setPersonalRecords(data.records || []);
+        setPersonalTotal(data.totalCount || 0);
       }
 
-      // Fetch global
-      const globalRes = await fetch("/api/wrong-questions?mode=global&limit=10");
       if (globalRes.ok) {
         const data = await globalRes.json();
         setGlobalQuestions(data.questions || []);
@@ -82,6 +91,17 @@ export default function WrongQuestionsRanking({
     fetchTopRankings();
   }, [fetchTopRankings]);
 
+  // Modal 關閉快捷鍵 (Escape)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen]);
+
   // Toggle explanation
   const toggleExplanation = (id: string) => {
     setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -93,7 +113,7 @@ export default function WrongQuestionsRanking({
     setIsModalLoading(true);
     setModalSearchQuery("");
     try {
-      const mode = activeTab === "personal" && user ? "personal" : "global";
+      const mode = activeTab === "personal" ? "personal" : "global";
       const res = await fetch(`/api/wrong-questions?mode=${mode}&limit=all`);
       if (res.ok) {
         const data = await res.json();
@@ -123,6 +143,48 @@ export default function WrongQuestionsRanking({
       );
     });
   }, [modalRecords, modalSearchQuery, activeTab]);
+
+  // 未登入時呈現會員解鎖導引，嚴格落實「查看錯題功能需登入才可以使用」
+  if (!user) {
+    return (
+      <div className="bg-[#0a0a0c]/90 rounded-3xl border border-white/[0.08] shadow-linear-card p-6 sm:p-8 space-y-6 backdrop-blur-md animate-fade-in-up">
+        <div className="border-b border-white/[0.06] pb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.3)]">
+              <Flame className="w-4 h-4" />
+            </div>
+            <h2 className="text-xl font-bold font-game text-foreground">
+              錯題排行榜 · 考點弱項突破
+            </h2>
+          </div>
+          <p className="text-xs text-foreground-muted mt-1 leading-relaxed">
+            系統精準記錄歷次做錯的題目與答錯頻率，鎖定高頻陷阱題，快速攻克知識盲區。
+          </p>
+        </div>
+
+        <div className="p-8 sm:p-10 rounded-2xl bg-gradient-to-b from-white/[0.03] to-white/[0.01] border border-white/[0.08] text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-accent/15 border border-accent/30 text-[#9AA5FF] flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(94,106,210,0.3)]">
+            <Lock className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5 max-w-md mx-auto">
+            <h3 className="text-base sm:text-lg font-bold font-game text-foreground">
+              查看錯題排行榜需登入帳號
+            </h3>
+            <p className="text-xs text-foreground-muted leading-relaxed">
+              錯題分析與排行榜功能僅限登入會員使用。登入後系統將自動為您統計歷次練習與 50 題模擬考答錯的題目，並將最常做錯的題目列在最上方（展示前 10 名），更支援「看更多錯題」檢視完整排行與單題一鍵重測！
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => openAuthModal("login")}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow transition-all duration-200 active:scale-95"
+          >
+            <span>立即登入 / 註冊 帳號</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#0a0a0c]/90 rounded-3xl border border-white/[0.08] shadow-linear-card p-6 sm:p-8 space-y-6 backdrop-blur-md animate-fade-in-up">
@@ -155,7 +217,7 @@ export default function WrongQuestionsRanking({
           >
             <UserCheck className="w-3.5 h-3.5" />
             <span>個人專屬錯題本</span>
-            {user && personalTotal > 0 && (
+            {personalTotal > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
                 {personalTotal}
               </span>
@@ -184,29 +246,7 @@ export default function WrongQuestionsRanking({
       {/* Tab 1: 個人專屬錯題本 */}
       {activeTab === "personal" && (
         <div className="space-y-4">
-          {!user ? (
-            /* 未登入引導卡片 */
-            <div className="p-8 rounded-2xl bg-gradient-to-b from-white/[0.03] to-white/[0.01] border border-white/[0.08] text-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-accent/15 border border-accent/30 text-[#9AA5FF] flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(94,106,210,0.3)]">
-                <Lock className="w-7 h-7" />
-              </div>
-              <div className="space-y-1.5 max-w-md mx-auto">
-                <h3 className="text-base font-bold font-game text-foreground">
-                  登入即可啟用個人專屬錯題本
-                </h3>
-                <p className="text-xs text-foreground-muted leading-relaxed">
-                  註冊並登入後，您在即時刷題與 50 題模擬考中答錯的每一道題目，系統都會自動統計錯題頻率並列入個人弱點排行榜，方便隨時複習。
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => openAuthModal("login")}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow transition-all duration-200 active:scale-95"
-              >
-                <span>立即登入 / 註冊 帳號</span>
-              </button>
-            </div>
-          ) : personalRecords.length === 0 ? (
+          {personalRecords.length === 0 ? (
             /* 已登入但尚無錯題紀錄 */
             <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(16,185,129,0.3)]">
