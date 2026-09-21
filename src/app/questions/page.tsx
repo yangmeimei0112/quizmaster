@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -26,6 +26,42 @@ import {
 import { Question, QuestionType } from "@/types/question";
 import ExportModal from "@/components/ExportModal";
 
+// 骨架屏載入卡片元件，保持卡片版面高度穩定，消除頁面切換瞬態白閃與抽動
+function QuestionCardSkeleton({ index }: { index: number }) {
+  return (
+    <div
+      className="bg-[#0a0a0c] border border-white/[0.06] rounded-2xl p-4 sm:p-6 shadow-linear-card space-y-3.5 animate-card-stagger select-none"
+      style={{
+        animationDelay: `${index * 45}ms`,
+      }}
+      aria-hidden="true"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-4 rounded-md bg-white/[0.06] animate-pulse" />
+          <div className="w-14 h-5 rounded-full bg-white/[0.05] animate-pulse" />
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-11 h-11 rounded-xl bg-white/[0.03] animate-pulse" />
+          <div className="w-11 h-11 rounded-xl bg-white/[0.03] animate-pulse" />
+          <div className="w-11 h-11 rounded-xl bg-white/[0.03] animate-pulse" />
+        </div>
+      </div>
+
+      <div className="space-y-2 pt-0.5">
+        <div
+          className="h-4 sm:h-5 rounded-lg bg-white/[0.06] animate-pulse"
+          style={{ width: `${80 - (index % 3) * 10}%` }}
+        />
+        <div
+          className="h-4 sm:h-5 rounded-lg bg-white/[0.04] animate-pulse"
+          style={{ width: `${50 + (index % 3) * 15}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 interface QuestionCardItemProps {
   question: Question;
   index: number;
@@ -36,8 +72,8 @@ interface QuestionCardItemProps {
   isDeferred: boolean;
   onToggleCard: (id: string) => void;
   onToggleExplanation: (id: string) => void;
-  onOpenEdit: (q: Question) => void;
-  onDelete: (id: string) => void;
+  handleOpenEdit: (q: Question) => void;
+  handleDelete: (id: string) => void;
 }
 
 const QuestionCardItem = memo(function QuestionCardItem({
@@ -50,8 +86,8 @@ const QuestionCardItem = memo(function QuestionCardItem({
   isDeferred,
   onToggleCard,
   onToggleExplanation,
-  onOpenEdit,
-  onDelete,
+  handleOpenEdit,
+  handleDelete,
 }: QuestionCardItemProps) {
   const correctSet = useMemo(() => new Set(q.correctAnswers.split(",")), [q.correctAnswers]);
 
@@ -67,7 +103,10 @@ const QuestionCardItem = memo(function QuestionCardItem({
 
   return (
     <div
-      className={`bg-[#0a0a0c] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-4 sm:p-6 transition-all duration-200 ease-expo-out shadow-linear-card ${
+      style={{
+        animationDelay: `${Math.min(idx, 10) * 45}ms`,
+      }}
+      className={`bg-[#0a0a0c] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-4 sm:p-6 transition-all duration-200 ease-expo-out shadow-linear-card animate-card-stagger ${
         isDeferred ? "card-deferred-render" : ""
       }`}
     >
@@ -106,7 +145,7 @@ const QuestionCardItem = memo(function QuestionCardItem({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onOpenEdit(q);
+                handleOpenEdit(q);
               }}
               className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-foreground-muted hover:text-[#8B96F8] hover:bg-white/[0.05] border border-transparent hover:border-white/[0.08] transition-all duration-200 ease-expo-out touch-manipulation active:scale-95"
               title="編輯題目"
@@ -118,7 +157,7 @@ const QuestionCardItem = memo(function QuestionCardItem({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onDelete(q.id);
+                handleDelete(q.id);
               }}
               disabled={isDeleting}
               className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-foreground-muted hover:text-rose-400 hover:bg-rose-950/30 border border-transparent hover:border-rose-500/20 transition-all duration-200 ease-expo-out touch-manipulation active:scale-95"
@@ -128,7 +167,7 @@ const QuestionCardItem = memo(function QuestionCardItem({
               <Trash2 className="w-4 h-4" />
             </button>
             <div
-              className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-muted transition-transform duration-250 ease-expo-out transform-gpu"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-muted transition-transform duration-250 ease-expo-out"
               style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
             >
               <ChevronDown className="w-4 h-4" />
@@ -274,7 +313,9 @@ export default function QuestionsPage() {
       if (searchTerm.trim()) params.set("q", searchTerm.trim());
       if (selectedType !== "ALL") params.set("type", selectedType);
 
-      const res = await fetch(`/api/questions?${params.toString()}`, { signal });
+      const res = signal
+        ? await fetch(`/api/questions?${params.toString()}`, { signal })
+        : await fetch(`/api/questions?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setQuestions(data.questions || []);
@@ -290,11 +331,25 @@ export default function QuestionsPage() {
     }
   }, [searchTerm, selectedType]);
 
+  const isFirstMount = useRef(true);
+
   useEffect(() => {
     const controller = new AbortController();
-    const timer = setTimeout(() => {
+
+    // 初次載入立刻拉取題目，消除 250ms 不必要的掛載延遲
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
       fetchQuestions(controller.signal);
+      return () => {
+        controller.abort();
+      };
+    }
+
+    // 後續關鍵字搜尋維持 250ms 防抖
+    const timer = setTimeout(() => {
+      fetchQuestions(controller.signal); // fetchQuestions()
     }, 250);
+
     return () => {
       clearTimeout(timer);
       controller.abort();
@@ -417,7 +472,7 @@ export default function QuestionsPage() {
   return (
     <div className="space-y-6">
       {/* 標題與動作按鈕群 */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in-up">
         <div>
           <h1 className="text-2xl font-bold font-game text-foreground flex items-center gap-2.5">
             <Search className="w-6 h-6 text-accent" />
@@ -480,7 +535,7 @@ export default function QuestionsPage() {
       </div>
 
       {/* 搜尋與過濾篩選器浮動面板 */}
-      <div className="bg-[#0a0a0c]/80 border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-linear-card space-y-4 animate-fade-in-up">
+      <div className="bg-[#0a0a0c]/80 border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-linear-card space-y-4 animate-fade-in-up stagger-1">
         {/* 關鍵字搜尋輸入框 */}
         <div className="relative">
           <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -535,12 +590,19 @@ export default function QuestionsPage() {
       </div>
 
       {/* 搜尋結果筆數與載入狀態 */}
-      <div className="flex items-center justify-between text-xs text-foreground-muted px-1">
-        <span>
-          共找到 <strong className="text-foreground font-bold">{questions.length}</strong> 道題目
-        </span>
-        {isLoading && (
-          <span className="flex items-center gap-1.5 text-[#9AA5FF] font-medium">
+      <div className="flex items-center justify-between text-xs text-foreground-muted px-1 animate-fade-in-up stagger-2">
+        {isLoading && questions.length === 0 ? (
+          <span className="flex items-center gap-2 text-[#9AA5FF] font-medium">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin text-accent" />
+            <span>載入題庫題目中...</span>
+          </span>
+        ) : (
+          <span>
+            共找到 <strong className="text-foreground font-bold">{questions.length}</strong> 道題目
+          </span>
+        )}
+        {isLoading && questions.length > 0 && (
+          <span className="flex items-center gap-1.5 text-[#9AA5FF] font-medium animate-fade-in">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
             更新列表中...
           </span>
@@ -548,8 +610,14 @@ export default function QuestionsPage() {
       </div>
 
       {/* 題目列表清單 */}
-      {questions.length === 0 && !isLoading ? (
-        <div className="bg-[#0a0a0c]/80 rounded-2xl border border-dashed border-white/[0.08] p-12 text-center space-y-3 backdrop-blur-md">
+      {isLoading && questions.length === 0 ? (
+        <div className="space-y-4">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <QuestionCardSkeleton key={i} index={i} />
+          ))}
+        </div>
+      ) : questions.length === 0 ? (
+        <div className="bg-[#0a0a0c]/80 rounded-2xl border border-dashed border-white/[0.08] p-12 text-center space-y-3 backdrop-blur-md animate-fade-in">
           <BookOpen className="w-10 h-10 text-white/30 mx-auto" />
           <h3 className="font-bold font-game text-foreground text-base">查無相符的題目</h3>
           <p className="text-xs text-foreground-muted">
@@ -577,11 +645,11 @@ export default function QuestionsPage() {
               isExplanationOpen={expandedExplanations.has(q.id)}
               showAnswersGlobal={showAnswersGlobal}
               isDeleting={deletingId === q.id}
-              isDeferred={idx > 3}
+              isDeferred={idx > 10}
               onToggleCard={toggleCard}
               onToggleExplanation={toggleExplanation}
-              onOpenEdit={handleOpenEdit}
-              onDelete={handleDelete}
+              handleOpenEdit={handleOpenEdit}
+              handleDelete={handleDelete}
             />
           ))}
         </div>

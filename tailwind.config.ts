@@ -86,11 +86,12 @@ const config: Config = {
         "float-slow": "floatSlow 18s ease-in-out infinite alternate",
         "float-delayed": "floatSlow 24s ease-in-out 4s infinite alternate-reverse",
         "float-reverse": "floatReverse 14s ease-in-out infinite alternate",
-        "fade-in": "fadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
-        "fade-in-up": "fadeInUp 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
-        "fade-in-down": "fadeInDown 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
-        "scale-in": "scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
-        "sheet-up": "sheetUp 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "fade-in": "fadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) both",
+        "fade-in-up": "fadeInUp 240ms cubic-bezier(0.16, 1, 0.3, 1) both",
+        "fade-in-down": "fadeInDown 240ms cubic-bezier(0.16, 1, 0.3, 1) both",
+        "scale-in": "scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both",
+        "sheet-up": "sheetUp 260ms cubic-bezier(0.16, 1, 0.3, 1) both",
+        "card-stagger": "cardEntrance 340ms cubic-bezier(0.16, 1, 0.3, 1) both",
         "pulse-subtle": "pulseSubtle 2.5s ease-in-out infinite",
       },
       keyframes: {
@@ -122,6 +123,10 @@ const config: Config = {
         },
         sheetUp: {
           "0%": { opacity: "0.5", transform: "translateY(100%)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        cardEntrance: {
+          "0%": { opacity: "0", transform: "translateY(14px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         pulseSubtle: {
