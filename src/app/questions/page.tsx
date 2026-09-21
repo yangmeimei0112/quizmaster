@@ -372,13 +372,16 @@ export default function QuestionsPage() {
   // 鍵盤快捷鍵：/ 鍵聚焦搜尋框、Esc 取消聚焦/清除搜尋/關閉彈窗
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.isComposing) return;
+      // 忽略輸入法組字中 (包含微軟新注音/拼音候選字狀態，避免 Esc 關閉彈窗或誤清空搜尋)
+      if (e.isComposing || e.keyCode === 229) return;
 
       // 1. Esc 快捷鍵
       if (e.key === "Escape") {
         if (editingQuestion) {
-          e.preventDefault();
-          setEditingQuestion(null);
+          if (!isUpdating) {
+            e.preventDefault();
+            setEditingQuestion(null);
+          }
           return;
         }
         if (isExportModalOpen) {
@@ -403,12 +406,17 @@ export default function QuestionsPage() {
       }
 
       // 2. / 鍵聚焦搜尋框
-      if (e.key === "/") {
+      // 當在線編輯彈窗或匯出彈窗開啟時，不可奪取焦點至背後背景搜尋框
+      if (editingQuestion || isExportModalOpen) return;
+
+      // 嚴格隔離修飾鍵 (防止 Ctrl+/、Cmd+/ 等開發者工具或外掛快捷鍵被誤攔截)
+      if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const target = e.target as HTMLElement | null;
         const isTyping =
           target &&
           (target.tagName === "INPUT" ||
             target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT" ||
             (target as HTMLElement).isContentEditable);
 
         if (!isTyping) {
@@ -421,7 +429,7 @@ export default function QuestionsPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editingQuestion, isExportModalOpen, searchTerm]);
+  }, [editingQuestion, isExportModalOpen, isUpdating, searchTerm]);
 
   // R4 智慧手風琴卡片展開/收合控制
   const isAllCardsExpanded = questions.length > 0 && expandedCardIds.size === questions.length;

@@ -149,20 +149,37 @@ export default function PracticePage() {
   // 鍵盤快捷鍵：自測刷題 A/B/C/D 選擇選項、Enter 送出作答或進入下一題
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 忽略輸入法組字中
-      if (e.isComposing) return;
+      // 忽略輸入法組字中 (微軟新注音/拼音候選字狀態)
+      if (e.isComposing || e.keyCode === 229) return;
 
       const target = e.target as HTMLElement | null;
       const isTyping =
         target &&
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
           (target as HTMLElement).isContentEditable);
 
       if (isTyping) return;
 
       // 1. Enter 快捷鍵
-      if (e.key === "Enter") {
+      // 嚴格排除 Ctrl/Meta/Alt 組合鍵，避免干擾系統或全域快捷鍵
+      if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // 如果焦點在 <a> 導覽連結上 (如頂部導覽列或結算頁的返回題庫)，尊重原生超連結導覽行為
+        if (target && (target.tagName === "A" || target.closest("a"))) {
+          return;
+        }
+
+        // 大廳模式下，若焦點在題型切換按鈕，允許原生點擊切換
+        if (!quizStarted && target && target.tagName === "BUTTON" && !target.hasAttribute("data-start-btn")) {
+          return;
+        }
+
+        // 測驗進行中，若焦點在非作答/下一題按鈕 (例如「結束測驗」按鈕)，允許原生點擊
+        if (quizStarted && !quizCompleted && target && target.tagName === "BUTTON" && !target.hasAttribute("data-quiz-action")) {
+          return;
+        }
+
         if (quizStarted && !quizCompleted) {
           if (!isAnswerSubmitted) {
             if (selectedAnswers.length > 0) {
@@ -184,19 +201,22 @@ export default function PracticePage() {
       }
 
       // 2. A / B / C / D (及 1 / 2 / 3 / 4) 選擇選項
-      if (quizStarted && !quizCompleted && !isAnswerSubmitted) {
-        const keyUpper = e.key.toUpperCase();
-        const numMap: Record<string, string> = {
-          "1": "A",
-          "2": "B",
-          "3": "C",
-          "4": "D",
-        };
-        const resolvedKey = numMap[e.key] || keyUpper;
+      // 嚴格隔離修飾鍵：防止攔截 Ctrl+C (複製)、Ctrl+A (全選)、Cmd+C、Cmd+A、Alt+D (網址列) 等關鍵瀏覽器操作
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (quizStarted && !quizCompleted && !isAnswerSubmitted) {
+          const keyUpper = e.key.toUpperCase();
+          const numMap: Record<string, string> = {
+            "1": "A",
+            "2": "B",
+            "3": "C",
+            "4": "D",
+          };
+          const resolvedKey = numMap[e.key] || keyUpper;
 
-        if (["A", "B", "C", "D"].includes(resolvedKey)) {
-          e.preventDefault();
-          handleSelectOption(resolvedKey);
+          if (["A", "B", "C", "D"].includes(resolvedKey)) {
+            e.preventDefault();
+            handleSelectOption(resolvedKey);
+          }
         }
       }
     };
@@ -305,6 +325,7 @@ export default function PracticePage() {
 
           <button
             type="button"
+            data-start-btn="true"
             onClick={handleStartQuiz}
             disabled={filteredQuestions.length === 0}
             className={`w-full min-h-[48px] py-3.5 rounded-2xl font-bold font-game text-sm shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2.5 touch-manipulation touch-tactile ${
@@ -421,6 +442,7 @@ export default function PracticePage() {
                 <button
                   key={opt.key}
                   type="button"
+                  data-quiz-action="true"
                   onClick={() => handleSelectOption(opt.key)}
                   disabled={isAnswerSubmitted}
                   title={`按鍵盤 [${opt.key}] 快速選取`}
@@ -455,6 +477,7 @@ export default function PracticePage() {
             <div className="pt-2 flex justify-end w-full">
               <button
                 type="button"
+                data-quiz-action="true"
                 onClick={handleSubmitAnswer}
                 disabled={selectedAnswers.length === 0}
                 className={`w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl text-sm font-bold font-game shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2 touch-manipulation touch-tactile ${
@@ -505,6 +528,7 @@ export default function PracticePage() {
               <div className="flex justify-end w-full">
                 <button
                   type="button"
+                  data-quiz-action="true"
                   onClick={handleNextQuestion}
                   className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out touch-manipulation touch-tactile animate-fade-in-up stagger-2"
                 >

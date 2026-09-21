@@ -70,6 +70,24 @@ test('QuickAddModal: 介面具備切換指示與 Ctrl+Enter 快捷鍵提示', ()
   assert(quickAddContent.includes('ChevronLeft') && quickAddContent.includes('ChevronRight'), '缺少左右按鈕輔助切換');
 });
 
+test('QuickAddModal: 具備 isComposing 與 keyCode === 229 輸入法防護 (防止注音/拼音 Esc 關閉彈窗丟失輸入)', () => {
+  assert(quickAddContent.includes('e.isComposing || e.keyCode === 229'), 'QuickAddModal 需排除輸入法組字中狀態與 keyCode 229');
+});
+
+test('QuickAddModal: 送出中 (isBatchSubmitting / isDirectSubmitting) 防重複提交與 Esc 鎖定', () => {
+  assert(quickAddContent.includes('if (isBatchSubmitting || isDirectSubmitting) return;'), '送出中應阻止重複觸發或 Esc 關閉');
+  assert(quickAddContent.includes('if (isBatchSubmitting) return;'), 'handleBatchSaveAll 需防禦重複請求');
+  assert(quickAddContent.includes('if (isDirectSubmitting) return;'), 'handleConfirmAndDirectSave 需防禦重複請求');
+});
+
+test('QuickAddModal: 左右切換按鈕符合 44px 觸控熱區規範', () => {
+  assert(quickAddContent.includes('min-w-[44px] min-h-[44px]'), '題目切換輔助箭頭需滿足 44px 最小觸控熱區');
+});
+
+test('QuickAddModal: 左右鍵切換排除 Shift / Ctrl / Meta 修飾鍵干擾', () => {
+  assert(quickAddContent.includes('!e.shiftKey && !e.ctrlKey && !e.metaKey'), '切換題目需排除 Shift/Ctrl/Meta 快捷鍵組合');
+});
+
 test('QuickAddModal: 狀態切換邏輯模擬 (3 道題目巡訪驗證)', () => {
   const parsedList = [{ id: 1 }, { id: 2 }, { id: 3 }];
   let activeIndex = 0;
@@ -82,23 +100,18 @@ test('QuickAddModal: 狀態切換邏輯模擬 (3 道題目巡訪驗證)', () => 
     }
   };
 
-  // 從第 0 題往右切換到第 1 題
   navigate('ArrowRight');
   assert.strictEqual(activeIndex, 1, '第 0 題按右鍵應到第 1 題');
 
-  // 再往右切換到第 2 題
   navigate('ArrowRight');
   assert.strictEqual(activeIndex, 2, '第 1 題按右鍵應到第 2 題');
 
-  // 第 2 題往右回繞到第 0 題
   navigate('ArrowRight');
   assert.strictEqual(activeIndex, 0, '最後一題按右鍵應回到第 0 題');
 
-  // 第 0 題往左回繞到第 2 題
   navigate('ArrowLeft');
   assert.strictEqual(activeIndex, 2, '第 0 題按左鍵應回繞到第 2 題');
 
-  // 第 2 題往左到第 1 題
   navigate('ArrowLeft');
   assert.strictEqual(activeIndex, 1, '第 2 題按左鍵應到第 1 題');
 });
@@ -133,8 +146,18 @@ test('PracticePage: Enter 在大廳與結算畫面也能開始/重測', () => {
   assert(practiceContent.includes('handleRestart()'), '測驗完成時 Enter 呼叫 handleRestart');
 });
 
-test('PracticePage: 具備 isComposing 輸入法組字防干擾檢查', () => {
-  assert(practiceContent.includes('e.isComposing'), '需排除輸入法組字中狀態');
+test('PracticePage: 具備 isComposing 與 keyCode === 229 輸入法組字防干擾檢查', () => {
+  assert(practiceContent.includes('e.isComposing || e.keyCode === 229'), '需排除輸入法組字中狀態及 keyCode 229');
+});
+
+test('PracticePage: 嚴格隔離修飾鍵 (防止 Ctrl+C 複製、Ctrl+A 全選、Cmd+C、Alt+D 被攔截為答案)', () => {
+  assert(practiceContent.includes('!e.ctrlKey && !e.metaKey && !e.altKey'), '選項選取需嚴格隔離 Ctrl、Meta、Alt 修飾鍵');
+});
+
+test('PracticePage: Enter 排除修飾鍵且尊重 <a> 導覽連結與大廳按鈕原生焦點行為', () => {
+  assert(practiceContent.includes('target.tagName === "A" || target.closest("a")'), 'Enter 需尊重 <a> 超連結導覽');
+  assert(practiceContent.includes('data-start-btn'), '大廳按鈕需區分開始按鈕與篩選按鈕');
+  assert(practiceContent.includes('data-quiz-action'), '測驗主動作按鈕需明確標記');
 });
 
 test('PracticePage: 介面具備 A/B/C/D 與 Enter 快捷鍵標籤提示', () => {
@@ -169,7 +192,6 @@ test('PracticePage: 刷題作答流程邏輯模擬', () => {
       }
       isAnswerSubmitted = true;
     } else {
-      // next question
       isAnswerSubmitted = false;
       selectedAnswers = [];
       currentQ = { correctAnswers: 'A,C' };
@@ -177,36 +199,68 @@ test('PracticePage: 刷題作答流程邏輯模擬', () => {
     }
   }
 
-  // 1. 按 A 鍵選取 A
   handleSelect('A');
   assert.deepStrictEqual(selectedAnswers, ['A'], '單選題按 A 應選取 A');
 
-  // 2. 改按 B 鍵切換為 B
   handleSelect('B');
   assert.deepStrictEqual(selectedAnswers, ['B'], '單選題按 B 應切換為 B');
 
-  // 3. 按 Enter 提交作答
   handleEnter();
   assert.strictEqual(isAnswerSubmitted, true, '按 Enter 應標記為已送出');
   assert.strictEqual(score, 1, '回答正確應得 1 分');
 
-  // 4. 已送出後按 C 鍵不可變更答案
   handleSelect('C');
   assert.deepStrictEqual(selectedAnswers, ['B'], '已送出後答案不可變更');
 
-  // 5. 按 Enter 進入下一題 (複選題)
   handleEnter();
   assert.strictEqual(isAnswerSubmitted, false, '進入下一題應重設作答狀態');
   assert.deepStrictEqual(selectedAnswers, [], '進入下一題已選選項應清空');
 
-  // 6. 複選題連續按 A 和 C
   handleSelect('A');
   handleSelect('C');
   assert.deepStrictEqual(selectedAnswers, ['A', 'C'], '複選題應可多選');
 
-  // 7. 再按一次 C 取消勾選
   handleSelect('C');
   assert.deepStrictEqual(selectedAnswers, ['A'], '複選題再次按鍵應取消勾選');
+});
+
+test('PracticePage: 模擬 Ctrl+C / Ctrl+A 攻擊場景驗證修飾鍵隔離', () => {
+  let selectedOption = null;
+  let preventDefaultCalled = false;
+
+  function simulateKeyPress(e) {
+    preventDefaultCalled = false;
+    if (e.isComposing || e.keyCode === 229) return;
+    if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+      const keyUpper = e.key.toUpperCase();
+      const numMap = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' };
+      const resolved = numMap[e.key] || keyUpper;
+      if (['A', 'B', 'C', 'D'].includes(resolved)) {
+        e.preventDefault();
+        selectedOption = resolved;
+      }
+    }
+  }
+
+  // 1. 使用者按下 Ctrl+C (複製文字)
+  simulateKeyPress({ key: 'c', ctrlKey: true, metaKey: false, altKey: false, preventDefault: () => { preventDefaultCalled = true; } });
+  assert.strictEqual(preventDefaultCalled, false, 'Ctrl+C 不可呼叫 preventDefault');
+  assert.strictEqual(selectedOption, null, 'Ctrl+C 不可選取選項 C');
+
+  // 2. 使用者按下 Ctrl+A (全選文字)
+  simulateKeyPress({ key: 'a', ctrlKey: true, metaKey: false, altKey: false, preventDefault: () => { preventDefaultCalled = true; } });
+  assert.strictEqual(preventDefaultCalled, false, 'Ctrl+A 不可呼叫 preventDefault');
+  assert.strictEqual(selectedOption, null, 'Ctrl+A 不可選取選項 A');
+
+  // 3. 使用者按下 Cmd+C (Mac 複製)
+  simulateKeyPress({ key: 'c', ctrlKey: false, metaKey: true, altKey: false, preventDefault: () => { preventDefaultCalled = true; } });
+  assert.strictEqual(preventDefaultCalled, false, 'Cmd+C 不可呼叫 preventDefault');
+  assert.strictEqual(selectedOption, null, 'Cmd+C 不可選取選項 C');
+
+  // 4. 使用者單純按下 c 鍵
+  simulateKeyPress({ key: 'c', ctrlKey: false, metaKey: false, altKey: false, preventDefault: () => { preventDefaultCalled = true; } });
+  assert.strictEqual(preventDefaultCalled, true, '純 c 鍵應呼叫 preventDefault');
+  assert.strictEqual(selectedOption, 'C', '純 c 鍵應選取選項 C');
 });
 
 // ==========================================
@@ -229,6 +283,18 @@ test('QuestionsPage: / 鍵具備打字隔離 (避免在一般輸入框打斜線�
   assert(questionsContent.includes('target.tagName === "INPUT"'), '需檢查 INPUT');
   assert(questionsContent.includes('target.tagName === "TEXTAREA"'), '需檢查 TEXTAREA');
   assert(questionsContent.includes('if (!isTyping)'), '打字狀態不可攔截斜線');
+});
+
+test('QuestionsPage: 具備 isComposing 與 keyCode === 229 輸入法防護', () => {
+  assert(questionsContent.includes('e.isComposing || e.keyCode === 229'), '需排除輸入法組字中與 keyCode 229');
+});
+
+test('QuestionsPage: 開啟在線編輯或匯出彈窗時，/ 鍵禁止聚焦背後搜尋欄', () => {
+  assert(questionsContent.includes('editingQuestion || isExportModalOpen'), '彈窗開啟時不可奪取焦點至背後搜尋框');
+});
+
+test('QuestionsPage: / 鍵嚴格隔離修飾鍵 (Ctrl+/、Cmd+/ 等不觸發)', () => {
+  assert(questionsContent.includes('!e.ctrlKey && !e.metaKey && !e.altKey'), '/ 鍵需隔離修飾鍵');
 });
 
 test('QuestionsPage: 支援 Esc 鍵取消聚焦、清空搜尋與關閉彈窗', () => {

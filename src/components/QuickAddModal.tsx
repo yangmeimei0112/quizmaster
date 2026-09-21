@@ -169,6 +169,16 @@ export default function QuickAddModal({
   // 當前編輯中的題目
   const currentItem = parsedList[activeIndex] || null;
 
+  const isCurrentFormValid = Boolean(
+    currentItem &&
+      currentItem.stem.trim().length > 0 &&
+      currentItem.optionA.trim().length > 0 &&
+      currentItem.optionB.trim().length > 0 &&
+      currentItem.optionC.trim().length > 0 &&
+      currentItem.optionD.trim().length > 0 &&
+      currentItem.correctAnswers.length > 0
+  );
+
   // 更新當前正在檢視題目的欄位
   const updateCurrentItem = useCallback(
     (updater: (prev: EditableQuestionItem) => EditableQuestionItem) => {
@@ -274,11 +284,10 @@ export default function QuickAddModal({
       setFormError("A、B、C、D 四個選項皆不可為空");
       return;
     }
-    if (currentItem.correctAnswers.length === 0) {
-      setFormError("請至少指定一個正確解答");
+    if (!isCurrentFormValid) {
+      setFormError("請先補齊題幹、四個選項與正確解答後再帶入表單");
       return;
     }
-
     setFormError("");
     onApply({
       stem: currentItem.stem,
@@ -293,10 +302,11 @@ export default function QuickAddModal({
     setRawText("");
     setParsedList([]);
     onClose();
-  }, [currentItem, onApply, onClose]);
+  }, [currentItem, isCurrentFormValid, onApply, onClose]);
 
   // 單題直接新增
   const handleConfirmAndDirectSave = useCallback(async () => {
+    if (isDirectSubmitting) return;
     if (!currentItem || !onDirectSave) {
       handleConfirmAndApply();
       return;
@@ -345,10 +355,11 @@ export default function QuickAddModal({
     } finally {
       setIsDirectSubmitting(false);
     }
-  }, [currentItem, onDirectSave, handleConfirmAndApply, onClose]);
+  }, [currentItem, onDirectSave, handleConfirmAndApply, onClose, isDirectSubmitting]);
 
   // 批次新增全部已解析題目 (多題同時新增核心功能)
   const handleBatchSaveAll = useCallback(async () => {
+    if (isBatchSubmitting) return;
     if (parsedList.length === 0) return;
 
     // 前置驗證各題完整性
@@ -428,8 +439,12 @@ export default function QuickAddModal({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. ESC 關閉視窗
+      // 忽略輸入法組字中 (包含微軟新注音/拼音候選字窗開闔，避免 Esc 關閉彈窗丟失輸入)
+      if (e.isComposing || e.keyCode === 229) return;
+
+      // 1. ESC 關閉視窗 (送出中禁止關閉避免狀態脫節)
       if (e.key === "Escape") {
+        if (isBatchSubmitting || isDirectSubmitting) return;
         e.preventDefault();
         onClose();
         return;
@@ -437,6 +452,7 @@ export default function QuickAddModal({
 
       // 2. Ctrl+Enter 或 Cmd+Enter: 送出儲存
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        if (isBatchSubmitting || isDirectSubmitting) return;
         e.preventDefault();
         if (parsedList.length > 1) {
           handleBatchSaveAll();
@@ -457,9 +473,11 @@ export default function QuickAddModal({
           target &&
           (target.tagName === "INPUT" ||
             target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT" ||
             (target as HTMLElement).isContentEditable);
 
-        if (!isTyping || e.altKey) {
+        // 排除 Shift 鍵文字選取與 Ctrl/Cmd 系統快捷鍵干擾
+        if (!e.shiftKey && !e.ctrlKey && !e.metaKey && (!isTyping || e.altKey)) {
           if (e.key === "ArrowLeft") {
             e.preventDefault();
             setActiveIndex((prev) => (prev > 0 ? prev - 1 : parsedList.length - 1));
@@ -477,6 +495,8 @@ export default function QuickAddModal({
     isOpen,
     onClose,
     parsedList.length,
+    isBatchSubmitting,
+    isDirectSubmitting,
     handleBatchSaveAll,
     handleConfirmAndDirectSave,
     handleConfirmAndApply,
@@ -512,15 +532,6 @@ export default function QuickAddModal({
       },
     ];
   }, [currentItem, updateCurrentItem]);
-
-  const isCurrentFormValid =
-    currentItem &&
-    currentItem.stem.trim().length > 0 &&
-    currentItem.optionA.trim().length > 0 &&
-    currentItem.optionB.trim().length > 0 &&
-    currentItem.optionC.trim().length > 0 &&
-    currentItem.optionD.trim().length > 0 &&
-    currentItem.correctAnswers.length > 0;
 
   if (!isOpen) return null;
 
@@ -679,7 +690,7 @@ export default function QuickAddModal({
                     <button
                       type="button"
                       onClick={() => setActiveIndex((prev) => (prev > 0 ? prev - 1 : parsedList.length - 1))}
-                      className="min-h-[38px] min-w-[36px] px-2 rounded-xl bg-white/[0.04] text-foreground-muted hover:text-foreground border border-white/[0.08] hover:bg-white/[0.08] flex items-center justify-center shrink-0 transition-colors"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/[0.04] text-foreground-muted hover:text-foreground border border-white/[0.08] hover:bg-white/[0.08] flex items-center justify-center shrink-0 transition-colors touch-tactile"
                       title="上一題 (← 鍵)"
                       aria-label="上一題"
                     >
@@ -700,7 +711,7 @@ export default function QuickAddModal({
                           key={idx}
                           type="button"
                           onClick={() => setActiveIndex(idx)}
-                          className={`min-h-[38px] px-3.5 py-1.5 rounded-xl font-game text-xs font-bold transition-all duration-180 flex items-center gap-2 shrink-0 touch-tactile ${
+                          className={`min-h-[44px] px-3.5 py-1.5 rounded-xl font-game text-xs font-bold transition-all duration-180 flex items-center gap-2 shrink-0 touch-tactile ${
                             isActive
                               ? "bg-accent text-white shadow-glow border border-accent-bright"
                               : "bg-white/[0.04] text-foreground-muted hover:text-foreground border border-white/[0.08] hover:bg-white/[0.08]"
@@ -729,7 +740,7 @@ export default function QuickAddModal({
                     <button
                       type="button"
                       onClick={() => setActiveIndex((prev) => (prev < parsedList.length - 1 ? prev + 1 : 0))}
-                      className="min-h-[38px] min-w-[36px] px-2 rounded-xl bg-white/[0.04] text-foreground-muted hover:text-foreground border border-white/[0.08] hover:bg-white/[0.08] flex items-center justify-center shrink-0 transition-colors"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/[0.04] text-foreground-muted hover:text-foreground border border-white/[0.08] hover:bg-white/[0.08] flex items-center justify-center shrink-0 transition-colors touch-tactile"
                       title="下一題 (→ 鍵)"
                       aria-label="下一題"
                     >
