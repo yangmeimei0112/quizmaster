@@ -55,7 +55,7 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ease-expo-out active:scale-95 ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ease-expo-out touch-tactile ${
                   isActive
                     ? "bg-white/[0.08] text-foreground border border-white/[0.10] shadow-sm shadow-[0_0_16px_rgba(94,106,210,0.2)] font-semibold"
                     : "text-foreground-muted hover:text-foreground hover:bg-white/[0.04] border border-transparent"
@@ -72,7 +72,7 @@ export default function Navbar() {
         <button
           type="button"
           onClick={() => setMobileMenuOpen((prev) => !prev)}
-          className="sm:hidden min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.06] border border-white/[0.08] transition-colors duration-200 ease-expo-out focus:outline-none focus:ring-2 focus:ring-accent shrink-0"
+          className="sm:hidden min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.06] border border-white/[0.08] transition-colors duration-200 ease-expo-out focus:outline-none focus:ring-2 focus:ring-accent shrink-0 touch-tactile"
           aria-label={mobileMenuOpen ? "關閉選單" : "開啟選單"}
           aria-expanded={mobileMenuOpen}
         >
@@ -82,7 +82,7 @@ export default function Navbar() {
 
       {/* Mobile Drawer / Collapsible Navigation */}
       {mobileMenuOpen && (
-        <nav className="sm:hidden border-t border-white/[0.06] bg-[#050506]/95 backdrop-blur-2xl px-4 py-3 space-y-1 shadow-2xl animate-in slide-in-from-top-2 duration-200 ease-expo-out">
+        <nav className="sm:hidden border-t border-white/[0.06] bg-[#050506]/95 backdrop-blur-2xl px-4 py-3 space-y-1 shadow-2xl animate-fade-in-down">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -91,7 +91,7 @@ export default function Navbar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`min-h-[44px] flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ease-expo-out ${
+                className={`min-h-[44px] flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ease-expo-out touch-tactile ${
                   isActive
                     ? "bg-white/[0.08] text-foreground border border-white/[0.10] shadow-sm font-semibold"
                     : "text-foreground-muted hover:text-foreground hover:bg-white/[0.04]"

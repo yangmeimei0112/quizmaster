@@ -33,7 +33,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-10">
       {/* Linear Hero Section with Ambient Glowing Backdrop */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#0a0a0c] via-[#050506] to-[#020203] border border-white/[0.08] p-4 sm:p-8 md:p-12 text-foreground shadow-2xl shadow-black/80">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#0a0a0c] via-[#050506] to-[#020203] border border-white/[0.08] p-4 sm:p-8 md:p-12 text-foreground shadow-2xl shadow-black/80 animate-fade-in-up">
         {/* Ambient Blurred Glow Blobs */}
         <div className="absolute -right-16 -top-16 w-96 h-96 rounded-full bg-[#5E6AD2]/18 blur-3xl pointer-events-none" />
         <div className="absolute right-24 -bottom-20 w-80 h-80 rounded-full bg-[#8B5CF6]/12 blur-2xl pointer-events-none" />
@@ -49,7 +49,7 @@ export default async function HomePage() {
           <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-3.5">
             <Link
               href="/add"
-              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white font-bold text-sm shadow-glow transition-all duration-200 ease-expo-out active:scale-95"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white font-bold text-sm shadow-glow touch-tactile animate-fade-in-up stagger-1"
             >
               <PlusCircle className="w-4 h-4" />
               <span>開始錄入題目</span>
@@ -57,7 +57,7 @@ export default async function HomePage() {
 
             <Link
               href="/questions"
-              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-foreground font-semibold text-sm border border-white/[0.08] hover:border-white/[0.16] backdrop-blur-md transition-all duration-200 ease-expo-out active:scale-95 shadow-sm"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-foreground font-semibold text-sm border border-white/[0.08] hover:border-white/[0.16] backdrop-blur-md touch-tactile animate-fade-in-up stagger-2 shadow-sm"
             >
               <Search className="w-4 h-4 text-slate-400" />
               <span>搜尋題庫 ({total})</span>
@@ -65,7 +65,7 @@ export default async function HomePage() {
 
             <Link
               href="/practice"
-              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold text-sm border border-amber-500/30 hover:border-amber-500/50 backdrop-blur-md transition-all duration-200 ease-expo-out active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold text-sm border border-amber-500/30 hover:border-amber-500/50 backdrop-blur-md touch-tactile animate-fade-in-up stagger-3 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
             >
               <GraduationCap className="w-4 h-4 text-amber-400" />
               <span>隨機刷題練習</span>
@@ -73,7 +73,7 @@ export default async function HomePage() {
 
             <Link
               href="/questions"
-              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 font-semibold text-sm border border-blue-500/30 hover:border-blue-500/50 backdrop-blur-md transition-all duration-200 ease-expo-out active:scale-95 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 font-semibold text-sm border border-blue-500/30 hover:border-blue-500/50 backdrop-blur-md touch-tactile animate-fade-in-up stagger-4 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
             >
               <FileDown className="w-4 h-4 text-blue-400" />
               <span>匯出 Google 文件</span>
@@ -85,7 +85,7 @@ export default async function HomePage() {
       {/* Asymmetric Bento Grid for Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Bento Item 1 (Wide 2-column card) */}
-        <div className="md:col-span-2 bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.12] rounded-3xl p-4 sm:p-8 shadow-linear-card transition-all duration-200 ease-expo-out relative overflow-hidden flex flex-col justify-between group">
+        <div className="md:col-span-2 bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.14] rounded-3xl p-4 sm:p-8 shadow-linear-card hover:shadow-linear-hover hover:-translate-y-0.5 transition-all duration-200 ease-expo-out relative overflow-hidden flex flex-col justify-between group animate-fade-in-up stagger-2">
           <div className="absolute right-0 top-0 w-48 h-48 bg-accent/10 rounded-full blur-3xl pointer-events-none group-hover:bg-accent/20 transition-all duration-300" />
 
           <div className="flex items-center justify-between relative z-10 mb-6">
@@ -122,11 +122,11 @@ export default async function HomePage() {
               </div>
               <div className="h-2.5 w-full bg-white/[0.06] rounded-full overflow-hidden flex border border-white/[0.06]">
                 <div
-                  className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-[width] duration-700 ease-expo-out"
                   style={{ width: `${singlePercent}%` }}
                 />
                 <div
-                  className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-[width] duration-700 ease-expo-out"
                   style={{ width: `${multiplePercent}%` }}
                 />
               </div>
@@ -135,12 +135,12 @@ export default async function HomePage() {
         </div>
 
         {/* Bento Item 2: Quick Status & Practice Shortcut */}
-        <div className="bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.12] rounded-3xl p-4 sm:p-8 shadow-linear-card transition-all duration-200 ease-expo-out flex flex-col justify-between group">
+        <div className="bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.14] rounded-3xl p-4 sm:p-8 shadow-linear-card hover:shadow-linear-hover hover:-translate-y-0.5 transition-all duration-200 ease-expo-out flex flex-col justify-between group animate-fade-in-up stagger-3">
           <div className="flex items-center justify-between mb-4">
             <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-[0_0_16px_rgba(245,158,11,0.25)]">
               <BarChart3 className="w-5 h-5" />
             </div>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 animate-pulse-subtle">
               系統良好
             </span>
           </div>
@@ -155,11 +155,11 @@ export default async function HomePage() {
           <div className="pt-4 mt-4 border-t border-white/[0.06]">
             <Link
               href="/practice"
-              className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] text-foreground text-sm font-bold border border-white/[0.08] transition-all duration-200 ease-expo-out group-hover:border-white/[0.18]"
+              className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] text-foreground text-sm font-bold border border-white/[0.08] transition-all duration-200 ease-expo-out group-hover:border-white/[0.18] touch-tactile"
             >
               <GraduationCap className="w-4 h-4 text-amber-400" />
               <span>立即進入練習模式</span>
-              <ArrowRight className="w-3.5 h-3.5 text-foreground-muted group-hover:translate-x-0.5 transition-transform" />
+              <ArrowRight className="w-3.5 h-3.5 text-foreground-muted group-hover:translate-x-0.5 transition-transform duration-180" />
             </Link>
           </div>
         </div>
@@ -167,7 +167,7 @@ export default async function HomePage() {
 
 
       {/* Recent Questions Section */}
-      <div className="bg-[#0a0a0c]/90 border border-white/[0.06] rounded-3xl p-4 sm:p-8 shadow-linear-card space-y-5 backdrop-blur-md">
+      <div className="bg-[#0a0a0c]/90 border border-white/[0.06] rounded-3xl p-4 sm:p-8 shadow-linear-card space-y-5 backdrop-blur-md animate-fade-in-up stagger-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold font-game text-foreground flex items-center gap-2.5">
             <BookMarked className="w-5 h-5 text-accent" />
@@ -175,10 +175,10 @@ export default async function HomePage() {
           </h2>
           <Link
             href="/questions"
-            className="text-xs font-semibold text-[#8B96F8] hover:text-accent-bright flex items-center gap-1 group transition-colors"
+            className="text-xs font-semibold text-[#8B96F8] hover:text-accent-bright flex items-center gap-1 group transition-colors duration-180"
           >
-            查看所有題目
-            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            <span>查看所有題目</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-180" />
           </Link>
         </div>
 
@@ -187,10 +187,10 @@ export default async function HomePage() {
             <p className="text-sm text-foreground-muted">目前題庫尚無題目，立即新增第一道題目吧！</p>
             <Link
               href="/add"
-              className="mt-4 inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-semibold shadow-glow transition-all active:scale-95"
+              className="mt-4 inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-semibold shadow-glow touch-tactile"
             >
               <PlusCircle className="w-4 h-4" />
-              新增第一道題目
+              <span>新增第一道題目</span>
             </Link>
           </div>
         ) : (
@@ -198,7 +198,7 @@ export default async function HomePage() {
             {recentQuestions.map((q) => (
               <div
                 key={q.id}
-                className="py-4 px-2 -mx-2 rounded-2xl hover:bg-white/[0.02] flex items-start justify-between gap-4 transition-colors duration-200 ease-expo-out"
+                className="py-4 px-2 -mx-2 rounded-2xl hover:bg-white/[0.02] flex items-start justify-between gap-4 transition-all duration-180 ease-expo-out hover:pl-3"
               >
                 <div className="space-y-1.5 min-w-0">
                   <div className="flex items-center gap-2.5">

@@ -172,13 +172,13 @@ export default function ExportModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden sm:overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden sm:overflow-y-auto animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-250 ease-expo-out text-foreground"
+        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. Mobile Drag Handle Indicator */}
@@ -327,7 +327,7 @@ export default function ExportModal({
 
           {/* 成功複製提示 */}
           {copySuccess && (
-            <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center gap-2.5 shadow-[0_0_20px_rgba(16,185,129,0.15)] animate-in fade-in duration-200 ease-expo-out">
+            <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center gap-2.5 shadow-[0_0_20px_rgba(16,185,129,0.15)] animate-fade-in-up">
               <Check className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>
                 已複製 Google 文件專屬排版！打開 Google 文件按下 <strong>Ctrl + V</strong> 即可直接貼上完整排版試卷！
@@ -344,7 +344,7 @@ export default function ExportModal({
               type="button"
               onClick={handleDownloadDocx}
               disabled={isExporting}
-              className="w-full min-h-[48px] px-5 py-3.5 rounded-xl bg-accent hover:bg-accent-bright text-white font-bold font-game text-sm shadow-glow flex items-center justify-center gap-2 active:scale-95 transition-all duration-200 ease-expo-out touch-manipulation"
+              className="w-full min-h-[48px] px-5 py-3.5 rounded-xl bg-accent hover:bg-accent-bright text-white font-bold font-game text-sm shadow-glow flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out touch-manipulation touch-tactile"
             >
               <Download className="w-4 h-4" />
               <span>{isExporting ? "產生文件中..." : "下載 Google 文件 (.docx)"}</span>
@@ -354,10 +354,23 @@ export default function ExportModal({
             <button
               type="button"
               onClick={handleCopyRichText}
-              className="w-full min-h-[48px] px-5 py-3.5 rounded-xl border border-white/[0.10] bg-white/[0.04] hover:bg-white/[0.08] text-foreground font-bold font-game text-sm flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out active:scale-95 shadow-sm touch-manipulation"
+              className={`w-full min-h-[48px] px-5 py-3.5 rounded-xl border text-foreground font-bold font-game text-sm flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out shadow-sm touch-manipulation touch-tactile ${
+                copySuccess
+                  ? "border-emerald-500/50 bg-emerald-950/40 text-emerald-200 ring-1 ring-emerald-500/40"
+                  : "border-white/[0.10] bg-white/[0.04] hover:bg-white/[0.08]"
+              }`}
             >
-              <Copy className="w-4 h-4 text-slate-400" />
-              <span>複製為 Google 文件排版</span>
+              {copySuccess ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400 animate-scale-in" />
+                  <span>已複製到剪貼簿！</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 text-slate-400" />
+                  <span>複製為 Google 文件排版</span>
+                </>
+              )}
             </button>
           </div>
 
@@ -367,7 +380,7 @@ export default function ExportModal({
               href="https://docs.google.com/document/create"
               target="_blank"
               rel="noopener noreferrer"
-              className="min-h-[44px] py-2.5 px-3 inline-flex items-center justify-center gap-1.5 text-xs text-[#8B96F8] hover:text-accent-bright font-semibold hover:underline transition-colors"
+              className="min-h-[44px] py-2.5 px-3 inline-flex items-center justify-center gap-1.5 text-xs text-[#8B96F8] hover:text-accent-bright font-semibold hover:underline transition-colors duration-180"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>直接前往 Google 文件開新文件 (Google Docs)</span>

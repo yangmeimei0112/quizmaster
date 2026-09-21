@@ -247,7 +247,7 @@ export default function AddQuestionPage() {
 
       {/* Success Banner */}
       {successMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-sm font-medium flex items-center justify-between shadow-[0_0_24px_rgba(16,185,129,0.15)] animate-in fade-in slide-in-from-top-2 duration-200 ease-expo-out">
+        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-sm font-medium flex items-center justify-between shadow-[0_0_24px_rgba(16,185,129,0.15)] animate-fade-in-down">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
             <span className="font-semibold">{successMsg}</span>
@@ -263,14 +263,14 @@ export default function AddQuestionPage() {
 
       {/* Error Banner */}
       {errorMsg && (
-        <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-sm font-medium flex items-center gap-2.5 shadow-[0_0_24px_rgba(244,63,94,0.15)] animate-in fade-in duration-200 ease-expo-out">
+        <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-sm font-medium flex items-center gap-2.5 shadow-[0_0_24px_rgba(244,63,94,0.15)] animate-fade-in-down">
           <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Main Form Box */}
-      <div className="bg-[#0a0a0c]/90 rounded-3xl border border-white/[0.06] shadow-linear-card p-4 sm:p-8 space-y-6 backdrop-blur-md">
+      <div className="bg-[#0a0a0c]/90 rounded-3xl border border-white/[0.06] shadow-linear-card p-4 sm:p-8 space-y-6 backdrop-blur-md animate-fade-in-up">
         {/* 1. 題幹輸入 */}
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
@@ -280,7 +280,7 @@ export default function AddQuestionPage() {
             </label>
             <div className="flex items-center gap-2.5">
               {isCheckingDuplicate && (
-                <span className="text-[11px] text-[#9AA5FF] flex items-center gap-1.5 bg-accent/15 px-2.5 py-0.5 rounded-full font-medium border border-accent/30 shadow-sm">
+                <span className="text-[11px] text-[#9AA5FF] flex items-center gap-1.5 bg-accent/15 px-2.5 py-0.5 rounded-full font-medium border border-accent/30 shadow-sm animate-pulse-subtle">
                   <RefreshCw className="w-3 h-3 animate-spin" />
                   防重複比對中...
                 </span>
@@ -301,7 +301,7 @@ export default function AddQuestionPage() {
 
           {/* 即時防重複比對警告區塊 */}
           {hasExactMatch && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-xs space-y-3 shadow-[0_0_24px_rgba(244,63,94,0.15)] animate-in fade-in duration-200 ease-expo-out">
+            <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-xs space-y-3 shadow-[0_0_24px_rgba(244,63,94,0.15)] animate-fade-in-down">
               <div className="flex items-center gap-2 font-bold text-sm text-rose-300 font-game">
                 <AlertTriangle className="w-4.5 h-4.5 text-rose-400" />
                 <span>⚠️ 題庫中已有完全相同 (100%) 的題目！</span>
@@ -320,7 +320,7 @@ export default function AddQuestionPage() {
                   <Link
                     href={`/questions?q=${encodeURIComponent(m.stem)}`}
                     target="_blank"
-                    className="text-rose-300 font-bold hover:text-white flex items-center gap-1 whitespace-nowrap text-[11px] transition-colors shrink-0"
+                    className="text-rose-300 font-bold hover:text-white flex items-center gap-1 whitespace-nowrap text-[11px] transition-colors shrink-0 touch-tactile"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     查看該題
@@ -331,7 +331,7 @@ export default function AddQuestionPage() {
           )}
 
           {!hasExactMatch && duplicateMatches.length > 0 && maxSimilarity >= 70 && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs space-y-3 shadow-[0_0_24px_rgba(245,158,11,0.15)] animate-in fade-in duration-200 ease-expo-out">
+            <div className="p-4 sm:p-5 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs space-y-3 shadow-[0_0_24px_rgba(245,158,11,0.15)] animate-fade-in-down">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 font-bold text-sm text-amber-300 font-game">
                   <AlertTriangle className="w-4.5 h-4.5 text-amber-400" />
@@ -401,7 +401,7 @@ export default function AddQuestionPage() {
                   <button
                     type="button"
                     onClick={() => toggleAnswer(opt.key)}
-                    className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center font-bold text-base font-game transition-all duration-200 ease-expo-out flex-shrink-0 active:scale-95 touch-manipulation ${
+                    className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center font-bold text-base font-game transition-all duration-200 ease-expo-out flex-shrink-0 touch-manipulation touch-tactile ${
                       isCorrect
                         ? "bg-emerald-500 text-slate-950 font-black shadow-[0_0_15px_rgba(16,185,129,0.5)]"
                         : "bg-white/[0.05] border border-white/[0.10] text-foreground-muted hover:border-accent hover:text-white"
@@ -426,7 +426,7 @@ export default function AddQuestionPage() {
 
                   {/* 標籤顯示 */}
                   {isCorrect && (
-                    <span className="font-game text-[11px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg shrink-0 shadow-sm">
+                    <span className="font-game text-[11px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg shrink-0 shadow-sm animate-fade-in">
                       正解 {opt.key}
                     </span>
                   )}
@@ -476,10 +476,10 @@ export default function AddQuestionPage() {
               type="button"
               onClick={() => handleSubmit(false)}
               disabled={isSubmitting || hasExactMatch}
-              className={`w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl text-sm font-bold font-game shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2 touch-manipulation ${
+              className={`w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl text-sm font-bold font-game shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2 touch-manipulation touch-tactile ${
                 hasExactMatch
                   ? "bg-rose-950/40 text-rose-400/50 border border-rose-800/30 cursor-not-allowed shadow-none"
-                  : "bg-accent hover:bg-accent-bright text-white shadow-glow active:scale-95"
+                  : "bg-accent hover:bg-accent-bright text-white shadow-glow"
               }`}
             >
               <PlusCircle className="w-4 h-4" />
@@ -492,11 +492,11 @@ export default function AddQuestionPage() {
       {/* 高度相似題目防呆確認視窗 (Mobile Bottom Sheet & Desktop Modal) */}
       {showConfirmModal && (
         <div 
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden sm:overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden sm:overflow-y-auto animate-fade-in"
           onClick={(e) => { if (e.target === e.currentTarget) setShowConfirmModal(false); }}
         >
           <div 
-            className="bg-[#0a0a0c]/95 max-w-lg w-full rounded-t-3xl sm:rounded-3xl p-6 sm:p-7 shadow-2xl border-t sm:border border-white/[0.10] space-y-5 backdrop-blur-2xl animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-250 ease-expo-out pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]"
+            className="bg-[#0a0a0c]/95 max-w-lg w-full rounded-t-3xl sm:rounded-3xl p-6 sm:p-7 shadow-2xl border-t sm:border border-white/[0.10] space-y-5 backdrop-blur-2xl animate-sheet-up sm:animate-scale-in pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Drag Handle Indicator */}

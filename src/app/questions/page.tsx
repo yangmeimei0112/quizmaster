@@ -260,7 +260,7 @@ export default function QuestionsPage() {
       </div>
 
       {/* 搜尋與過濾篩選器浮動面板 */}
-      <div className="bg-[#0a0a0c]/80 border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-linear-card space-y-4">
+      <div className="bg-[#0a0a0c]/80 border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-linear-card space-y-4 animate-fade-in-up">
         {/* 關鍵字搜尋輸入框 */}
         <div className="relative">
           <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -275,7 +275,7 @@ export default function QuestionsPage() {
             <button
               type="button"
               onClick={() => setSearchTerm("")}
-              className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-white/40 hover:text-white absolute right-1 top-1/2 -translate-y-1/2"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-white/40 hover:text-white absolute right-1 top-1/2 -translate-y-1/2 touch-tactile"
               aria-label="清除搜尋關鍵字"
             >
               <X className="w-4 h-4" />
@@ -299,7 +299,7 @@ export default function QuestionsPage() {
                     key={t.key}
                     type="button"
                     onClick={() => setSelectedType(t.key)}
-                    className={`min-h-[44px] px-3 sm:px-4 py-2 rounded-xl font-medium font-game transition-all duration-200 ease-expo-out flex items-center justify-center ${
+                    className={`min-h-[44px] px-3 sm:px-4 py-2 rounded-xl font-medium font-game transition-all duration-200 ease-expo-out flex items-center justify-center touch-tactile ${
                       isSelected
                         ? "bg-white/[0.10] text-foreground border border-white/[0.15] shadow-sm font-semibold"
                         : "bg-white/[0.02] text-foreground-muted hover:text-foreground hover:bg-white/[0.05] border border-transparent"
@@ -535,11 +535,11 @@ export default function QuestionsPage() {
       {/* 在線編輯題目彈窗 (Mobile Bottom Sheet & Desktop Frosted Glass Modal) */}
       {editingQuestion && (
         <div 
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden sm:overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden sm:overflow-y-auto animate-fade-in"
           onClick={(e) => { if (e.target === e.currentTarget) setEditingQuestion(null); }}
         >
           <div 
-            className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-250 ease-expo-out text-foreground"
+            className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 頂部拖曳提示飾條 (僅手機端顯示) */}

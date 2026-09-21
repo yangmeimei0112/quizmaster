@@ -153,7 +153,7 @@ export default function PracticePage() {
 
       {/* 1. 測驗準備與篩選設定 (尚未開始時 - Switch Game Lobby) */}
       {!quizStarted && (
-        <div className="bg-[#0a0a0c]/90 rounded-3xl border border-white/[0.08] shadow-linear-card p-6 sm:p-8 space-y-6 backdrop-blur-md">
+        <div className="bg-[#0a0a0c]/90 rounded-3xl border border-white/[0.08] shadow-linear-card p-6 sm:p-8 space-y-6 backdrop-blur-md animate-fade-in-up">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/15 text-[#9AA5FF] text-[11px] font-bold font-game border border-accent/30 shadow-sm">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
@@ -181,7 +181,7 @@ export default function PracticePage() {
                     key={t.key}
                     type="button"
                     onClick={() => setSelectedType(t.key)}
-                    className={`min-h-[48px] p-3 rounded-2xl font-bold font-game border text-center flex items-center justify-center transition-all duration-200 ease-expo-out touch-manipulation active:scale-95 ${
+                    className={`min-h-[48px] p-3 rounded-2xl font-bold font-game border text-center flex items-center justify-center transition-all duration-200 ease-expo-out touch-manipulation active:scale-95 touch-tactile ${
                       isSelected
                         ? "bg-white/[0.10] text-foreground border-white/[0.18] shadow-[0_0_15px_rgba(94,106,210,0.25)] font-semibold"
                         : "bg-white/[0.03] text-foreground-muted border-white/[0.06] hover:bg-white/[0.06] hover:text-foreground"
@@ -214,9 +214,9 @@ export default function PracticePage() {
             type="button"
             onClick={handleStartQuiz}
             disabled={filteredQuestions.length === 0}
-            className={`w-full min-h-[48px] py-3.5 rounded-2xl font-bold font-game text-sm shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2.5 touch-manipulation ${
+            className={`w-full min-h-[48px] py-3.5 rounded-2xl font-bold font-game text-sm shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2.5 touch-manipulation touch-tactile ${
               filteredQuestions.length > 0
-                ? "bg-accent hover:bg-accent-bright text-white shadow-glow active:scale-[0.98]"
+                ? "bg-accent hover:bg-accent-bright text-white shadow-glow"
                 : "bg-white/[0.04] text-white/30 border border-white/[0.06] cursor-not-allowed"
             }`}
           >
@@ -228,12 +228,15 @@ export default function PracticePage() {
 
       {/* 2. 測驗進行中 (Gamified Quiz Card) */}
       {quizStarted && !quizCompleted && currentQ && (
-        <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-6 sm:p-8 space-y-6 backdrop-blur-xl relative overflow-hidden">
+        <div
+          key={`question-${currentQ.id || currentIndex}`}
+          className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-6 sm:p-8 space-y-6 backdrop-blur-xl relative overflow-hidden animate-fade-in-up"
+        >
           {/* Glowing Top Progress Bar */}
           <div className="space-y-2">
             <div className="h-1.5 w-full bg-white/[0.06] rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-accent via-[#8B5CF6] to-cyan-400 transition-all duration-300 shadow-[0_0_10px_rgba(94,106,210,0.5)]"
+                className="h-full bg-gradient-to-r from-accent via-[#8B5CF6] to-cyan-400 transition-[width] duration-300 ease-expo-out shadow-[0_0_10px_rgba(94,106,210,0.5)]"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -319,11 +322,11 @@ export default function PracticePage() {
                   type="button"
                   onClick={() => handleSelectOption(opt.key)}
                   disabled={isAnswerSubmitted}
-                  className={`p-4 min-h-[52px] rounded-2xl border text-left text-xs sm:text-sm flex items-center justify-between gap-3.5 transition-all duration-200 ease-expo-out touch-manipulation active:scale-[0.99] ${cardStyle}`}
+                  className={`p-4 min-h-[52px] rounded-2xl border text-left text-xs sm:text-sm flex items-center justify-between gap-3.5 transition-all duration-200 ease-expo-out touch-manipulation touch-tactile ${cardStyle}`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <span
-                      className={`w-7 h-7 rounded-xl border font-bold text-xs flex items-center justify-center flex-shrink-0 font-game transition-colors ${badgeStyle}`}
+                      className={`w-7 h-7 rounded-xl border font-bold text-xs flex items-center justify-center flex-shrink-0 font-game transition-colors duration-180 ${badgeStyle}`}
                     >
                       {opt.key}
                     </span>
@@ -331,12 +334,12 @@ export default function PracticePage() {
                   </div>
 
                   {isAnswerSubmitted && isCorrectAnswer && (
-                    <span className="font-game text-[11px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm">
+                    <span className="font-game text-[11px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm animate-fade-in">
                       ✓ 標準答案
                     </span>
                   )}
                   {isAnswerSubmitted && isSelected && !isCorrectAnswer && (
-                    <span className="font-game text-[11px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm">
+                    <span className="font-game text-[11px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm animate-fade-in">
                       ✗ 您的回答
                     </span>
                   )}
@@ -352,9 +355,9 @@ export default function PracticePage() {
                 type="button"
                 onClick={handleSubmitAnswer}
                 disabled={selectedAnswers.length === 0}
-                className={`w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl text-sm font-bold font-game shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2 touch-manipulation ${
+                className={`w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl text-sm font-bold font-game shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2 touch-manipulation touch-tactile ${
                   selectedAnswers.length > 0
-                    ? "bg-accent hover:bg-accent-bright text-white shadow-glow active:scale-95"
+                    ? "bg-accent hover:bg-accent-bright text-white shadow-glow"
                     : "bg-white/[0.04] text-white/30 border border-white/[0.06] cursor-not-allowed"
                 }`}
               >
@@ -362,16 +365,16 @@ export default function PracticePage() {
               </button>
             </div>
           ) : (
-            <div className="pt-4 border-t border-white/[0.06] space-y-4 animate-in fade-in duration-200 ease-expo-out">
+            <div className="pt-4 border-t border-white/[0.06] space-y-4 animate-fade-in-up">
               {/* 對錯評判提示 (立體揭曉橫幅) */}
               {selectedAnswers.sort().join(",") ===
               currentQ.correctAnswers.split(",").sort().join(",") ? (
-                <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs sm:text-sm font-bold font-game flex items-center gap-2.5 shadow-[0_0_24px_rgba(16,185,129,0.15)]">
+                <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs sm:text-sm font-bold font-game flex items-center gap-2.5 shadow-[0_0_24px_rgba(16,185,129,0.15)] animate-fade-in-up">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
                   <span>🎉 太棒了，完全答對！得分 +1</span>
                 </div>
               ) : (
-                <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-xs sm:text-sm font-bold font-game flex items-center gap-2.5 shadow-[0_0_24px_rgba(244,63,94,0.15)]">
+                <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-xs sm:text-sm font-bold font-game flex items-center gap-2.5 shadow-[0_0_24px_rgba(244,63,94,0.15)] animate-fade-in-up">
                   <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
                   <span>
                     答錯了！標準解答為：
@@ -384,7 +387,7 @@ export default function PracticePage() {
 
               {/* 詳解說明 (Dark Glass Container) */}
               {currentQ.explanation && (
-                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-xs text-foreground-muted space-y-1.5 leading-relaxed">
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-xs text-foreground-muted space-y-1.5 leading-relaxed animate-fade-in-up stagger-1">
                   <p className="font-bold font-game text-foreground flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                     題目詳解與考點：
@@ -398,7 +401,7 @@ export default function PracticePage() {
                 <button
                   type="button"
                   onClick={handleNextQuestion}
-                  className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 active:scale-95 transition-all duration-200 ease-expo-out touch-manipulation"
+                  className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out touch-manipulation touch-tactile animate-fade-in-up stagger-2"
                 >
                   <span>
                     {currentIndex + 1 < filteredQuestions.length
@@ -415,17 +418,17 @@ export default function PracticePage() {
 
       {/* 3. 測驗結束結算畫面 (Award / Settlement Screen) */}
       {quizCompleted && (
-        <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-6 sm:p-12 text-center space-y-6 backdrop-blur-xl animate-in zoom-in-95 duration-200 ease-expo-out relative overflow-hidden">
+        <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-6 sm:p-12 text-center space-y-6 backdrop-blur-xl animate-scale-in relative overflow-hidden">
           {/* Ambient Blurred Circle */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-64 h-64 bg-amber-500/10 rounded-full blur-3xl" />
           </div>
 
-          <div className="w-20 h-20 rounded-3xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-[0_0_35px_rgba(245,158,11,0.35)] relative z-10">
+          <div className="w-20 h-20 rounded-3xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-[0_0_35px_rgba(245,158,11,0.35)] relative z-10 animate-fade-in-up">
             <Award className="w-10 h-10" />
           </div>
 
-          <div className="space-y-2 relative z-10">
+          <div className="space-y-2 relative z-10 animate-fade-in-up stagger-1">
             <h2 className="text-2xl sm:text-3xl font-extrabold font-game text-foreground">
               測驗結束！
             </h2>
@@ -434,7 +437,7 @@ export default function PracticePage() {
             </p>
           </div>
 
-          <div className="bg-white/[0.03] p-7 rounded-3xl border border-white/[0.08] max-w-sm mx-auto space-y-3 relative z-10 shadow-inner">
+          <div className="bg-white/[0.03] p-7 rounded-3xl border border-white/[0.08] max-w-sm mx-auto space-y-3 relative z-10 shadow-inner animate-fade-in-up stagger-2">
             <div className="text-xs text-foreground-muted font-semibold">本次得分</div>
             <div className="text-5xl font-black font-game text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-indigo-300 to-cyan-300">
               {score}{" "}
@@ -453,18 +456,18 @@ export default function PracticePage() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 pt-3 relative z-10 w-full max-w-sm mx-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 pt-3 relative z-10 w-full max-w-sm mx-auto animate-fade-in-up stagger-3">
             <button
               type="button"
               onClick={handleRestart}
-              className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out active:scale-95 touch-manipulation"
+              className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out touch-manipulation touch-tactile"
             >
               <RotateCcw className="w-4 h-4" />
               <span>再來一次</span>
             </button>
             <Link
               href="/questions"
-              className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl border border-white/[0.10] text-foreground text-sm font-semibold hover:bg-white/[0.05] transition-colors duration-200 ease-expo-out flex items-center justify-center text-center touch-manipulation"
+              className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl border border-white/[0.10] text-foreground text-sm font-semibold hover:bg-white/[0.05] transition-colors duration-200 ease-expo-out flex items-center justify-center text-center touch-manipulation touch-tactile"
             >
               返回題庫清單
             </Link>

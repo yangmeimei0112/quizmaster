@@ -66,8 +66,10 @@ const config: Config = {
       },
       transitionTimingFunction: {
         "expo-out": "cubic-bezier(0.16, 1, 0.3, 1)",
+        spring: "cubic-bezier(0.34, 1.3, 0.64, 1)",
       },
       transitionDuration: {
+        "180": "180ms",
         "250": "250ms",
       },
       boxShadow: {
@@ -84,6 +86,12 @@ const config: Config = {
         "float-slow": "floatSlow 18s ease-in-out infinite alternate",
         "float-delayed": "floatSlow 24s ease-in-out 4s infinite alternate-reverse",
         "float-reverse": "floatReverse 14s ease-in-out infinite alternate",
+        "fade-in": "fadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "fade-in-up": "fadeInUp 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "fade-in-down": "fadeInDown 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "scale-in": "scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "sheet-up": "sheetUp 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "pulse-subtle": "pulseSubtle 2.5s ease-in-out infinite",
       },
       keyframes: {
         floatSlow: {
@@ -95,6 +103,30 @@ const config: Config = {
           "0%": { transform: "translate(0px, 0px) scale(1)" },
           "50%": { transform: "translate(-30px, 30px) scale(1.08)" },
           "100%": { transform: "translate(25px, -20px) scale(0.95)" },
+        },
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        fadeInUp: {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        fadeInDown: {
+          "0%": { opacity: "0", transform: "translateY(-8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        scaleIn: {
+          "0%": { opacity: "0", transform: "scale(0.97)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        sheetUp: {
+          "0%": { opacity: "0.5", transform: "translateY(100%)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        pulseSubtle: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.6" },
         },
       },
     },

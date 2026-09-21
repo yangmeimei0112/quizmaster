@@ -62,3 +62,29 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+/* Linear / Vercel Micro-Dynamics Utilities */
+.touch-tactile {
+  transition: transform 180ms var(--ease-expo-out), background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  will-change: transform;
+}
+.touch-tactile:active {
+  transform: scale(0.98);
+}
+
+/* Stagger animation delay utilities for smooth sequential entry */
+.stagger-1 { animation-delay: 40ms; }
+.stagger-2 { animation-delay: 80ms; }
+.stagger-3 { animation-delay: 120ms; }
+.stagger-4 { animation-delay: 160ms; }
+.stagger-5 { animation-delay: 200ms; }
+
+/* Accessibility: WCAG prefers-reduced-motion compliance */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
