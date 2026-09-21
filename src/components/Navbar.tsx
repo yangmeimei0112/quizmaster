@@ -7,7 +7,6 @@ import {
   BookOpen,
   PlusCircle,
   Search,
-  Sparkles,
   GraduationCap,
   Menu,
   X,
@@ -35,7 +34,7 @@ export default function Navbar() {
         {/* Brand logo & Switch badge */}
         <Link href="/" className="flex items-center gap-3 group">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#5E6AD2] to-[#434db0] flex items-center justify-center text-white shadow-[0_0_20px_rgba(94,106,210,0.45)] border border-white/[0.15] group-hover:scale-105 transition-all duration-200 ease-expo-out">
-            <Sparkles className="w-5 h-5 text-indigo-100" />
+            <GraduationCap className="w-5 h-5 text-indigo-100 drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]" />
           </div>
           <div>
             <span className="font-game font-bold text-lg text-foreground tracking-tight flex items-center gap-2">

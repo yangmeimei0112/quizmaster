@@ -3,8 +3,11 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: "QuizMaster - 個人題庫管理與防重複系統",
-  description: "支援 4 選項單選與複選題錄入、智慧相似度比對防重複輸入、高效關鍵字查詢與個人自測刷題平台。",
+  title: "QuizMaster - 專案管理概論 個人複習題庫",
+  description: "專為專案管理概論打造的個人複習題庫，支援 4 選項單選與複選題、智慧即時防重複比對、關鍵字查詢與個人模擬刷題自測平台。",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {
