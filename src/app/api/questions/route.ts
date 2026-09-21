@@ -164,7 +164,9 @@ export async function POST(req: NextRequest) {
         optionC: optionC.trim(),
         optionD: optionD.trim(),
         correctAnswers: answersStr,
-        explanation: explanation ? explanation.trim() : null,
+        explanation: explanation && explanation.trim()
+          ? explanation.replace(/^\r?\n+|\s+$/g, "")
+          : null,
         category: category ? category.trim() : null,
         difficulty: difficulty || "MEDIUM",
         tags: tags ? tags.trim() : null,

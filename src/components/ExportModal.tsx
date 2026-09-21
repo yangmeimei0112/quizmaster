@@ -40,11 +40,33 @@ export default function ExportModal({
 
   // 產生 Rich Text HTML (專門針對貼入 Google Docs 的標準列印白底黑字排版結構)
   const generateGoogleDocsHtml = () => {
+    // 轉義 HTML 特殊字元以防干擾標籤
+    const escapeHtml = (str: string) => {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    };
+
+    // 將換行符轉為 <br/>，並保留縮排與連續空格，確保貼入 Google Docs 時格式完全不走樣
+    const formatHtmlText = (str: string) => {
+      let escaped = escapeHtml(str);
+      // 製表符 Tab 轉為 4 個不斷行空格
+      escaped = escaped.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;");
+      // 保留多重連續空格與縮排，避免 Google Docs 或第三方編輯器 HTML 貼上時 collapsing
+      escaped = escaped.replace(/  /g, "&nbsp; ");
+      // 支援 \r\n, \r, \n 所有換行符號轉為 <br/>
+      escaped = escaped.replace(/\r\n|\r|\n/g, "<br/>");
+      return escaped;
+    };
+
     let html = `
       <div style="font-family: 'Noto Sans TC', 'Microsoft JhengHei', Arial, sans-serif; line-height: 1.5; color: #1e293b; max-width: 800px; margin: 0 auto;">
-        <h1 style="text-align: center; color: #0f172a; margin-bottom: 4px; font-size: 18pt;">${title}</h1>
+        <h1 style="text-align: center; color: #0f172a; margin-bottom: 4px; font-size: 18pt;">${escapeHtml(title)}</h1>
         <p style="text-align: center; color: #64748b; font-size: 10pt; margin-top: 0; margin-bottom: 12px;">
-          ${subtitle} · 總題數：${questions.length} 題 · 模式：${
+          ${escapeHtml(subtitle)} · 總題數：${questions.length} 題 · 模式：${
             includeExplanation
               ? "含答案與詳細解析"
               : includeAnswers
@@ -62,33 +84,28 @@ export default function ExportModal({
 
       html += `
         <div style="margin-bottom: 16px; page-break-inside: avoid;">
-          <p style="font-size: 11pt; font-weight: bold; margin: 0 0 6px 0; color: #0f172a;">
-            ${idx + 1}. <span style="color: ${q.type === "SINGLE" ? "#2563eb" : "#7c3aed"}; font-weight: bold;">【${typeLabel}】</span>
-            ${q.stem}
-          </p>
-          <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b;"><strong>(A)</strong> ${q.optionA}</p>
-          <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b;"><strong>(B)</strong> ${q.optionB}</p>
-          <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b;"><strong>(C)</strong> ${q.optionC}</p>
-          <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b;"><strong>(D)</strong> ${q.optionD}</p>
+          <p style="font-size: 11pt; font-weight: bold; margin: 0 0 6px 0; color: #0f172a; white-space: pre-wrap; word-break: break-word;">${idx + 1}. <span style="color: ${q.type === "SINGLE" ? "#2563eb" : "#7c3aed"}; font-weight: bold;">【${typeLabel}】</span> ${formatHtmlText(q.stem)}</p>
+          <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b; white-space: pre-wrap; word-break: break-word;"><strong>(A)</strong> ${formatHtmlText(q.optionA)}</p>
+          <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b; white-space: pre-wrap; word-break: break-word;"><strong>(B)</strong> ${formatHtmlText(q.optionB)}</p>
+          <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b; white-space: pre-wrap; word-break: break-word;"><strong>(C)</strong> ${formatHtmlText(q.optionC)}</p>
+          <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b; white-space: pre-wrap; word-break: break-word;"><strong>(D)</strong> ${formatHtmlText(q.optionD)}</p>
       `;
 
       if (includeExplanation || includeAnswers) {
         html += `
           <p style="margin: 6px 0 2px 24px; font-size: 10pt; color: #047857;">
-            <strong>【標準答案】：</strong> <span style="font-weight: bold; color: #059669;">${q.correctAnswers}</span>
+            <strong>【標準答案】：</strong> <span style="font-weight: bold; color: #059669;">${escapeHtml(q.correctAnswers)}</span>
           </p>
         `;
       }
 
       if (includeExplanation) {
+        const explanationContent = (q.explanation && q.explanation.trim())
+          ? formatHtmlText(q.explanation)
+          : "<span style='color: #94a3b8; font-style: italic;'>（出題者未填寫解析）</span>";
+
         html += `
-          <div style="margin: 4px 0 0 24px; font-size: 9.5pt; color: #334155; background-color: #f8fafc; padding: 6px 10px; border-left: 3px solid #cbd5e1;">
-            <strong>【題目解析】：</strong> ${
-              q.explanation
-                ? q.explanation
-                : "<span style='color: #94a3b8; font-style: italic;'>（出題者未填寫解析）</span>"
-            }
-          </div>
+          <div style="margin: 4px 0 0 24px; font-size: 9.5pt; color: #334155; background-color: #f8fafc; padding: 6px 10px; border-left: 3px solid #cbd5e1; white-space: pre-wrap; word-break: break-word;"><strong>【題目解析】：</strong>${explanationContent}</div>
         `;
       }
 
@@ -142,11 +159,19 @@ export default function ExportModal({
   const handleCopyRichText = async () => {
     try {
       const htmlContent = generateGoogleDocsHtml();
-      const textContent = `${title}\n${subtitle}\n\n` + questions.map((q, idx) =>
-        `${idx + 1}. [${q.type === "SINGLE" ? "單選" : "複選"}] ${q.stem}\n(A) ${q.optionA}\n(B) ${q.optionB}\n(C) ${q.optionC}\n(D) ${q.optionD}\n` +
-        (includeExplanation || includeAnswers ? `【正確答案】: ${q.correctAnswers}\n` : "") +
-        (includeExplanation ? `【題目解析】: ${q.explanation || "無"}\n` : "")
-      ).join("\n");
+      const textContent = `${title}\n${subtitle}\n\n` + questions.map((q, idx) => {
+        const typeLabel = q.type === "SINGLE" ? "單選題" : "複選題";
+        const explanationText = (q.explanation && q.explanation.trim())
+          ? q.explanation
+          : "（出題者未填寫解析）";
+
+        return (
+          `${idx + 1}. 【${typeLabel}】 ${q.stem}\n` +
+          `(A) ${q.optionA}\n(B) ${q.optionB}\n(C) ${q.optionC}\n(D) ${q.optionD}\n` +
+          (includeExplanation || includeAnswers ? `【標準答案】：${q.correctAnswers}\n` : "") +
+          (includeExplanation ? `【題目解析】：${explanationText}\n` : "")
+        );
+      }).join("\n");
 
       const blobHtml = new Blob([htmlContent], { type: "text/html" });
       const blobText = new Blob([textContent], { type: "text/plain" });

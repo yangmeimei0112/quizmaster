@@ -431,7 +431,7 @@ export default function QuestionsPage() {
                   </div>
 
                   {/* 題幹內容 (折疊時 line-clamp-2，展開時完整展示) */}
-                  <h3 className={`text-sm sm:text-base font-bold font-game text-foreground leading-relaxed break-words ${
+                  <h3 className={`text-sm sm:text-base font-bold font-game text-foreground leading-relaxed break-words whitespace-pre-wrap ${
                     isExpanded ? "" : "line-clamp-2 sm:line-clamp-none"
                   }`}>
                     {q.stem}
@@ -473,7 +473,7 @@ export default function QuestionsPage() {
                                 >
                                   {opt.key}
                                 </span>
-                                <span className="leading-snug min-w-0 break-words">{opt.text}</span>
+                                <span className="leading-snug min-w-0 break-words whitespace-pre-wrap">{opt.text}</span>
                               </div>
 
                               {shouldHighlight && (
@@ -496,7 +496,7 @@ export default function QuestionsPage() {
                             </span>
                           </div>
 
-                          {q.explanation && (
+                          {q.explanation && q.explanation.trim() && (
                             <button
                               type="button"
                               onClick={() => toggleExplanation(q.id)}
@@ -513,13 +513,13 @@ export default function QuestionsPage() {
                         </div>
 
                         {/* 解析手風琴展開容器 */}
-                        {isExplanationOpen && q.explanation && (
+                        {isExplanationOpen && q.explanation && q.explanation.trim() && (
                           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs text-foreground-muted leading-relaxed transition-all duration-250 ease-out animate-in fade-in">
                             <p className="font-bold font-game text-foreground mb-1.5 flex items-center gap-1.5">
                               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                               解析與考點說明：
                             </p>
-                            <p className="text-foreground-subtle leading-relaxed break-words">{q.explanation}</p>
+                            <p className="text-foreground-subtle leading-relaxed break-words whitespace-pre-wrap">{q.explanation}</p>
                           </div>
                         )}
                       </div>

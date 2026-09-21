@@ -268,7 +268,7 @@ export default function PracticePage() {
 
           {/* 題幹內容 (Nintendo Switch Dialog Feel) */}
           <div className="space-y-1.5">
-            <h2 className="text-lg sm:text-xl font-bold font-game text-foreground leading-relaxed break-words">
+            <h2 className="text-lg sm:text-xl font-bold font-game text-foreground leading-relaxed break-words whitespace-pre-wrap">
               {currentQ.stem}
             </h2>
             <p className="text-xs text-foreground-muted">
@@ -330,7 +330,7 @@ export default function PracticePage() {
                     >
                       {opt.key}
                     </span>
-                    <span className="leading-snug min-w-0 break-words">{opt.text}</span>
+                    <span className="leading-snug min-w-0 break-words whitespace-pre-wrap">{opt.text}</span>
                   </div>
 
                   {isAnswerSubmitted && isCorrectAnswer && (
@@ -386,13 +386,13 @@ export default function PracticePage() {
               )}
 
               {/* 詳解說明 (Dark Glass Container) */}
-              {currentQ.explanation && (
+              {currentQ.explanation && currentQ.explanation.trim() && (
                 <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-xs text-foreground-muted space-y-1.5 leading-relaxed animate-fade-in-up stagger-1">
                   <p className="font-bold font-game text-foreground flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                     題目詳解與考點：
                   </p>
-                  <p className="text-foreground-subtle">{currentQ.explanation}</p>
+                  <p className="text-foreground-subtle leading-relaxed break-words whitespace-pre-wrap">{currentQ.explanation}</p>
                 </div>
               )}
 

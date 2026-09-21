@@ -60,8 +60,12 @@ export async function PUT(
         optionB: optionB ? optionB.trim() : undefined,
         optionC: optionC ? optionC.trim() : undefined,
         optionD: optionD ? optionD.trim() : undefined,
-        correctAnswers: answersStr || undefined,
-        explanation: explanation !== undefined ? explanation?.trim() || null : undefined,
+        explanation:
+          explanation !== undefined
+            ? explanation && explanation.trim()
+              ? explanation.replace(/^\r?\n+|\s+$/g, "")
+              : null
+            : undefined,
         category: category !== undefined ? category?.trim() || null : undefined,
         difficulty: difficulty || undefined,
         tags: tags !== undefined ? tags?.trim() || null : undefined,

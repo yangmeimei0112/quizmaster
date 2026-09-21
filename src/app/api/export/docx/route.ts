@@ -122,33 +122,42 @@ export async function POST(req: NextRequest) {
       const typeLabel = q.type === "SINGLE" ? "單選題" : "複選題";
 
       // 題幹 (keepNext: true 防止題目與選項跨頁斷開)
+      const stemLines = q.stem.split(/\r\n|\r|\n/);
+      const stemRuns: TextRun[] = [
+        new TextRun({
+          text: `${idx + 1}. `,
+          bold: true,
+          size: 22,
+          color: "0F172A",
+          font: "Microsoft JhengHei",
+        }),
+        new TextRun({
+          text: `【${typeLabel}】 `,
+          bold: true,
+          size: 20,
+          color: q.type === "SINGLE" ? "2563EB" : "7C3AED",
+          font: "Microsoft JhengHei",
+        }),
+      ];
+
+      stemLines.forEach((line, lIdx) => {
+        stemRuns.push(
+          new TextRun({
+            text: line,
+            bold: true,
+            size: 22,
+            color: "0F172A",
+            font: "Microsoft JhengHei",
+            break: lIdx > 0 ? 1 : undefined,
+          })
+        );
+      });
+
       docChildren.push(
         new Paragraph({
           keepNext: true,
           spacing: { before: 200, after: 100 },
-          children: [
-            new TextRun({
-              text: `${idx + 1}. `,
-              bold: true,
-              size: 22,
-              color: "0F172A",
-              font: "Microsoft JhengHei",
-            }),
-            new TextRun({
-              text: `【${typeLabel}】`,
-              bold: true,
-              size: 20,
-              color: q.type === "SINGLE" ? "2563EB" : "7C3AED",
-              font: "Microsoft JhengHei",
-            }),
-            new TextRun({
-              text: q.stem,
-              bold: true,
-              size: 22,
-              color: "0F172A",
-              font: "Microsoft JhengHei",
-            }),
-          ],
+          children: stemRuns,
         })
       );
 
@@ -161,26 +170,35 @@ export async function POST(req: NextRequest) {
       ];
 
       options.forEach((opt) => {
+        const optLines = opt.text.split(/\r\n|\r|\n/);
+        const optRuns: TextRun[] = [
+          new TextRun({
+            text: `(${opt.key}) `,
+            bold: true,
+            size: 20,
+            color: "334155",
+            font: "Microsoft JhengHei",
+          }),
+        ];
+
+        optLines.forEach((line, lIdx) => {
+          optRuns.push(
+            new TextRun({
+              text: line,
+              size: 20,
+              color: "1E293B",
+              font: "Microsoft JhengHei",
+              break: lIdx > 0 ? 1 : undefined,
+            })
+          );
+        });
+
         docChildren.push(
           new Paragraph({
             keepLines: true,
             indent: { left: 450 },
             spacing: { after: 60 },
-            children: [
-              new TextRun({
-                text: `(${opt.key}) `,
-                bold: true,
-                size: 20,
-                color: "334155",
-                font: "Microsoft JhengHei",
-              }),
-              new TextRun({
-                text: opt.text,
-                size: 20,
-                color: "1E293B",
-                font: "Microsoft JhengHei",
-              }),
-            ],
+            children: optRuns,
           })
         );
       });
@@ -212,28 +230,61 @@ export async function POST(req: NextRequest) {
       }
 
       if (includeExplanation) {
-        docChildren.push(
-          new Paragraph({
-            indent: { left: 450 },
-            spacing: { after: 120 },
-            children: [
+        if (!q.explanation || !q.explanation.trim()) {
+          docChildren.push(
+            new Paragraph({
+              indent: { left: 450 },
+              spacing: { after: 120 },
+              children: [
+                new TextRun({
+                  text: "【題目解析】：",
+                  bold: true,
+                  size: 20,
+                  color: "475569",
+                  font: "Microsoft JhengHei",
+                }),
+                new TextRun({
+                  text: "（出題者未填寫解析）",
+                  italics: true,
+                  size: 20,
+                  color: "94A3B8",
+                  font: "Microsoft JhengHei",
+                }),
+              ],
+            })
+          );
+        } else {
+          const lines = q.explanation.split(/\r\n|\r|\n/);
+          const explanationRuns: TextRun[] = [
+            new TextRun({
+              text: "【題目解析】：",
+              bold: true,
+              size: 20,
+              color: "475569",
+              font: "Microsoft JhengHei",
+            }),
+          ];
+
+          lines.forEach((line, lIdx) => {
+            explanationRuns.push(
               new TextRun({
-                text: "【題目解析】：",
-                bold: true,
+                text: line,
                 size: 20,
-                color: "475569",
+                color: "334155",
                 font: "Microsoft JhengHei",
-              }),
-              new TextRun({
-                text: q.explanation ? q.explanation : "（出題者未填寫解析）",
-                italics: !q.explanation,
-                size: 20,
-                color: q.explanation ? "334155" : "94A3B8",
-                font: "Microsoft JhengHei",
-              }),
-            ],
-          })
-        );
+                break: lIdx > 0 ? 1 : undefined,
+              })
+            );
+          });
+
+          docChildren.push(
+            new Paragraph({
+              indent: { left: 450 },
+              spacing: { after: 120 },
+              children: explanationRuns,
+            })
+          );
+        }
       }
 
       // 每題間隔微線
