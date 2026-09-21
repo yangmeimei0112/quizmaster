@@ -131,7 +131,7 @@ export default function PracticePage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* 頂部標題 */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold font-game text-foreground flex items-center gap-2.5">
             <GraduationCap className="w-6 h-6 text-accent" />
@@ -143,7 +143,7 @@ export default function PracticePage() {
           <button
             type="button"
             onClick={handleRestart}
-            className="text-xs font-semibold text-foreground-muted hover:text-foreground flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-all duration-200 ease-expo-out"
+            className="min-h-[44px] text-xs sm:text-sm font-semibold text-foreground-muted hover:text-foreground flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-all duration-200 ease-expo-out active:scale-95 shrink-0"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>結束測驗</span>
@@ -181,7 +181,7 @@ export default function PracticePage() {
                     key={t.key}
                     type="button"
                     onClick={() => setSelectedType(t.key)}
-                    className={`p-3 rounded-2xl font-bold font-game border text-center transition-all duration-200 ease-expo-out ${
+                    className={`min-h-[48px] p-3 rounded-2xl font-bold font-game border text-center flex items-center justify-center transition-all duration-200 ease-expo-out touch-manipulation active:scale-95 ${
                       isSelected
                         ? "bg-white/[0.10] text-foreground border-white/[0.18] shadow-[0_0_15px_rgba(94,106,210,0.25)] font-semibold"
                         : "bg-white/[0.03] text-foreground-muted border-white/[0.06] hover:bg-white/[0.06] hover:text-foreground"
@@ -214,7 +214,7 @@ export default function PracticePage() {
             type="button"
             onClick={handleStartQuiz}
             disabled={filteredQuestions.length === 0}
-            className={`w-full py-3.5 rounded-2xl font-bold font-game text-sm shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2.5 ${
+            className={`w-full min-h-[48px] py-3.5 rounded-2xl font-bold font-game text-sm shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2.5 touch-manipulation ${
               filteredQuestions.length > 0
                 ? "bg-accent hover:bg-accent-bright text-white shadow-glow active:scale-[0.98]"
                 : "bg-white/[0.04] text-white/30 border border-white/[0.06] cursor-not-allowed"
@@ -239,7 +239,7 @@ export default function PracticePage() {
             </div>
 
             {/* 進度與得分狀態列 */}
-            <div className="flex items-center justify-between pt-1 pb-3 border-b border-white/[0.06] text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 pb-3 border-b border-white/[0.06] text-xs">
               <div className="flex items-center gap-2.5">
                 <span className="font-bold font-game text-[#9AA5FF] bg-accent/15 px-3 py-1 rounded-full border border-accent/30 shadow-sm">
                   第 {currentIndex + 1} / {filteredQuestions.length} 題
@@ -265,7 +265,7 @@ export default function PracticePage() {
 
           {/* 題幹內容 (Nintendo Switch Dialog Feel) */}
           <div className="space-y-1.5">
-            <h2 className="text-lg sm:text-xl font-bold font-game text-foreground leading-relaxed">
+            <h2 className="text-lg sm:text-xl font-bold font-game text-foreground leading-relaxed break-words">
               {currentQ.stem}
             </h2>
             <p className="text-xs text-foreground-muted">
@@ -319,15 +319,15 @@ export default function PracticePage() {
                   type="button"
                   onClick={() => handleSelectOption(opt.key)}
                   disabled={isAnswerSubmitted}
-                  className={`p-4 rounded-2xl border text-left text-xs sm:text-sm flex items-center justify-between gap-3.5 transition-all duration-200 ease-expo-out ${cardStyle}`}
+                  className={`p-4 min-h-[52px] rounded-2xl border text-left text-xs sm:text-sm flex items-center justify-between gap-3.5 transition-all duration-200 ease-expo-out touch-manipulation active:scale-[0.99] ${cardStyle}`}
                 >
-                  <div className="flex items-center gap-3.5">
+                  <div className="flex items-center gap-3.5 min-w-0">
                     <span
                       className={`w-7 h-7 rounded-xl border font-bold text-xs flex items-center justify-center flex-shrink-0 font-game transition-colors ${badgeStyle}`}
                     >
                       {opt.key}
                     </span>
-                    <span className="leading-snug">{opt.text}</span>
+                    <span className="leading-snug min-w-0 break-words">{opt.text}</span>
                   </div>
 
                   {isAnswerSubmitted && isCorrectAnswer && (
@@ -345,20 +345,20 @@ export default function PracticePage() {
             })}
           </div>
 
-          {/* 送出或對錯回饋區塊 */}
+          {/* 送出或對錯回饋區塊 (Thumb-Friendly CTA) */}
           {!isAnswerSubmitted ? (
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex justify-end w-full">
               <button
                 type="button"
                 onClick={handleSubmitAnswer}
                 disabled={selectedAnswers.length === 0}
-                className={`px-7 py-3 rounded-xl text-xs sm:text-sm font-bold font-game shadow-md transition-all duration-200 ease-expo-out ${
+                className={`w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl text-sm font-bold font-game shadow-md transition-all duration-200 ease-expo-out flex items-center justify-center gap-2 touch-manipulation ${
                   selectedAnswers.length > 0
                     ? "bg-accent hover:bg-accent-bright text-white shadow-glow active:scale-95"
                     : "bg-white/[0.04] text-white/30 border border-white/[0.06] cursor-not-allowed"
                 }`}
               >
-                確認送出答案
+                <span>確認送出答案</span>
               </button>
             </div>
           ) : (
@@ -393,12 +393,12 @@ export default function PracticePage() {
                 </div>
               )}
 
-              {/* 下一題按鈕 */}
-              <div className="flex justify-end">
+              {/* 下一題按鈕 (Thumb-Friendly CTA) */}
+              <div className="flex justify-end w-full">
                 <button
                   type="button"
                   onClick={handleNextQuestion}
-                  className="px-7 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow flex items-center gap-2 active:scale-95 transition-all duration-200 ease-expo-out"
+                  className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 active:scale-95 transition-all duration-200 ease-expo-out touch-manipulation"
                 >
                   <span>
                     {currentIndex + 1 < filteredQuestions.length
@@ -415,7 +415,7 @@ export default function PracticePage() {
 
       {/* 3. 測驗結束結算畫面 (Award / Settlement Screen) */}
       {quizCompleted && (
-        <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-8 sm:p-12 text-center space-y-6 backdrop-blur-xl animate-in zoom-in-95 duration-200 ease-expo-out relative overflow-hidden">
+        <div className="bg-[#0a0a0c]/95 rounded-3xl border border-white/[0.08] shadow-2xl p-6 sm:p-12 text-center space-y-6 backdrop-blur-xl animate-in zoom-in-95 duration-200 ease-expo-out relative overflow-hidden">
           {/* Ambient Blurred Circle */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-64 h-64 bg-amber-500/10 rounded-full blur-3xl" />
@@ -453,18 +453,18 @@ export default function PracticePage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-3 relative z-10">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 pt-3 relative z-10 w-full max-w-sm mx-auto">
             <button
               type="button"
               onClick={handleRestart}
-              className="px-6 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow flex items-center gap-2 transition-all duration-200 ease-expo-out active:scale-95"
+              className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out active:scale-95 touch-manipulation"
             >
               <RotateCcw className="w-4 h-4" />
               <span>再來一次</span>
             </button>
             <Link
               href="/questions"
-              className="px-6 py-3 rounded-xl border border-white/[0.10] text-foreground text-xs sm:text-sm font-semibold hover:bg-white/[0.05] transition-colors duration-200 ease-expo-out"
+              className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl border border-white/[0.10] text-foreground text-sm font-semibold hover:bg-white/[0.05] transition-colors duration-200 ease-expo-out flex items-center justify-center text-center touch-manipulation"
             >
               返回題庫清單
             </Link>

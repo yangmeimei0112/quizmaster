@@ -33,26 +33,22 @@ export default async function HomePage() {
   return (
     <div className="space-y-10">
       {/* Linear Hero Section with Ambient Glowing Backdrop */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#0a0a0c] via-[#050506] to-[#020203] border border-white/[0.08] p-8 sm:p-12 text-foreground shadow-2xl shadow-black/80">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#0a0a0c] via-[#050506] to-[#020203] border border-white/[0.08] p-4 sm:p-8 md:p-12 text-foreground shadow-2xl shadow-black/80">
         {/* Ambient Blurred Glow Blobs */}
         <div className="absolute -right-16 -top-16 w-96 h-96 rounded-full bg-[#5E6AD2]/18 blur-3xl pointer-events-none" />
         <div className="absolute right-24 -bottom-20 w-80 h-80 rounded-full bg-[#8B5CF6]/12 blur-2xl pointer-events-none" />
         <div className="absolute -left-10 top-1/2 w-64 h-64 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 max-w-3xl">
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight font-game bg-clip-text text-transparent bg-gradient-to-r from-white via-[#EDEDEF] to-[#8A8F98]">
-            收錄題目、杜絕重複，<br />打造高效個人複習題庫
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight font-game bg-clip-text text-transparent bg-gradient-to-r from-white via-[#EDEDEF] to-[#8A8F98]">
+            收錄題目、杜絕重複，<br className="hidden sm:inline" />打造高效個人複習題庫
           </h1>
 
-          <p className="mt-4 text-foreground-muted text-sm sm:text-base leading-relaxed max-w-2xl font-sans">
-            內建字串演算法即時偵測重複題目，在送出前預先攔截，讓每道題目都有條不紊。
-          </p>
-
           {/* Hero CTAs */}
-          <div className="mt-8 flex flex-wrap items-center gap-3.5">
+          <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-3.5">
             <Link
               href="/add"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white font-bold text-sm shadow-glow transition-all duration-200 ease-expo-out active:scale-95"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white font-bold text-sm shadow-glow transition-all duration-200 ease-expo-out active:scale-95"
             >
               <PlusCircle className="w-4 h-4" />
               <span>開始錄入題目</span>
@@ -60,7 +56,7 @@ export default async function HomePage() {
 
             <Link
               href="/questions"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-foreground font-semibold text-sm border border-white/[0.08] hover:border-white/[0.16] backdrop-blur-md transition-all duration-200 ease-expo-out active:scale-95 shadow-sm"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-foreground font-semibold text-sm border border-white/[0.08] hover:border-white/[0.16] backdrop-blur-md transition-all duration-200 ease-expo-out active:scale-95 shadow-sm"
             >
               <Search className="w-4 h-4 text-slate-400" />
               <span>搜尋題庫 ({total})</span>
@@ -68,7 +64,7 @@ export default async function HomePage() {
 
             <Link
               href="/practice"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold text-sm border border-amber-500/30 hover:border-amber-500/50 backdrop-blur-md transition-all duration-200 ease-expo-out active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold text-sm border border-amber-500/30 hover:border-amber-500/50 backdrop-blur-md transition-all duration-200 ease-expo-out active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
             >
               <GraduationCap className="w-4 h-4 text-amber-400" />
               <span>隨機刷題練習</span>
@@ -76,7 +72,7 @@ export default async function HomePage() {
 
             <Link
               href="/questions"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 font-semibold text-sm border border-blue-500/30 hover:border-blue-500/50 backdrop-blur-md transition-all duration-200 ease-expo-out active:scale-95 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 font-semibold text-sm border border-blue-500/30 hover:border-blue-500/50 backdrop-blur-md transition-all duration-200 ease-expo-out active:scale-95 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
             >
               <FileDown className="w-4 h-4 text-blue-400" />
               <span>匯出 Google 文件</span>
@@ -88,7 +84,7 @@ export default async function HomePage() {
       {/* Asymmetric Bento Grid for Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Bento Item 1 (Wide 2-column card) */}
-        <div className="md:col-span-2 bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.12] rounded-3xl p-6 sm:p-8 shadow-linear-card transition-all duration-200 ease-expo-out relative overflow-hidden flex flex-col justify-between group">
+        <div className="md:col-span-2 bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.12] rounded-3xl p-4 sm:p-8 shadow-linear-card transition-all duration-200 ease-expo-out relative overflow-hidden flex flex-col justify-between group">
           <div className="absolute right-0 top-0 w-48 h-48 bg-accent/10 rounded-full blur-3xl pointer-events-none group-hover:bg-accent/20 transition-all duration-300" />
 
           <div className="flex items-center justify-between relative z-10 mb-6">
@@ -138,7 +134,7 @@ export default async function HomePage() {
         </div>
 
         {/* Bento Item 2: Quick Status & Practice Shortcut */}
-        <div className="bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.12] rounded-3xl p-6 sm:p-8 shadow-linear-card transition-all duration-200 ease-expo-out flex flex-col justify-between group">
+        <div className="bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.12] rounded-3xl p-4 sm:p-8 shadow-linear-card transition-all duration-200 ease-expo-out flex flex-col justify-between group">
           <div className="flex items-center justify-between mb-4">
             <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-[0_0_16px_rgba(245,158,11,0.25)]">
               <BarChart3 className="w-5 h-5" />
@@ -158,7 +154,7 @@ export default async function HomePage() {
           <div className="pt-4 mt-4 border-t border-white/[0.06]">
             <Link
               href="/practice"
-              className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] text-foreground text-xs font-bold border border-white/[0.08] transition-all duration-200 ease-expo-out group-hover:border-white/[0.18]"
+              className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] text-foreground text-sm font-bold border border-white/[0.08] transition-all duration-200 ease-expo-out group-hover:border-white/[0.18]"
             >
               <GraduationCap className="w-4 h-4 text-amber-400" />
               <span>立即進入練習模式</span>
@@ -170,7 +166,7 @@ export default async function HomePage() {
 
 
       {/* Recent Questions Section */}
-      <div className="bg-[#0a0a0c]/90 border border-white/[0.06] rounded-3xl p-6 sm:p-8 shadow-linear-card space-y-5 backdrop-blur-md">
+      <div className="bg-[#0a0a0c]/90 border border-white/[0.06] rounded-3xl p-4 sm:p-8 shadow-linear-card space-y-5 backdrop-blur-md">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold font-game text-foreground flex items-center gap-2.5">
             <BookMarked className="w-5 h-5 text-accent" />
@@ -190,7 +186,7 @@ export default async function HomePage() {
             <p className="text-sm text-foreground-muted">目前題庫尚無題目，立即新增第一道題目吧！</p>
             <Link
               href="/add"
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs font-semibold shadow-glow transition-all active:scale-95"
+              className="mt-4 inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-semibold shadow-glow transition-all active:scale-95"
             >
               <PlusCircle className="w-4 h-4" />
               新增第一道題目

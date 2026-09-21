@@ -1,10 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
   title: "QuizMaster - 個人題庫管理與防重複系統",
   description: "支援 4 選項單選與複選題錄入、智慧相似度比對防重複輸入、高效關鍵字查詢與個人自測刷題平台。",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -22,7 +28,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-background-base text-foreground antialiased min-h-screen flex flex-col font-sans relative selection:bg-accent/30 selection:text-white">
+      <body className="bg-background-base text-foreground antialiased min-h-[100dvh] flex flex-col font-sans relative selection:bg-accent/30 selection:text-white">
         {/* Four-Layer Background System */}
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
           {/* Layer 1: Top radial spotlight */}
@@ -36,12 +42,12 @@ export default function RootLayout({
         </div>
 
         {/* Foreground Content */}
-        <div className="relative z-10 flex flex-col min-h-screen">
+        <div className="relative z-10 flex flex-col min-h-[100dvh]">
           <Navbar />
           <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
             {children}
           </main>
-          <footer className="border-t border-white/[0.06] bg-[#050506]/80 backdrop-blur-md py-6 text-center text-xs text-[#8A8F98]">
+          <footer className="border-t border-white/[0.06] bg-[#050506]/80 backdrop-blur-md pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] text-center text-xs text-[#8A8F98]">
             QuizMaster 個人題庫系統
           </footer>
         </div>

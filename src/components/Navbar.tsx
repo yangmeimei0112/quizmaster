@@ -73,7 +73,7 @@ export default function Navbar() {
         <button
           type="button"
           onClick={() => setMobileMenuOpen((prev) => !prev)}
-          className="sm:hidden p-2 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.06] border border-white/[0.08] transition-colors duration-200 ease-expo-out focus:outline-none focus:ring-2 focus:ring-accent"
+          className="sm:hidden min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-foreground-muted hover:text-foreground hover:bg-white/[0.06] border border-white/[0.08] transition-colors duration-200 ease-expo-out focus:outline-none focus:ring-2 focus:ring-accent shrink-0"
           aria-label={mobileMenuOpen ? "關閉選單" : "開啟選單"}
           aria-expanded={mobileMenuOpen}
         >
@@ -92,7 +92,7 @@ export default function Navbar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ease-expo-out ${
+                className={`min-h-[44px] flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ease-expo-out ${
                   isActive
                     ? "bg-white/[0.08] text-foreground border border-white/[0.10] shadow-sm font-semibold"
                     : "text-foreground-muted hover:text-foreground hover:bg-white/[0.04]"

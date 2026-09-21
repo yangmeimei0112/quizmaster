@@ -171,16 +171,29 @@ export default function ExportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-[#0a0a0c]/95 max-w-xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/[0.10] space-y-5 text-foreground backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200 ease-expo-out">
-        {/* 頂部標題與關閉按鈕 */}
-        <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+    <div
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden sm:overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-250 ease-expo-out text-foreground"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 1. Mobile Drag Handle Indicator */}
+        <div className="pt-3 pb-1 sm:hidden flex justify-center shrink-0" aria-hidden="true">
+          <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+        </div>
+
+        {/* 2. Fixed Modal Header */}
+        <div className="flex items-center justify-between px-5 sm:px-6 pt-2 sm:pt-6 pb-3 sm:pb-4 border-b border-white/[0.06] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold shadow-[0_0_16px_rgba(59,130,246,0.25)]">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold shadow-[0_0_16px_rgba(59,130,246,0.25)] shrink-0">
               <FileDown className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold font-game text-foreground">
+              <h2 className="text-base sm:text-lg font-bold font-game text-foreground">
                 匯出全部題目成 Google 文件
               </h2>
               <p className="text-xs text-foreground-muted">
@@ -191,14 +204,15 @@ export default function ExportModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-foreground-muted hover:text-foreground p-1.5 rounded-xl hover:bg-white/[0.05] transition-colors"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-muted hover:text-foreground rounded-xl hover:bg-white/[0.05] transition-colors"
             aria-label="關閉匯出視窗"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="space-y-4 text-xs">
+        {/* 3. Smooth Scrollable Body */}
+        <div className="overflow-y-auto overscroll-contain flex-1 p-4 sm:p-6 space-y-4 text-xs">
           {/* 試卷基本資訊設定 */}
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -207,7 +221,7 @@ export default function ExportModal({
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent font-medium transition-all placeholder:text-white/30"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-base sm:text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent font-medium transition-all placeholder:text-white/30"
               />
             </div>
             <div className="space-y-1.5">
@@ -216,7 +230,7 @@ export default function ExportModal({
                 type="text"
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-white/30"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-base sm:text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-white/30"
               />
             </div>
           </div>
@@ -236,14 +250,14 @@ export default function ExportModal({
                   setIncludeExplanation(true);
                   setIncludeAnswers(true);
                 }}
-                className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all duration-200 ease-expo-out ${
+                className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all duration-200 ease-expo-out touch-manipulation active:scale-[0.99] ${
                   includeExplanation
                     ? "border-accent/70 bg-accent/15 text-foreground ring-1 ring-accent/40 shadow-[0_0_18px_rgba(94,106,210,0.2)] font-medium"
                     : "border-white/[0.06] bg-white/[0.02] text-foreground-muted hover:border-white/[0.12] hover:bg-white/[0.04]"
                 }`}
               >
                 <div
-                  className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center shrink-0 transition-colors ${
                     includeExplanation
                       ? "border-accent bg-accent text-white"
                       : "border-white/30 bg-transparent"
@@ -268,14 +282,14 @@ export default function ExportModal({
                   setIncludeExplanation(false);
                   setIncludeAnswers(true);
                 }}
-                className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all duration-200 ease-expo-out ${
+                className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all duration-200 ease-expo-out touch-manipulation active:scale-[0.99] ${
                   !includeExplanation
                     ? "border-accent/70 bg-accent/15 text-foreground ring-1 ring-accent/40 shadow-[0_0_18px_rgba(94,106,210,0.2)] font-medium"
                     : "border-white/[0.06] bg-white/[0.02] text-foreground-muted hover:border-white/[0.12] hover:bg-white/[0.04]"
                 }`}
               >
                 <div
-                  className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center shrink-0 transition-colors ${
                     !includeExplanation
                       ? "border-accent bg-accent text-white"
                       : "border-white/30 bg-transparent"
@@ -310,27 +324,27 @@ export default function ExportModal({
               </div>
             )}
           </div>
+
+          {/* 成功複製提示 */}
+          {copySuccess && (
+            <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center gap-2.5 shadow-[0_0_20px_rgba(16,185,129,0.15)] animate-in fade-in duration-200 ease-expo-out">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>
+                已複製 Google 文件專屬排版！打開 Google 文件按下 <strong>Ctrl + V</strong> 即可直接貼上完整排版試卷！
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* 成功複製提示 */}
-        {copySuccess && (
-          <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center gap-2.5 shadow-[0_0_20px_rgba(16,185,129,0.15)] animate-in fade-in duration-200 ease-expo-out">
-            <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>
-              已複製 Google 文件專屬排版！打開 Google 文件按下 <strong>Ctrl + V</strong> 即可直接貼上完整排版試卷！
-            </span>
-          </div>
-        )}
-
-        {/* 匯出動作按鈕區 */}
-        <div className="space-y-3 pt-3 border-t border-white/[0.06]">
-          <div className="grid sm:grid-cols-2 gap-3">
+        {/* 4. Fixed Sticky Action Footer */}
+        <div className="sticky bottom-0 bg-[#0a0a0c]/95 backdrop-blur-md border-t border-white/[0.08] p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom,0px))] flex flex-col gap-3 shrink-0">
+          <div className="grid sm:grid-cols-2 gap-3 w-full">
             {/* 途徑 1: 下載 .docx 檔案 */}
             <button
               type="button"
               onClick={handleDownloadDocx}
               disabled={isExporting}
-              className="px-5 py-3 rounded-xl bg-accent hover:bg-accent-bright text-white font-bold font-game text-xs shadow-glow flex items-center justify-center gap-2 active:scale-95 transition-all duration-200 ease-expo-out"
+              className="w-full min-h-[48px] px-5 py-3.5 rounded-xl bg-accent hover:bg-accent-bright text-white font-bold font-game text-sm shadow-glow flex items-center justify-center gap-2 active:scale-95 transition-all duration-200 ease-expo-out touch-manipulation"
             >
               <Download className="w-4 h-4" />
               <span>{isExporting ? "產生文件中..." : "下載 Google 文件 (.docx)"}</span>
@@ -340,7 +354,7 @@ export default function ExportModal({
             <button
               type="button"
               onClick={handleCopyRichText}
-              className="px-5 py-3 rounded-xl border border-white/[0.10] bg-white/[0.04] hover:bg-white/[0.08] text-foreground font-bold font-game text-xs flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out active:scale-95 shadow-sm"
+              className="w-full min-h-[48px] px-5 py-3.5 rounded-xl border border-white/[0.10] bg-white/[0.04] hover:bg-white/[0.08] text-foreground font-bold font-game text-sm flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out active:scale-95 shadow-sm touch-manipulation"
             >
               <Copy className="w-4 h-4 text-slate-400" />
               <span>複製為 Google 文件排版</span>
@@ -348,12 +362,12 @@ export default function ExportModal({
           </div>
 
           {/* 途徑 3: 快速前往 Google 文件建立空白文件 */}
-          <div className="text-center pt-1">
+          <div className="text-center pt-0.5">
             <a
               href="https://docs.google.com/document/create"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-[#8B96F8] hover:text-accent-bright font-semibold hover:underline transition-colors"
+              className="min-h-[44px] py-2.5 px-3 inline-flex items-center justify-center gap-1.5 text-xs text-[#8B96F8] hover:text-accent-bright font-semibold hover:underline transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>直接前往 Google 文件開新文件 (Google Docs)</span>
