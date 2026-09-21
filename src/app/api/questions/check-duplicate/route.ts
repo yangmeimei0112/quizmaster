@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       for (const q of questions) {
         const qNorm = q.normalizedStem || normalizeText(q.stem);
         // 快速比較已正規化的字串
-        if (qNorm === normInput) {
+        if (normInput && qNorm === normInput) {
           hasExactMatch = true;
           maxSimilarity = 100;
           matches.push({

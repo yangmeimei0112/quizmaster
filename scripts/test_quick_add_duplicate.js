@@ -277,6 +277,47 @@ async function runAllTests() {
     assert(quickAddContent.includes("已嚴格阻擋新增") || quickAddContent.includes("已嚴格鎖定送出"), "快捷鍵阻擋需提示錯誤");
   });
 
+  console.log("\n--- 6. 比對中競爭態與邊界防禦深度驗證 (Hardened Checks) ---");
+
+  test("競爭態防禦: isCheckingDuplicates 徹底鎖定多題批次按鈕與文字", () => {
+    assert(quickAddContent.includes("比對題庫防重複中..."), "批次按鈕比對中需顯示「比對題庫防重複中...」");
+    assert(quickAddContent.includes("disabled={isBatchSubmitting || isCheckingDuplicates}"), "批次儲存按鈕需包含 isCheckingDuplicates 禁用");
+  });
+
+  test("競爭態防禦: isCheckingDuplicates 阻擋 Ctrl+Enter 快速提交", () => {
+    assert(quickAddContent.includes('if (isCheckingDuplicates) {\n          setFormError("正在比對題庫防重複，請稍候...");\n          return;\n        }'), "Ctrl+Enter 快捷鍵需在比對中攔截並提示");
+  });
+
+  test("競爭態防禦: 所有送出函式皆嚴格防禦 isCheckingDuplicates", () => {
+    assert(quickAddContent.includes('handleConfirmAndApply = useCallback(() => {\n    if (!currentItem) return;\n\n    if (isCheckingDuplicates) {'), "handleConfirmAndApply 缺少比對中防護");
+    assert(quickAddContent.includes('handleConfirmAndDirectSave = useCallback(async () => {\n    if (isDirectSubmitting) return;\n\n    if (isCheckingDuplicates) {'), "handleConfirmAndDirectSave 缺少比對中防護");
+    assert(quickAddContent.includes('handleBatchSaveAll = useCallback(async () => {\n    if (isBatchSubmitting) return;\n    if (parsedList.length === 0) return;\n\n    if (isCheckingDuplicates) {'), "handleBatchSaveAll 缺少比對中防護");
+    assert(quickAddContent.includes('handleBatchSaveNonDuplicates = useCallback(async () => {\n    if (isBatchSubmitting) return;\n\n    if (isCheckingDuplicates) {'), "handleBatchSaveNonDuplicates 缺少比對中防護");
+  });
+
+  test("UI狀態誠實性: 卡片頂部在比對中顯示藍色 Spinner 而非提前假綠「題庫比對正常」", () => {
+    assert(quickAddContent.includes("isCurrentDupChecking ? ("), "卡片橫幅需優先判定 isCurrentDupChecking");
+    assert(quickAddContent.includes("正在比對題庫防重複與相似度..."), "需顯示正在比對中文字");
+  });
+
+  test("UI狀態誠實性: 膠囊標籤在比對中顯示「比對中...」而非假綠「正常」", () => {
+    assert(quickAddContent.includes("isItemChecking ? ("), "膠囊需有 isItemChecking 狀態分流");
+    assert(quickAddContent.includes("比對中..."), "膠囊標籤需包含「比對中...」");
+  });
+
+  test("健壯性: stemsKey 採用 JSON.stringify 防範字串分隔符碰撞", () => {
+    assert(quickAddContent.includes("JSON.stringify(parsedList.map((q) => q.stem.trim()))"), "stemsKey 需採用 JSON.stringify");
+  });
+
+  test("API健壯性: check-duplicate 確保 normInput 非空避免空字串假陽性", () => {
+    assert(checkDuplicateRouteContent.includes("if (normInput && qNorm === normInput)"), "比對需檢查 normInput 非空");
+  });
+
+  test("多題排除功能體驗: 非重複題目若有缺漏欄位自動跳轉至該題 (setActiveIndex(i))", () => {
+    assert(quickAddContent.includes("if (duplicateStatuses[i]?.isExactMatch) continue;"), "驗證時需略過已重複之題目");
+    assert(quickAddContent.includes("setActiveIndex(i);"), "發現未填欄位需自動跳轉");
+  });
+
   console.log("\n====================================================");
   console.log(`TOTAL TESTS: ${totalTests}`);
   console.log(`PASSED: ${passedTests}`);
