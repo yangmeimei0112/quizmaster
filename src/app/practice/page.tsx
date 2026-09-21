@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   GraduationCap,
@@ -18,7 +18,8 @@ import {
 import { Question } from "@/types/question";
 
 export default function PracticePage() {
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [allQuestions, setAllQuestions] = useState<Question[]>([]);
+  const [quizQueue, setQuizQueue] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // 測驗設定
@@ -40,7 +41,7 @@ export default function PracticePage() {
         const res = await fetch("/api/questions");
         if (res.ok) {
           const data = await res.json();
-          setQuestions(data.questions || []);
+          setAllQuestions(data.questions || []);
         }
       } catch (err) {
         console.error("載入題庫失敗:", err);
@@ -52,30 +53,48 @@ export default function PracticePage() {
   }, []);
 
   // 依篩選過濾可用的題目
-  const filteredQuestions = questions.filter((q) => {
-    if (selectedType !== "ALL" && q.type !== selectedType) return false;
-    return true;
-  });
+  const filteredQuestions = useMemo(() => {
+    return allQuestions.filter((q) => {
+      if (selectedType !== "ALL" && q.type !== selectedType) return false;
+      return true;
+    });
+  }, [allQuestions, selectedType]);
 
   // 開始測驗
-  const handleStartQuiz = () => {
+  const handleStartQuiz = useCallback(() => {
     if (filteredQuestions.length === 0) return;
     // 隨機打亂題目順序
     const shuffled = [...filteredQuestions].sort(() => Math.random() - 0.5);
-    setQuestions(shuffled);
+    setQuizQueue(shuffled);
     setCurrentIndex(0);
     setSelectedAnswers([]);
     setIsAnswerSubmitted(false);
     setScore(0);
     setQuizCompleted(false);
     setQuizStarted(true);
-  };
+  }, [filteredQuestions]);
 
-  const currentQ = filteredQuestions[currentIndex];
+  const currentQ = quizQueue[currentIndex];
+
+  // 當前題目的選項與正解集合
+  const currentOptions = useMemo(() => {
+    if (!currentQ) return [];
+    return [
+      { key: "A", text: currentQ.optionA },
+      { key: "B", text: currentQ.optionB },
+      { key: "C", text: currentQ.optionC },
+      { key: "D", text: currentQ.optionD },
+    ];
+  }, [currentQ]);
+
+  const currentCorrectSet = useMemo(() => {
+    if (!currentQ) return new Set<string>();
+    return new Set(currentQ.correctAnswers.split(","));
+  }, [currentQ]);
 
   // 選取選項
-  const handleSelectOption = (key: string) => {
-    if (isAnswerSubmitted) return; // 已送出答案不可再改
+  const handleSelectOption = useCallback((key: string) => {
+    if (isAnswerSubmitted || !currentQ) return; // 已送出答案不可再改
 
     if (currentQ.type === "SINGLE") {
       setSelectedAnswers([key]);
@@ -84,11 +103,11 @@ export default function PracticePage() {
         prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key].sort()
       );
     }
-  };
+  }, [isAnswerSubmitted, currentQ]);
 
   // 提交作答
-  const handleSubmitAnswer = () => {
-    if (selectedAnswers.length === 0) return;
+  const handleSubmitAnswer = useCallback(() => {
+    if (selectedAnswers.length === 0 || !currentQ) return;
 
     const userAnsStr = [...selectedAnswers].sort().join(",");
     const correctAnsStr = currentQ.correctAnswers
@@ -101,31 +120,32 @@ export default function PracticePage() {
       setScore((s) => s + 1);
     }
     setIsAnswerSubmitted(true);
-  };
+  }, [selectedAnswers, currentQ]);
 
   // 下一題
-  const handleNextQuestion = () => {
-    if (currentIndex + 1 < filteredQuestions.length) {
+  const handleNextQuestion = useCallback(() => {
+    if (currentIndex + 1 < quizQueue.length) {
       setCurrentIndex((i) => i + 1);
       setSelectedAnswers([]);
       setIsAnswerSubmitted(false);
     } else {
       setQuizCompleted(true);
     }
-  };
+  }, [currentIndex, quizQueue.length]);
 
   // 重新測驗
-  const handleRestart = () => {
+  const handleRestart = useCallback(() => {
     setQuizStarted(false);
     setQuizCompleted(false);
     setCurrentIndex(0);
     setSelectedAnswers([]);
     setIsAnswerSubmitted(false);
     setScore(0);
-  };
+  }, []);
 
-  const progressPercent = filteredQuestions.length > 0
-    ? Math.round(((currentIndex + (isAnswerSubmitted ? 1 : 0)) / filteredQuestions.length) * 100)
+  const totalQuestionsCount = quizStarted ? quizQueue.length : filteredQuestions.length;
+  const progressPercent = totalQuestionsCount > 0
+    ? Math.round(((currentIndex + (isAnswerSubmitted ? 1 : 0)) / totalQuestionsCount) * 100)
     : 0;
 
   return (
@@ -245,7 +265,7 @@ export default function PracticePage() {
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1 pb-3 border-b border-white/[0.06] text-xs">
               <div className="flex items-center gap-2.5">
                 <span className="font-bold font-game text-[#9AA5FF] bg-accent/15 px-3 py-1 rounded-full border border-accent/30 shadow-sm">
-                  第 {currentIndex + 1} / {filteredQuestions.length} 題
+                  第 {currentIndex + 1} / {quizQueue.length} 題
                 </span>
                 <span
                   className={`font-game font-bold text-[10px] px-2.5 py-0.5 rounded-full border ${
@@ -280,15 +300,9 @@ export default function PracticePage() {
 
           {/* 4 個選項作答區塊 (Tactile Option Cards with Neon Glow) */}
           <div className="grid gap-3">
-            {[
-              { key: "A", text: currentQ.optionA },
-              { key: "B", text: currentQ.optionB },
-              { key: "C", text: currentQ.optionC },
-              { key: "D", text: currentQ.optionD },
-            ].map((opt) => {
+            {currentOptions.map((opt) => {
               const isSelected = selectedAnswers.includes(opt.key);
-              const correctSet = new Set(currentQ.correctAnswers.split(","));
-              const isCorrectAnswer = correctSet.has(opt.key);
+              const isCorrectAnswer = currentCorrectSet.has(opt.key);
 
               // 樣式判定
               let cardStyle =
@@ -404,7 +418,7 @@ export default function PracticePage() {
                   className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out touch-manipulation touch-tactile animate-fade-in-up stagger-2"
                 >
                   <span>
-                    {currentIndex + 1 < filteredQuestions.length
+                    {currentIndex + 1 < quizQueue.length
                       ? "下一題"
                       : "查看測驗結算"}
                   </span>
@@ -442,14 +456,14 @@ export default function PracticePage() {
             <div className="text-5xl font-black font-game text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-indigo-300 to-cyan-300">
               {score}{" "}
               <span className="text-base text-foreground-muted font-normal">
-                / {filteredQuestions.length}
+                / {quizQueue.length}
               </span>
             </div>
             <div className="text-xs text-foreground-muted font-medium pt-1 border-t border-white/[0.06]">
               整體答對率：
               <span className="font-bold font-game text-emerald-400 text-sm ml-1">
-                {filteredQuestions.length > 0
-                  ? Math.round((score / filteredQuestions.length) * 100)
+                {quizQueue.length > 0
+                  ? Math.round((score / quizQueue.length) * 100)
                   : 0}
                 %
               </span>

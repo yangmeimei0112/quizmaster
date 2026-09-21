@@ -24,6 +24,12 @@ export default async function HomePage() {
       prisma.question.findMany({
         orderBy: { createdAt: "desc" },
         take: 4,
+        select: {
+          id: true,
+          stem: true,
+          type: true,
+          correctAnswers: true,
+        },
       }),
     ]);
 

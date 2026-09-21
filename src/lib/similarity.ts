@@ -22,31 +22,41 @@ export function normalizeText(text: string): string {
 }
 
 /**
- * 計算 Levenshtein 編輯距離
+ * 計算 Levenshtein 編輯距離 (高效雙緩衝列演算法，零 2D 矩陣記憶體開銷)
  */
 function levenshtein(a: string, b: string): number {
-  const an = a.length;
-  const bn = b.length;
+  if (a === b) return 0;
+  let an = a.length;
+  let bn = b.length;
   if (an === 0) return bn;
   if (bn === 0) return an;
 
-  const matrix = Array.from({ length: bn + 1 }, () => new Array(an + 1).fill(0));
-
-  for (let i = 0; i <= an; i++) matrix[0][i] = i;
-  for (let j = 0; j <= bn; j++) matrix[j][0] = j;
-
-  for (let j = 1; j <= bn; j++) {
-    for (let i = 1; i <= an; i++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[j][i] = Math.min(
-        matrix[j - 1][i] + 1, // deletion
-        matrix[j][i - 1] + 1, // insertion
-        matrix[j - 1][i - 1] + cost // substitution
-      );
-    }
+  // 確保 a 為較短字串，最小化單列 Int32Array 記憶體配置
+  if (an > bn) {
+    const tmpS = a; a = b; b = tmpS;
+    const tmpL = an; an = bn; bn = tmpL;
   }
 
-  return matrix[bn][an];
+  const prevRow = new Int32Array(an + 1);
+  const currRow = new Int32Array(an + 1);
+
+  for (let i = 0; i <= an; i++) prevRow[i] = i;
+
+  for (let j = 1; j <= bn; j++) {
+    currRow[0] = j;
+    const bj = b.charCodeAt(j - 1);
+    for (let i = 1; i <= an; i++) {
+      const cost = a.charCodeAt(i - 1) === bj ? 0 : 1;
+      currRow[i] = Math.min(
+        currRow[i - 1] + 1,        // insertion
+        prevRow[i] + 1,            // deletion
+        prevRow[i - 1] + cost      // substitution
+      );
+    }
+    prevRow.set(currRow);
+  }
+
+  return currRow[an];
 }
 
 /**
@@ -81,26 +91,35 @@ function bigramSimilarity(a: string, b: string): number {
 }
 
 /**
- * 計算最長公共子序列 (LCS)
+ * 計算最長公共子序列 (LCS) (高效雙列 Int32Array 滾動計算)
  */
 function longestCommonSubsequence(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
+  if (a === b) return a.length;
+  let m = a.length;
+  let n = b.length;
   if (m === 0 || n === 0) return 0;
 
-  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (a[i - 1] === b[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
-      } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-      }
-    }
+  if (m > n) {
+    const tmpS = a; a = b; b = tmpS;
+    const tmpL = m; m = n; n = tmpL;
   }
 
-  return dp[m][n];
+  const prev = new Int32Array(m + 1);
+  const curr = new Int32Array(m + 1);
+
+  for (let j = 1; j <= n; j++) {
+    const bj = b.charCodeAt(j - 1);
+    for (let i = 1; i <= m; i++) {
+      if (a.charCodeAt(i - 1) === bj) {
+        curr[i] = prev[i - 1] + 1;
+      } else {
+        curr[i] = Math.max(prev[i], curr[i - 1]);
+      }
+    }
+    prev.set(curr);
+  }
+
+  return prev[m];
 }
 
 /**

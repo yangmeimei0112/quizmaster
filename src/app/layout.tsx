@@ -26,8 +26,10 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
       </head>
@@ -38,10 +40,10 @@ export default function RootLayout({
           <div className="absolute inset-x-0 top-0 h-[600px] bg-top-radial" />
           {/* Layer 2: Subtle dark grid texture */}
           <div className="absolute inset-0 bg-grid-pattern opacity-70" />
-          {/* Layer 3: Multiple slow animated floating blurred blobs */}
-          <div className="absolute -top-24 left-1/4 w-[500px] h-[500px] rounded-full bg-[#5E6AD2]/15 blur-[130px] animate-float-slow motion-reduce:animate-none" />
-          <div className="absolute top-48 -right-24 w-[450px] h-[450px] rounded-full bg-[#6872D9]/12 blur-[140px] animate-float-delayed motion-reduce:animate-none" />
-          <div className="absolute -bottom-24 -left-20 w-[550px] h-[550px] rounded-full bg-[#8B5CF6]/10 blur-[160px] animate-float-slow motion-reduce:animate-none" />
+          {/* Layer 3: Multiple slow animated floating blurred blobs with GPU compositing */}
+          <div className="absolute -top-24 left-1/4 w-[500px] h-[500px] rounded-full bg-[#5E6AD2]/15 blur-[130px] animate-float-slow motion-reduce:animate-none transform-gpu will-change-transform" />
+          <div className="absolute top-48 -right-24 w-[450px] h-[450px] rounded-full bg-[#6872D9]/12 blur-[140px] animate-float-delayed motion-reduce:animate-none transform-gpu will-change-transform" />
+          <div className="absolute -bottom-24 -left-20 w-[550px] h-[550px] rounded-full bg-[#8B5CF6]/10 blur-[160px] animate-float-slow motion-reduce:animate-none transform-gpu will-change-transform" />
         </div>
 
         {/* Foreground Content */}

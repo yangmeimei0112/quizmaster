@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useTransition, useCallback, useMemo } from "react";
 import {
   Sparkles,
   ClipboardPaste,
@@ -62,6 +62,7 @@ export default function QuickAddModal({
 }: QuickAddModalProps) {
   const [rawText, setRawText] = useState("");
   const [parsed, setParsed] = useState<ParsedQuestionResult | null>(null);
+  const [isParsingPending, startParsingTransition] = useTransition();
 
   // 可在預覽中微調的編輯狀態
   const [editedStem, setEditedStem] = useState("");
@@ -87,7 +88,7 @@ export default function QuickAddModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  // 當貼入文本變更時，即時解析
+  // 當貼入文本變更時，防抖 120ms + useTransition 即時解析，確保主執行緒零卡頓
   useEffect(() => {
     if (!rawText.trim()) {
       setParsed(null);
@@ -102,49 +103,54 @@ export default function QuickAddModal({
       return;
     }
 
-    const res = parseQuestionText(rawText);
-    setParsed(res);
-    setEditedStem(res.stem);
-    setEditedType(res.type);
-    setEditedA(res.optionA);
-    setEditedB(res.optionB);
-    setEditedC(res.optionC);
-    setEditedD(res.optionD);
-    setEditedAnswers(res.correctAnswers);
-    setEditedExplanation(res.explanation);
-    setFormError("");
+    const timer = setTimeout(() => {
+      startParsingTransition(() => {
+        const res = parseQuestionText(rawText);
+        setParsed(res);
+        setEditedStem(res.stem);
+        setEditedType(res.type);
+        setEditedA(res.optionA);
+        setEditedB(res.optionB);
+        setEditedC(res.optionC);
+        setEditedD(res.optionD);
+        setEditedAnswers(res.correctAnswers);
+        setEditedExplanation(res.explanation);
+        setFormError("");
+      });
+    }, 120);
+
+    return () => clearTimeout(timer);
   }, [rawText]);
 
   if (!isOpen) return null;
 
   // 切換答案勾選
-  const toggleAnswer = (key: string) => {
-    if (editedType === "SINGLE") {
-      setEditedAnswers([key]);
-    } else {
-      setEditedAnswers((prev) =>
-        prev.includes(key)
-          ? prev.filter((k) => k !== key)
-          : [...prev, key].sort()
-      );
-    }
-  };
+  const toggleAnswer = useCallback((key: string) => {
+    setEditedAnswers((prev) => {
+      if (editedType === "SINGLE") {
+        return [key];
+      }
+      return prev.includes(key)
+        ? prev.filter((k) => k !== key)
+        : [...prev, key].sort();
+    });
+  }, [editedType]);
 
   // 切換單選/複選題型
-  const handleTypeChange = (newType: QuestionType) => {
+  const handleTypeChange = useCallback((newType: QuestionType) => {
     setEditedType(newType);
     if (newType === "SINGLE") {
       setEditedAnswers((prev) => (prev.length > 0 ? [prev[0]] : ["A"]));
     }
-  };
+  }, []);
 
   // 貼入範例格式
-  const handlePasteSample = () => {
+  const handlePasteSample = useCallback(() => {
     setRawText(SAMPLE_TEXT);
-  };
+  }, []);
 
   // 讀取剪貼簿
-  const handleReadClipboard = async () => {
+  const handleReadClipboard = useCallback(async () => {
     try {
       if (navigator.clipboard && navigator.clipboard.readText) {
         const text = await navigator.clipboard.readText();
@@ -163,10 +169,10 @@ export default function QuickAddModal({
       console.warn("Clipboard access denied:", err);
       alert("無法讀取剪貼簿，請手動在文字框內按 Ctrl+V 貼上");
     }
-  };
+  }, []);
 
   // 檢查無誤，帶入主表單（核心推薦流程：先帶入表單檢查確認後再儲存）
-  const handleConfirmAndApply = () => {
+  const handleConfirmAndApply = useCallback(() => {
     if (!editedStem.trim()) {
       setFormError("題幹內容不可為空");
       return;
@@ -194,10 +200,21 @@ export default function QuickAddModal({
     // 清空彈窗內容，便於下次錄入下一題
     setRawText("");
     onClose();
-  };
+  }, [
+    editedStem,
+    editedType,
+    editedA,
+    editedB,
+    editedC,
+    editedD,
+    editedAnswers,
+    editedExplanation,
+    onApply,
+    onClose,
+  ]);
 
   // 檢查無誤，直接送出儲存
-  const handleConfirmAndDirectSave = async () => {
+  const handleConfirmAndDirectSave = useCallback(async () => {
     if (!onDirectSave) {
       handleConfirmAndApply();
       return;
@@ -240,14 +257,29 @@ export default function QuickAddModal({
     } finally {
       setIsDirectSubmitting(false);
     }
-  };
+  }, [
+    onDirectSave,
+    handleConfirmAndApply,
+    editedStem,
+    editedType,
+    editedA,
+    editedB,
+    editedC,
+    editedD,
+    editedAnswers,
+    editedExplanation,
+    onClose,
+  ]);
 
-  const optionsList = [
-    { key: "A", value: editedA, setter: setEditedA, label: "選項 A" },
-    { key: "B", value: editedB, setter: setEditedB, label: "選項 B" },
-    { key: "C", value: editedC, setter: setEditedC, label: "選項 C" },
-    { key: "D", value: editedD, setter: setEditedD, label: "選項 D" },
-  ];
+  const optionsList = useMemo(
+    () => [
+      { key: "A", value: editedA, setter: setEditedA, label: "選項 A" },
+      { key: "B", value: editedB, setter: setEditedB, label: "選項 B" },
+      { key: "C", value: editedC, setter: setEditedC, label: "選項 C" },
+      { key: "D", value: editedD, setter: setEditedD, label: "選項 D" },
+    ],
+    [editedA, editedB, editedC, editedD]
+  );
 
   const isFormValid =
     editedStem.trim().length > 0 &&
@@ -268,7 +300,7 @@ export default function QuickAddModal({
       aria-labelledby="quick-add-modal-title"
     >
       <div
-        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl backdrop-blur-2xl max-h-[92dvh] sm:max-h-[88vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground"
+        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl backdrop-blur-2xl max-h-[92dvh] sm:max-h-[88vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground transform-gpu will-change-transform"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. Mobile Drag Handle Indicator */}

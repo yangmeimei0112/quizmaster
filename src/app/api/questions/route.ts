@@ -36,15 +36,15 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const questions = await prisma.question.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
-
-    // 統計資料
-    const allQuestions = await prisma.question.findMany({
-      select: { type: true, category: true },
-    });
+    const [questions, allQuestions] = await Promise.all([
+      prisma.question.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.question.findMany({
+        select: { type: true, category: true },
+      }),
+    ]);
 
     const totalCount = allQuestions.length;
     const singleCount = allQuestions.filter((x) => x.type === "SINGLE").length;
@@ -119,23 +119,30 @@ export async function POST(req: NextRequest) {
 
     // 後端防重複檢查 (如果沒有強制新增)
     if (!forceCreate) {
+      // 1. 優先使用 normalizedStem 索引進行 O(1) 精確重複命中偵測
+      const exactMatch = await prisma.question.findFirst({
+        where: { normalizedStem: normStem },
+        select: { id: true, stem: true, normalizedStem: true },
+      });
+
+      if (exactMatch) {
+        return NextResponse.json(
+          {
+            error: "題庫中已存在完全相同的題目！",
+            isDuplicate: true,
+            exactMatch: true,
+            matchedQuestion: exactMatch,
+          },
+          { status: 409 }
+        );
+      }
+
+      // 2. 若無完全重複，比對模糊相似度
       const existing = await prisma.question.findMany({
         select: { id: true, stem: true, normalizedStem: true },
       });
 
       for (const item of existing) {
-        if (item.normalizedStem === normStem) {
-          return NextResponse.json(
-            {
-              error: "題庫中已存在完全相同的題目！",
-              isDuplicate: true,
-              exactMatch: true,
-              matchedQuestion: item,
-            },
-            { status: 409 }
-          );
-        }
-
         const sim = calculateSimilarity(stem, item.stem);
         if (sim.similarity >= 85) {
           return NextResponse.json(

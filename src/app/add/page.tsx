@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -47,7 +47,7 @@ export default function AddQuestionPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
 
-  // 當題幹輸入時，Debounced 即時防重複比對 (350ms)
+  // 當題幹輸入時，Debounced 即時防重複比對 (350ms) + AbortController 防止過期競態
   useEffect(() => {
     if (!stem.trim() || stem.trim().length < 2) {
       setDuplicateMatches([]);
@@ -57,57 +57,161 @@ export default function AddQuestionPage() {
       return;
     }
 
-    setIsCheckingDuplicate(true);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
+      setIsCheckingDuplicate(true);
       try {
         const res = await fetch("/api/questions/check-duplicate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ stem }),
+          signal: controller.signal,
         });
 
         if (res.ok) {
           const data = await res.json();
-          setDuplicateMatches(data.matches || []);
-          setHasExactMatch(data.hasExactMatch || false);
-          setMaxSimilarity(data.maxSimilarity || 0);
+          startTransition(() => {
+            setDuplicateMatches(data.matches || []);
+            setHasExactMatch(data.hasExactMatch || false);
+            setMaxSimilarity(data.maxSimilarity || 0);
+          });
         }
-      } catch (err) {
-        console.error("即時比對失敗:", err);
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.error("即時比對失敗:", err);
+        }
       } finally {
-        setIsCheckingDuplicate(false);
+        if (!controller.signal.aborted) {
+          setIsCheckingDuplicate(false);
+        }
       }
     }, 350);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [stem]);
 
   // 切換題型時的答案處理
-  const handleTypeChange = (newType: QuestionType) => {
+  const handleTypeChange = useCallback((newType: QuestionType) => {
     setType(newType);
     if (newType === "SINGLE") {
       // 若轉為單選，只保留第一個選中的答案，若無則預設為 A
       setCorrectAnswers((prev) => (prev.length > 0 ? [prev[0]] : ["A"]));
     }
-  };
+  }, []);
 
   // 切換選項正確性
-  const toggleAnswer = (optKey: string) => {
-    if (type === "SINGLE") {
-      setCorrectAnswers([optKey]);
-    } else {
-      setCorrectAnswers((prev) => {
-        if (prev.includes(optKey)) {
-          return prev.filter((k) => k !== optKey);
-        } else {
-          return [...prev, optKey].sort();
-        }
+  const toggleAnswer = useCallback((optKey: string) => {
+    setType((currentType) => {
+      if (currentType === "SINGLE") {
+        setCorrectAnswers([optKey]);
+      } else {
+        setCorrectAnswers((prev) => {
+          if (prev.includes(optKey)) {
+            return prev.filter((k) => k !== optKey);
+          } else {
+            return [...prev, optKey].sort();
+          }
+        });
+      }
+      return currentType;
+    });
+  }, []);
+
+  // 智慧快速新增：帶入主表單檢查
+  const handleQuickApply = useCallback((data: {
+    stem: string;
+    type: QuestionType;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+    correctAnswers: string[];
+    explanation: string;
+  }) => {
+    setStem(data.stem);
+    setType(data.type);
+    setOptionA(data.optionA);
+    setOptionB(data.optionB);
+    setOptionC(data.optionC);
+    setOptionD(data.optionD);
+    setCorrectAnswers(data.correctAnswers);
+    setExplanation(data.explanation || "");
+    setErrorMsg("");
+    setSuccessMsg("✨ 已成功帶入智慧解析題目！請核對題目內容與即時防重複提示，確認無誤後點擊「儲存題目至題庫」。");
+    setTimeout(() => setSuccessMsg(""), 5000);
+  }, []);
+
+  // 智慧快速新增：直接送出儲存
+  const handleDirectSave = useCallback(async (data: {
+    stem: string;
+    type: QuestionType;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+    correctAnswers: string[];
+    explanation: string;
+  }): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stem: data.stem,
+          type: data.type,
+          optionA: data.optionA,
+          optionB: data.optionB,
+          optionC: data.optionC,
+          optionD: data.optionD,
+          correctAnswers: data.correctAnswers,
+          explanation: data.explanation,
+          forceCreate: false,
+        }),
       });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        if (resData.requiresConfirmation) {
+          // 若有相似題目需確認，先將資料帶入表單並開啟防呆確認視窗
+          handleQuickApply(data);
+          setShowConfirmModal(true);
+          return true;
+        }
+        if (resData.isDuplicate || resData.exactMatch) {
+          // 若題庫中已存在完全相同題目，自動回填表單以便使用者檢視重複題目資訊
+          handleQuickApply(data);
+          setErrorMsg(resData.error || "題庫中已存在完全相同的題目，禁止重複錄入！請查看下方重複警示。");
+          return true;
+        }
+        throw new Error(resData.error || "儲存題目失敗");
+      }
+
+      setSuccessMsg("🎉 題目快速新增成功！");
+      setTimeout(() => setSuccessMsg(""), 3500);
+
+      // 清空表單
+      setStem("");
+      setOptionA("");
+      setOptionB("");
+      setOptionC("");
+      setOptionD("");
+      setCorrectAnswers(["A"]);
+      setExplanation("");
+      setDuplicateMatches([]);
+      setHasExactMatch(false);
+      setMaxSimilarity(0);
+
+      return true;
+    } catch (err: any) {
+      throw err;
     }
-  };
+  }, [handleQuickApply]);
 
   // 表單驗證與送出
-  const handleSubmit = async (force: boolean = false) => {
+  const handleSubmit = useCallback(async (force: boolean = false) => {
     setErrorMsg("");
     setSuccessMsg("");
 
@@ -189,104 +293,28 @@ export default function AddQuestionPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [
+    stem,
+    optionA,
+    optionB,
+    optionC,
+    optionD,
+    correctAnswers,
+    hasExactMatch,
+    maxSimilarity,
+    type,
+    explanation,
+  ]);
 
-  // 智慧快速新增：帶入主表單檢查
-  const handleQuickApply = (data: {
-    stem: string;
-    type: QuestionType;
-    optionA: string;
-    optionB: string;
-    optionC: string;
-    optionD: string;
-    correctAnswers: string[];
-    explanation: string;
-  }) => {
-    setStem(data.stem);
-    setType(data.type);
-    setOptionA(data.optionA);
-    setOptionB(data.optionB);
-    setOptionC(data.optionC);
-    setOptionD(data.optionD);
-    setCorrectAnswers(data.correctAnswers);
-    setExplanation(data.explanation || "");
-    setErrorMsg("");
-    setSuccessMsg("✨ 已成功帶入智慧解析題目！請核對題目內容與即時防重複提示，確認無誤後點擊「儲存題目至題庫」。");
-    setTimeout(() => setSuccessMsg(""), 5000);
-  };
-
-  // 智慧快速新增：直接送出儲存
-  const handleDirectSave = async (data: {
-    stem: string;
-    type: QuestionType;
-    optionA: string;
-    optionB: string;
-    optionC: string;
-    optionD: string;
-    correctAnswers: string[];
-    explanation: string;
-  }): Promise<boolean> => {
-    try {
-      const res = await fetch("/api/questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stem: data.stem,
-          type: data.type,
-          optionA: data.optionA,
-          optionB: data.optionB,
-          optionC: data.optionC,
-          optionD: data.optionD,
-          correctAnswers: data.correctAnswers,
-          explanation: data.explanation,
-          forceCreate: false,
-        }),
-      });
-
-      const resData = await res.json();
-      if (!res.ok) {
-        if (resData.requiresConfirmation) {
-          // 若有相似題目需確認，先將資料帶入表單並開啟防呆確認視窗
-          handleQuickApply(data);
-          setShowConfirmModal(true);
-          return true;
-        }
-        if (resData.isDuplicate || resData.exactMatch) {
-          // 若題庫中已存在完全相同題目，自動回填表單以便使用者檢視重複題目資訊
-          handleQuickApply(data);
-          setErrorMsg(resData.error || "題庫中已存在完全相同的題目，禁止重複錄入！請查看下方重複警示。");
-          return true;
-        }
-        throw new Error(resData.error || "儲存題目失敗");
-      }
-
-      setSuccessMsg("🎉 題目快速新增成功！");
-      setTimeout(() => setSuccessMsg(""), 3500);
-
-      // 清空表單
-      setStem("");
-      setOptionA("");
-      setOptionB("");
-      setOptionC("");
-      setOptionD("");
-      setCorrectAnswers(["A"]);
-      setExplanation("");
-      setDuplicateMatches([]);
-      setHasExactMatch(false);
-      setMaxSimilarity(0);
-
-      return true;
-    } catch (err: any) {
-      throw err;
-    }
-  };
-
-  const optionsList = [
-    { key: "A", value: optionA, setter: setOptionA, label: "選項 A" },
-    { key: "B", value: optionB, setter: setOptionB, label: "選項 B" },
-    { key: "C", value: optionC, setter: setOptionC, label: "選項 C" },
-    { key: "D", value: optionD, setter: setOptionD, label: "選項 D" },
-  ];
+  const optionsList = useMemo(
+    () => [
+      { key: "A", value: optionA, setter: setOptionA, label: "選項 A" },
+      { key: "B", value: optionB, setter: setOptionB, label: "選項 B" },
+      { key: "C", value: optionC, setter: setOptionC, label: "選項 C" },
+      { key: "D", value: optionD, setter: setOptionD, label: "選項 D" },
+    ],
+    [optionA, optionB, optionC, optionD]
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

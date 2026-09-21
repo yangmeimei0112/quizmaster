@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -70,6 +68,18 @@ body {
 }
 .touch-tactile:active {
   transform: scale(0.98);
+}
+
+/* Modern web guidance: defer rendering for below-the-fold content */
+.card-deferred-render {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 140px;
+}
+
+/* GPU hardware compositing layer promotion */
+.gpu-composited {
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 /* Stagger animation delay utilities for smooth sequential entry */

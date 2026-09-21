@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -25,6 +25,216 @@ import {
 } from "lucide-react";
 import { Question, QuestionType } from "@/types/question";
 import ExportModal from "@/components/ExportModal";
+
+interface QuestionCardItemProps {
+  question: Question;
+  index: number;
+  isExpanded: boolean;
+  isExplanationOpen: boolean;
+  showAnswersGlobal: boolean;
+  isDeleting: boolean;
+  isDeferred: boolean;
+  onToggleCard: (id: string) => void;
+  onToggleExplanation: (id: string) => void;
+  onOpenEdit: (q: Question) => void;
+  onDelete: (id: string) => void;
+}
+
+const QuestionCardItem = memo(function QuestionCardItem({
+  question: q,
+  index: idx,
+  isExpanded,
+  isExplanationOpen,
+  showAnswersGlobal,
+  isDeleting,
+  isDeferred,
+  onToggleCard,
+  onToggleExplanation,
+  onOpenEdit,
+  onDelete,
+}: QuestionCardItemProps) {
+  const correctSet = useMemo(() => new Set(q.correctAnswers.split(",")), [q.correctAnswers]);
+
+  const options = useMemo(
+    () => [
+      { key: "A", text: q.optionA },
+      { key: "B", text: q.optionB },
+      { key: "C", text: q.optionC },
+      { key: "D", text: q.optionD },
+    ],
+    [q.optionA, q.optionB, q.optionC, q.optionD]
+  );
+
+  return (
+    <div
+      className={`bg-[#0a0a0c] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-4 sm:p-6 transition-all duration-200 ease-expo-out shadow-linear-card ${
+        isDeferred ? "card-deferred-render" : ""
+      }`}
+    >
+      {/* 題目卡片標頭 (點擊切換折疊手風琴) */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onToggleCard(q.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggleCard(q.id);
+          }
+        }}
+        className="cursor-pointer select-none space-y-2.5 focus:outline-none focus:ring-1 focus:ring-accent rounded-xl"
+        aria-expanded={isExpanded}
+      >
+        {/* 題目頂部資訊列 */}
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="font-game font-bold text-foreground-muted shrink-0">#{idx + 1}</span>
+            <span
+              className={`font-game text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${
+                q.type === "SINGLE"
+                  ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/30"
+                  : "bg-purple-500/15 text-purple-300 border-purple-500/30"
+              }`}
+            >
+              {q.type === "SINGLE" ? "單選題" : "複選題"}
+            </span>
+          </div>
+
+          {/* 操作按鈕 (隔離點擊事件) + 旋轉指示箭頭 */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenEdit(q);
+              }}
+              className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-foreground-muted hover:text-[#8B96F8] hover:bg-white/[0.05] border border-transparent hover:border-white/[0.08] transition-all duration-200 ease-expo-out touch-manipulation active:scale-95"
+              title="編輯題目"
+              aria-label="編輯題目"
+            >
+              <Edit3 className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(q.id);
+              }}
+              disabled={isDeleting}
+              className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-foreground-muted hover:text-rose-400 hover:bg-rose-950/30 border border-transparent hover:border-rose-500/20 transition-all duration-200 ease-expo-out touch-manipulation active:scale-95"
+              title="刪除題目"
+              aria-label="刪除題目"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <div
+              className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-muted transition-transform duration-250 ease-expo-out transform-gpu"
+              style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+            >
+              <ChevronDown className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        {/* 題幹內容 (折疊時 line-clamp-2，展開時完整展示) */}
+        <h3 className={`text-sm sm:text-base font-bold font-game text-foreground leading-relaxed break-words whitespace-pre-wrap ${
+          isExpanded ? "" : "line-clamp-2 sm:line-clamp-none"
+        }`}>
+          {q.stem}
+        </h3>
+      </div>
+
+      {/* 手風琴折疊內容 (CSS Grid 0fr -> 1fr 純 CSS 平滑微動態) */}
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-250 ease-expo-out ${
+          isExpanded
+            ? "grid-rows-[1fr] opacity-100 mt-4"
+            : "grid-rows-[0fr] opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-4 pt-1">
+            {/* 四個選項 A, B, C, D */}
+            <div className="grid sm:grid-cols-2 gap-3">
+              {options.map((opt) => {
+                const isCorrect = correctSet.has(opt.key);
+                const shouldHighlight = showAnswersGlobal && isCorrect;
+
+                return (
+                  <div
+                    key={opt.key}
+                    className={`p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 transition-all duration-200 ease-expo-out ${
+                      shouldHighlight
+                        ? "border-emerald-500/60 bg-emerald-950/30 text-emerald-100 ring-1 ring-emerald-500/30 shadow-[0_0_16px_rgba(16,185,129,0.15)] font-medium"
+                        : "border-white/[0.06] bg-white/[0.02] text-foreground"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs font-game shrink-0 ${
+                          shouldHighlight
+                            ? "bg-emerald-500 text-slate-950 font-black shadow-sm"
+                            : "bg-white/[0.05] border border-white/[0.08] text-foreground-muted"
+                        }`}
+                      >
+                        {opt.key}
+                      </span>
+                      <span className="leading-snug min-w-0 break-words whitespace-pre-wrap">{opt.text}</span>
+                    </div>
+
+                    {shouldHighlight && (
+                      <span className="font-game text-[10px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 rounded-md shrink-0">
+                        正解
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 答案與解析區塊 */}
+            <div className="pt-3 border-t border-white/[0.06] flex flex-col gap-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground-muted">標準解答：</span>
+                  <span className="font-bold text-emerald-400 font-game text-sm">
+                    {showAnswersGlobal ? q.correctAnswers : "•••• (已隱藏)"}
+                  </span>
+                </div>
+
+                {q.explanation && q.explanation.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleExplanation(q.id)}
+                    className="min-h-[44px] py-2 px-1 text-xs text-[#8B96F8] font-semibold hover:text-accent-bright flex items-center gap-1 transition-colors"
+                  >
+                    <span>{isExplanationOpen ? "收合解析" : "查看詳細解析"}</span>
+                    {isExplanationOpen ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* 解析手風琴展開容器 */}
+              {isExplanationOpen && q.explanation && q.explanation.trim() && (
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs text-foreground-muted leading-relaxed transition-all duration-250 ease-out animate-in fade-in">
+                  <p className="font-bold font-game text-foreground mb-1.5 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    解析與考點說明：
+                  </p>
+                  <p className="text-foreground-subtle leading-relaxed break-words whitespace-pre-wrap">{q.explanation}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 export default function QuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -57,64 +267,74 @@ export default function QuestionsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // 載入題目
-  const fetchQuestions = useCallback(async () => {
+  const fetchQuestions = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
       if (searchTerm.trim()) params.set("q", searchTerm.trim());
       if (selectedType !== "ALL") params.set("type", selectedType);
 
-      const res = await fetch(`/api/questions?${params.toString()}`);
+      const res = await fetch(`/api/questions?${params.toString()}`, { signal });
       if (res.ok) {
         const data = await res.json();
         setQuestions(data.questions || []);
       }
-    } catch (err) {
-      console.error("載入題目失敗:", err);
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
+        console.error("載入題目失敗:", err);
+      }
     } finally {
-      setIsLoading(false);
+      if (!signal || !signal.aborted) {
+        setIsLoading(false);
+      }
     }
   }, [searchTerm, selectedType]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const timer = setTimeout(() => {
-      fetchQuestions();
+      fetchQuestions(controller.signal);
     }, 250);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [fetchQuestions]);
 
   // R4 智慧手風琴卡片展開/收合控制
   const isAllCardsExpanded = questions.length > 0 && expandedCardIds.size === questions.length;
 
-  const toggleExpandAllCards = () => {
-    if (isAllCardsExpanded) {
-      setExpandedCardIds(new Set());
-    } else {
-      setExpandedCardIds(new Set(questions.map((q) => q.id)));
-    }
-  };
+  const toggleExpandAllCards = useCallback(() => {
+    setExpandedCardIds((prev) => {
+      if (questions.length > 0 && prev.size === questions.length) {
+        return new Set();
+      } else {
+        return new Set(questions.map((q) => q.id));
+      }
+    });
+  }, [questions]);
 
-  const toggleCard = (id: string) => {
+  const toggleCard = useCallback((id: string) => {
     setExpandedCardIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
 
   // 切換解析展開狀態
-  const toggleExplanation = (id: string) => {
+  const toggleExplanation = useCallback((id: string) => {
     setExpandedExplanations((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
 
   // 刪除題目
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     if (!confirm("確定要刪除這道題目嗎？刪除後無法還原。")) return;
     setDeletingId(id);
     try {
@@ -127,10 +347,10 @@ export default function QuestionsPage() {
     } finally {
       setDeletingId(null);
     }
-  };
+  }, []);
 
   // 開啟編輯 Modal
-  const handleOpenEdit = (q: Question) => {
+  const handleOpenEdit = useCallback((q: Question) => {
     setEditingQuestion(q);
     setEditStem(q.stem);
     setEditType(q.type);
@@ -140,7 +360,7 @@ export default function QuestionsPage() {
     setEditOptD(q.optionD);
     setEditAnswers(q.correctAnswers.split(",").filter(Boolean));
     setEditExplanation(q.explanation || "");
-  };
+  }, []);
 
   // 儲存編輯變更
   const handleSaveEdit = async () => {
@@ -348,187 +568,22 @@ export default function QuestionsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {questions.map((q, idx) => {
-            const isExpanded = expandedCardIds.has(q.id);
-            const correctSet = new Set(q.correctAnswers.split(","));
-            const isExplanationOpen = expandedExplanations.has(q.id);
-
-            const options = [
-              { key: "A", text: q.optionA },
-              { key: "B", text: q.optionB },
-              { key: "C", text: q.optionC },
-              { key: "D", text: q.optionD },
-            ];
-
-            return (
-              <div
-                key={q.id}
-                className="bg-[#0a0a0c] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-4 sm:p-6 transition-all duration-200 ease-expo-out shadow-linear-card"
-              >
-                {/* 題目卡片標頭 (點擊切換折疊手風琴) */}
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleCard(q.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      toggleCard(q.id);
-                    }
-                  }}
-                  className="cursor-pointer select-none space-y-2.5 focus:outline-none focus:ring-1 focus:ring-accent rounded-xl"
-                  aria-expanded={isExpanded}
-                >
-                  {/* 題目頂部資訊列 */}
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="font-game font-bold text-foreground-muted shrink-0">#{idx + 1}</span>
-                      <span
-                        className={`font-game text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${
-                          q.type === "SINGLE"
-                            ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/30"
-                            : "bg-purple-500/15 text-purple-300 border-purple-500/30"
-                        }`}
-                      >
-                        {q.type === "SINGLE" ? "單選題" : "複選題"}
-                      </span>
-                    </div>
-
-                    {/* 操作按鈕 (隔離點擊事件) + 旋轉指示箭頭 */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenEdit(q);
-                        }}
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-foreground-muted hover:text-[#8B96F8] hover:bg-white/[0.05] border border-transparent hover:border-white/[0.08] transition-all duration-200 ease-expo-out touch-manipulation active:scale-95"
-                        title="編輯題目"
-                        aria-label="編輯題目"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(q.id);
-                        }}
-                        disabled={deletingId === q.id}
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-foreground-muted hover:text-rose-400 hover:bg-rose-950/30 border border-transparent hover:border-rose-500/20 transition-all duration-200 ease-expo-out touch-manipulation active:scale-95"
-                        title="刪除題目"
-                        aria-label="刪除題目"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <div
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-muted transition-transform duration-250 ease-expo-out"
-                        style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 題幹內容 (折疊時 line-clamp-2，展開時完整展示) */}
-                  <h3 className={`text-sm sm:text-base font-bold font-game text-foreground leading-relaxed break-words whitespace-pre-wrap ${
-                    isExpanded ? "" : "line-clamp-2 sm:line-clamp-none"
-                  }`}>
-                    {q.stem}
-                  </h3>
-                </div>
-
-                {/* 手風琴折疊內容 (CSS Grid 0fr -> 1fr 純 CSS 平滑微動態) */}
-                <div
-                  className={`grid transition-[grid-template-rows,opacity] duration-250 ease-expo-out ${
-                    isExpanded
-                      ? "grid-rows-[1fr] opacity-100 mt-4"
-                      : "grid-rows-[0fr] opacity-0 pointer-events-none"
-                  }`}
-                >
-                  <div className="overflow-hidden">
-                    <div className="space-y-4 pt-1">
-                      {/* 四個選項 A, B, C, D */}
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        {options.map((opt) => {
-                          const isCorrect = correctSet.has(opt.key);
-                          const shouldHighlight = showAnswersGlobal && isCorrect;
-
-                          return (
-                            <div
-                              key={opt.key}
-                              className={`p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 transition-all duration-200 ease-expo-out ${
-                                shouldHighlight
-                                  ? "border-emerald-500/60 bg-emerald-950/30 text-emerald-100 ring-1 ring-emerald-500/30 shadow-[0_0_16px_rgba(16,185,129,0.15)] font-medium"
-                                  : "border-white/[0.06] bg-white/[0.02] text-foreground"
-                              }`}
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <span
-                                  className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs font-game shrink-0 ${
-                                    shouldHighlight
-                                      ? "bg-emerald-500 text-slate-950 font-black shadow-sm"
-                                      : "bg-white/[0.05] border border-white/[0.08] text-foreground-muted"
-                                  }`}
-                                >
-                                  {opt.key}
-                                </span>
-                                <span className="leading-snug min-w-0 break-words whitespace-pre-wrap">{opt.text}</span>
-                              </div>
-
-                              {shouldHighlight && (
-                                <span className="font-game text-[10px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 rounded-md shrink-0">
-                                  正解
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* 答案與解析區塊 */}
-                      <div className="pt-3 border-t border-white/[0.06] flex flex-col gap-2.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-foreground-muted">標準解答：</span>
-                            <span className="font-bold text-emerald-400 font-game text-sm">
-                              {showAnswersGlobal ? q.correctAnswers : "•••• (已隱藏)"}
-                            </span>
-                          </div>
-
-                          {q.explanation && q.explanation.trim() && (
-                            <button
-                              type="button"
-                              onClick={() => toggleExplanation(q.id)}
-                              className="min-h-[44px] py-2 px-1 text-xs text-[#8B96F8] font-semibold hover:text-accent-bright flex items-center gap-1 transition-colors"
-                            >
-                              <span>{isExplanationOpen ? "收合解析" : "查看詳細解析"}</span>
-                              {isExplanationOpen ? (
-                                <ChevronUp className="w-3.5 h-3.5" />
-                              ) : (
-                                <ChevronDown className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          )}
-                        </div>
-
-                        {/* 解析手風琴展開容器 */}
-                        {isExplanationOpen && q.explanation && q.explanation.trim() && (
-                          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs text-foreground-muted leading-relaxed transition-all duration-250 ease-out animate-in fade-in">
-                            <p className="font-bold font-game text-foreground mb-1.5 flex items-center gap-1.5">
-                              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                              解析與考點說明：
-                            </p>
-                            <p className="text-foreground-subtle leading-relaxed break-words whitespace-pre-wrap">{q.explanation}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {questions.map((q, idx) => (
+            <QuestionCardItem
+              key={q.id}
+              question={q}
+              index={idx}
+              isExpanded={expandedCardIds.has(q.id)}
+              isExplanationOpen={expandedExplanations.has(q.id)}
+              showAnswersGlobal={showAnswersGlobal}
+              isDeleting={deletingId === q.id}
+              isDeferred={idx > 3}
+              onToggleCard={toggleCard}
+              onToggleExplanation={toggleExplanation}
+              onOpenEdit={handleOpenEdit}
+              onDelete={handleDelete}
+            />
+          ))}
         </div>
       )}
 
