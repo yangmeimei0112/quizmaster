@@ -6,18 +6,7 @@ import { SimilarMatch } from "@/types/question";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { stem, excludeId } = body;
-
-    if (!stem || typeof stem !== "string" || stem.trim().length < 2) {
-      return NextResponse.json({
-        hasExactMatch: false,
-        hasHighSimilarity: false,
-        maxSimilarity: 0,
-        matches: [],
-      });
-    }
-
-    const normInput = normalizeText(stem);
+    const { stem, stems, excludeId } = body;
 
     // 取得現有題目進行比對 (單人題庫規模，讀取題幹比對效率極高)
     const questions = await prisma.question.findMany({
@@ -32,57 +21,81 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const matches: SimilarMatch[] = [];
-    let hasExactMatch = false;
-    let maxSimilarity = 0;
-
-    for (const q of questions) {
-      // 快速比較已正規化的字串
-      if (q.normalizedStem === normInput) {
-        hasExactMatch = true;
-        maxSimilarity = 100;
-        matches.push({
-          id: q.id,
-          stem: q.stem,
-          type: q.type as any,
-          category: q.category,
-          similarity: 100,
-          isExact: true,
-          level: "EXACT",
-        });
-        continue;
+    const checkSingleStem = (inputStem: string) => {
+      if (!inputStem || typeof inputStem !== "string" || inputStem.trim().length < 2) {
+        return {
+          stem: inputStem || "",
+          hasExactMatch: false,
+          hasHighSimilarity: false,
+          maxSimilarity: 0,
+          matches: [],
+        };
       }
 
-      const res = calculateSimilarity(stem, q.stem);
-      if (res.similarity >= 60) {
-        if (res.similarity > maxSimilarity) {
-          maxSimilarity = res.similarity;
-        }
-        if (res.isExact) {
+      const trimmedStem = inputStem.trim();
+      const normInput = normalizeText(trimmedStem);
+      const matches: SimilarMatch[] = [];
+      let hasExactMatch = false;
+      let maxSimilarity = 0;
+
+      for (const q of questions) {
+        const qNorm = q.normalizedStem || normalizeText(q.stem);
+        // 快速比較已正規化的字串
+        if (qNorm === normInput) {
           hasExactMatch = true;
+          maxSimilarity = 100;
+          matches.push({
+            id: q.id,
+            stem: q.stem,
+            type: q.type as any,
+            category: q.category,
+            similarity: 100,
+            isExact: true,
+            level: "EXACT",
+          });
+          continue;
         }
-        matches.push({
-          id: q.id,
-          stem: q.stem,
-          type: q.type as any,
-          category: q.category,
-          similarity: res.similarity,
-          isExact: res.isExact,
-          level: res.level,
-        });
+
+        const res = calculateSimilarity(trimmedStem, q.stem);
+        if (res.similarity >= 60) {
+          if (res.similarity > maxSimilarity) {
+            maxSimilarity = res.similarity;
+          }
+          if (res.isExact || res.similarity === 100) {
+            hasExactMatch = true;
+          }
+          matches.push({
+            id: q.id,
+            stem: q.stem,
+            type: q.type as any,
+            category: q.category,
+            similarity: res.similarity,
+            isExact: res.isExact || res.similarity === 100,
+            level: res.level,
+          });
+        }
       }
+
+      // 按相似度由高到低排序，最多取前 5 筆
+      matches.sort((a, b) => b.similarity - a.similarity);
+      const topMatches = matches.slice(0, 5);
+
+      return {
+        stem: trimmedStem,
+        hasExactMatch,
+        hasHighSimilarity: maxSimilarity >= 70,
+        maxSimilarity,
+        matches: topMatches,
+      };
+    };
+
+    if (Array.isArray(stems)) {
+      const results = stems.map((s) => checkSingleStem(s));
+      return NextResponse.json({ results });
     }
 
-    // 按相似度由高到低排序，最多取前 5 筆
-    matches.sort((a, b) => b.similarity - a.similarity);
-    const topMatches = matches.slice(0, 5);
-
-    return NextResponse.json({
-      hasExactMatch,
-      hasHighSimilarity: maxSimilarity >= 75,
-      maxSimilarity,
-      matches: topMatches,
-    });
+    const singleResult = checkSingleStem(stem);
+    return NextResponse.json(singleResult);
   } catch (error: any) {
     console.error("Check duplicate error:", error);
     return NextResponse.json(

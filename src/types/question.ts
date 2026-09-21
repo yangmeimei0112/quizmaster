@@ -61,3 +61,15 @@ export interface SimilarMatch {
   isExact: boolean;
   level: "NONE" | "LOW" | "MEDIUM" | "HIGH" | "EXACT";
 }
+
+export interface QuestionDuplicateStatus {
+  isChecking: boolean;
+  status: "NORMAL" | "SIMILAR" | "EXACT";
+  similarity: number;
+  isExactMatch: boolean;
+  isHighSimilarity: boolean;
+  duplicateSource: "DATABASE" | "BATCH" | null;
+  matchedStem: string;
+  matchedBatchIndex?: number;
+  matchedQuestion?: SimilarMatch;
+}
