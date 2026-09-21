@@ -15,11 +15,13 @@ import {
   Flame,
   Check,
   AlertTriangle,
+  FileDown,
 } from "lucide-react";
 import { Question } from "@/types/question";
 import { getCachedQuestions, setCachedQuestions } from "@/lib/questionsCache";
 import MockExamView from "@/components/practice/MockExamView";
 import WrongQuestionsRanking from "@/components/practice/WrongQuestionsRanking";
+import ExportModal from "@/components/ExportModal";
 
 type PracticeMode = "NONE" | "INSTANT" | "MOCK_EXAM";
 
@@ -32,6 +34,7 @@ export default function PracticePage() {
 
   // 模式：NONE (大廳) | INSTANT (即時隨機練習) | MOCK_EXAM (60分鐘模擬考)
   const [quizMode, setQuizMode] = useState<PracticeMode>("NONE");
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // 即時測驗設定
   const [selectedType, setSelectedType] = useState<string>("ALL");
@@ -740,28 +743,48 @@ export default function PracticePage() {
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={handleStartMockExam}
-            disabled={!isMockExamAvailable}
-            className={`w-full min-h-[48px] py-3.5 rounded-2xl font-bold font-game text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
-              isMockExamAvailable
-                ? "bg-accent hover:bg-accent-bright text-white shadow-glow"
-                : "bg-white/[0.04] text-white/30 border border-white/[0.06] cursor-not-allowed"
-            }`}
-          >
-            <Award className="w-4 h-4" />
-            <span>
-              {isMockExamAvailable
-                ? "開始 50 題模擬考 (限時 60:00)"
-                : `題庫需達 50 題才能開啟模擬考（目前 ${allQuestions.length} 題）`}
-            </span>
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
+            <button
+              type="button"
+              onClick={handleStartMockExam}
+              disabled={!isMockExamAvailable}
+              className={`w-full min-h-[48px] py-3.5 px-4 rounded-2xl font-bold font-game text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
+                isMockExamAvailable
+                  ? "bg-accent hover:bg-accent-bright text-white shadow-glow"
+                  : "bg-white/[0.04] text-white/30 border border-white/[0.06] cursor-not-allowed"
+              }`}
+            >
+              <Award className="w-4 h-4" />
+              <span>
+                {isMockExamAvailable
+                  ? "開始 50 題模擬考"
+                  : `需達 50 題才能開考 (${allQuestions.length}/50)`}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsExportModalOpen(true)}
+              disabled={allQuestions.length === 0}
+              className="w-full min-h-[48px] py-3.5 px-4 rounded-2xl font-bold font-game text-xs sm:text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40"
+            >
+              <FileDown className="w-4 h-4 text-blue-400 shrink-0" />
+              <span>匯出 50 題考卷 (Docx/PDF)</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* 錯題排行榜系統區塊 */}
       <WrongQuestionsRanking onQuickPractice={handleQuickPracticeSingle} />
+
+      {/* 50 題考卷匯出彈窗 */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        questions={allQuestions}
+        initialMode="RANDOM_50"
+      />
     </div>
   );
 }

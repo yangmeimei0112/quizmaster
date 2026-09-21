@@ -13,6 +13,7 @@ import {
   User as UserIcon,
   LogIn,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -31,6 +32,7 @@ export default function Navbar() {
     { href: "/add", label: "新增題目", icon: PlusCircle },
     { href: "/questions", label: "題目查詢", icon: Search },
     { href: "/practice", label: "刷題練習", icon: GraduationCap },
+    { href: "/guide", label: "引導小精靈", icon: Sparkles },
   ];
 
   return (

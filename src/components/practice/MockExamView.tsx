@@ -16,9 +16,11 @@ import {
   HelpCircle,
   Flame,
   ArrowLeft,
+  FileText,
 } from "lucide-react";
 import { Question } from "@/types/question";
 import { useAuth } from "@/lib/AuthContext";
+import ExamWrongReportModal from "./ExamWrongReportModal";
 
 interface MockExamViewProps {
   questions: Question[]; // 50 questions
@@ -48,6 +50,8 @@ export default function MockExamView({
   // 測驗狀態
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showWrongReportModal, setShowWrongReportModal] = useState(false);
+  const [completedAt, setCompletedAt] = useState<string>("");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
@@ -69,6 +73,7 @@ export default function MockExamView({
     setShowSubmitModal(false);
 
     const now = Date.now();
+    setCompletedAt(new Date(now).toLocaleString("zh-TW", { hour12: false }));
     const finalElapsed = Math.min(
       TOTAL_TIME_SECONDS,
       Math.max(1, Math.floor((now - startTimeRef.current) / 1000))
@@ -260,7 +265,6 @@ export default function MockExamView({
 
       if (!userAns) {
         unanswered++;
-        wrongCount++;
       } else if (userAns === correctAns) {
         correctCount++;
       } else {
@@ -715,6 +719,14 @@ export default function MockExamView({
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2 relative z-10">
           <button
             type="button"
+            onClick={() => setShowWrongReportModal(true)}
+            className="min-h-[46px] px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold font-game shadow-[0_0_20px_rgba(59,130,246,0.35)] transition-all flex items-center gap-2 active:scale-95"
+          >
+            <FileText className="w-4 h-4" />
+            <span>印出錯題報告 (Google文件)</span>
+          </button>
+          <button
+            type="button"
             onClick={onRestart}
             className="min-h-[46px] px-6 py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs sm:text-sm font-bold font-game shadow-glow transition-all flex items-center gap-2"
           >
@@ -911,6 +923,17 @@ export default function MockExamView({
           })}
         </div>
       </div>
+
+      {/* 錯題報告 (Google文件) 彈窗 */}
+      <ExamWrongReportModal
+        isOpen={showWrongReportModal}
+        onClose={() => setShowWrongReportModal(false)}
+        questions={questions}
+        userAnswers={userAnswers}
+        scoreResults={scoreResults}
+        elapsedSeconds={elapsedSeconds}
+        completedAt={completedAt}
+      />
     </div>
   );
 }
