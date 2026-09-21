@@ -15,8 +15,10 @@ import {
   Check,
   XCircle,
   RefreshCw,
+  ClipboardPaste,
 } from "lucide-react";
 import { SimilarMatch, QuestionType } from "@/types/question";
+import QuickAddModal from "@/components/QuickAddModal";
 
 export default function AddQuestionPage() {
   const router = useRouter();
@@ -43,6 +45,7 @@ export default function AddQuestionPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false);
 
   // 當題幹輸入時，Debounced 即時防重複比對 (350ms)
   useEffect(() => {
@@ -188,6 +191,96 @@ export default function AddQuestionPage() {
     }
   };
 
+  // 智慧快速新增：帶入主表單檢查
+  const handleQuickApply = (data: {
+    stem: string;
+    type: QuestionType;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+    correctAnswers: string[];
+    explanation: string;
+  }) => {
+    setStem(data.stem);
+    setType(data.type);
+    setOptionA(data.optionA);
+    setOptionB(data.optionB);
+    setOptionC(data.optionC);
+    setOptionD(data.optionD);
+    setCorrectAnswers(data.correctAnswers);
+    setExplanation(data.explanation || "");
+    setErrorMsg("");
+    setSuccessMsg("✨ 已成功帶入智慧解析題目！請核對題目內容與即時防重複提示，確認無誤後點擊「儲存題目至題庫」。");
+    setTimeout(() => setSuccessMsg(""), 5000);
+  };
+
+  // 智慧快速新增：直接送出儲存
+  const handleDirectSave = async (data: {
+    stem: string;
+    type: QuestionType;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+    correctAnswers: string[];
+    explanation: string;
+  }): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stem: data.stem,
+          type: data.type,
+          optionA: data.optionA,
+          optionB: data.optionB,
+          optionC: data.optionC,
+          optionD: data.optionD,
+          correctAnswers: data.correctAnswers,
+          explanation: data.explanation,
+          forceCreate: false,
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        if (resData.requiresConfirmation) {
+          // 若有相似題目需確認，先將資料帶入表單並開啟防呆確認視窗
+          handleQuickApply(data);
+          setShowConfirmModal(true);
+          return true;
+        }
+        if (resData.isDuplicate || resData.exactMatch) {
+          // 若題庫中已存在完全相同題目，自動回填表單以便使用者檢視重複題目資訊
+          handleQuickApply(data);
+          setErrorMsg(resData.error || "題庫中已存在完全相同的題目，禁止重複錄入！請查看下方重複警示。");
+          return true;
+        }
+        throw new Error(resData.error || "儲存題目失敗");
+      }
+
+      setSuccessMsg("🎉 題目快速新增成功！");
+      setTimeout(() => setSuccessMsg(""), 3500);
+
+      // 清空表單
+      setStem("");
+      setOptionA("");
+      setOptionB("");
+      setOptionC("");
+      setOptionD("");
+      setCorrectAnswers(["A"]);
+      setExplanation("");
+      setDuplicateMatches([]);
+      setHasExactMatch(false);
+      setMaxSimilarity(0);
+
+      return true;
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
   const optionsList = [
     { key: "A", value: optionA, setter: setOptionA, label: "選項 A" },
     { key: "B", value: optionB, setter: setOptionB, label: "選項 B" },
@@ -216,32 +309,49 @@ export default function AddQuestionPage() {
           </p>
         </div>
 
-        {/* Nintendo Switch Glowing Capsule Switcher */}
-        <div className="bg-[#020203] p-1.5 rounded-2xl grid grid-cols-2 sm:flex items-center gap-1.5 border border-white/[0.08] shadow-inner w-full sm:w-auto">
+        {/* Action Controls Group: 快速新增 + 題型切換 */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+          {/* 智慧快速新增按鈕 */}
           <button
             type="button"
-            onClick={() => handleTypeChange("SINGLE")}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold font-game transition-all duration-200 ease-expo-out flex items-center justify-center gap-1.5 ${
-              type === "SINGLE"
-                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-                : "text-foreground-muted hover:text-foreground border border-transparent"
-            }`}
+            onClick={() => setShowQuickAddModal(true)}
+            className="min-h-[44px] px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-500/20 via-accent/20 to-purple-500/20 hover:from-purple-500/30 hover:via-accent/30 hover:to-purple-500/30 text-white font-game font-bold text-xs sm:text-sm border border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.25)] flex items-center justify-center gap-2 transition-all duration-200 ease-expo-out touch-manipulation touch-tactile group"
+            title="貼上完整題目文字進行智慧解析"
           >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>單選題</span>
+            <Sparkles className="w-4 h-4 text-purple-400 group-hover:rotate-12 transition-transform" />
+            <span>快速新增</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/30 text-purple-200 border border-purple-400/40">
+              貼上解析
+            </span>
           </button>
-          <button
-            type="button"
-            onClick={() => handleTypeChange("MULTIPLE")}
-            className={`min-h-[44px] px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold font-game transition-all duration-200 ease-expo-out flex items-center justify-center gap-1.5 ${
-              type === "MULTIPLE"
-                ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.3)]"
-                : "text-foreground-muted hover:text-foreground border border-transparent"
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>複選題</span>
-          </button>
+
+          {/* Nintendo Switch Glowing Capsule Switcher */}
+          <div className="bg-[#020203] p-1.5 rounded-2xl grid grid-cols-2 sm:flex items-center gap-1.5 border border-white/[0.08] shadow-inner w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => handleTypeChange("SINGLE")}
+              className={`min-h-[44px] px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold font-game transition-all duration-200 ease-expo-out flex items-center justify-center gap-1.5 ${
+                type === "SINGLE"
+                  ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                  : "text-foreground-muted hover:text-foreground border border-transparent"
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>單選題</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTypeChange("MULTIPLE")}
+              className={`min-h-[44px] px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold font-game transition-all duration-200 ease-expo-out flex items-center justify-center gap-1.5 ${
+                type === "MULTIPLE"
+                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.3)]"
+                  : "text-foreground-muted hover:text-foreground border border-transparent"
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>複選題</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -271,6 +381,34 @@ export default function AddQuestionPage() {
 
       {/* Main Form Box */}
       <div className="bg-[#0a0a0c]/90 rounded-3xl border border-white/[0.06] shadow-linear-card p-4 sm:p-8 space-y-6 backdrop-blur-md animate-fade-in-up">
+        {/* 智慧快速新增引導橫幅 */}
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-accent/15 to-white/[0.02] border border-purple-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-[0_0_18px_rgba(168,85,247,0.1)]">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0 shadow-sm">
+              <ClipboardPaste className="w-4.5 h-4.5 text-purple-400" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold font-game text-foreground flex items-center gap-1.5">
+                <span>手邊有完整題目文字？使用智慧快速新增</span>
+                <span className="text-[10px] text-purple-300 bg-purple-500/25 border border-purple-400/30 px-2 py-0.2 rounded-full font-medium">
+                  推薦
+                </span>
+              </div>
+              <p className="text-foreground-muted text-[11px] truncate mt-0.5">
+                一鍵貼上整道題目，演算法自動分離題號、題幹、四個選項、答案與解析，核對後帶入表單。
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowQuickAddModal(true)}
+            className="min-h-[40px] px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-500/40 text-xs font-bold font-game shrink-0 flex items-center justify-center gap-1.5 transition-all duration-200 ease-expo-out touch-tactile shadow-sm self-stretch sm:self-auto"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span>開啟快速新增</span>
+          </button>
+        </div>
+
         {/* 1. 題幹輸入 */}
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
@@ -544,6 +682,14 @@ export default function AddQuestionPage() {
           </div>
         </div>
       )}
+
+      {/* 智慧快速新增彈窗 (包含即時解析與結構化檢查預覽) */}
+      <QuickAddModal
+        isOpen={showQuickAddModal}
+        onClose={() => setShowQuickAddModal(false)}
+        onApply={handleQuickApply}
+        onDirectSave={handleDirectSave}
+      />
     </div>
   );
 }
