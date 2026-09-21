@@ -14,9 +14,11 @@ import {
   ArrowRight,
   PlusCircle,
   HelpCircle,
+  ListPlus,
+  Send,
 } from "lucide-react";
 import { QuestionType } from "@/types/question";
-import { parseQuestionText, ParsedQuestionResult } from "@/lib/questionParser";
+import { parseMultipleQuestions, ParsedQuestionResult } from "@/lib/questionParser";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -41,9 +43,22 @@ interface QuickAddModalProps {
     correctAnswers: string[];
     explanation: string;
   }) => Promise<boolean>;
+  onBatchSaved?: (data: { createdCount: number; skippedCount: number }) => void;
 }
 
-const SAMPLE_TEXT = `8. 專案工作說明書（Statement of Work, SOW）主要是由下列哪一方提供？
+interface EditableQuestionItem {
+  stem: string;
+  type: QuestionType;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctAnswers: string[];
+  explanation: string;
+  warnings: string[];
+}
+
+const SAMPLE_TEXT_SINGLE = `8. 專案工作說明書（Statement of Work, SOW）主要是由下列哪一方提供？
 (A) 需求者、業主或委託人
 
 (B) 專案贊助者（Project Sponsor）
@@ -51,32 +66,48 @@ const SAMPLE_TEXT = `8. 專案工作說明書（Statement of Work, SOW）主要�
 (C) 主承包商（Contractor）
 
 (D) 專案經理（Project Manager）
-答案：A
+正確解答：A
 解析：專案工作說明書（SOW）是由需求者、客戶或買方撰寫，用以說明要採購的產品、成果或服務規格。`;
+
+const SAMPLE_TEXT_MULTI = `11. 發展專案團隊（Develop Project Team）的產出（Output）為下列哪一項？
+(A) 團隊績效評估（Team Performance Assessment）
+
+(B) 績效評鑑的投入（Input）與表揚獎勵系統
+
+(C) 績效改善、績效評鑑的投入（Input）與績效報告（Performance Report）
+
+(D) 工作成果、績效評鑑的投入（Input）與績效報告（Performance Report）
+
+正確解答：A
+
+12. 下列哪一項指的是工作結果的滿意度確認？
+(A) 控制品質（Control Quality）
+
+(B) 確認範疇（Validate Scope）
+
+(C) 控制成本（Control Costs）
+
+(D) 控制風險（Control Risks）
+
+正確解答：B`;
 
 export default function QuickAddModal({
   isOpen,
   onClose,
   onApply,
   onDirectSave,
+  onBatchSaved,
 }: QuickAddModalProps) {
   const [rawText, setRawText] = useState("");
-  const [parsed, setParsed] = useState<ParsedQuestionResult | null>(null);
+  const [parsedList, setParsedList] = useState<EditableQuestionItem[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isParsingPending, startParsingTransition] = useTransition();
 
-  // 可在預覽中微調的編輯狀態
-  const [editedStem, setEditedStem] = useState("");
-  const [editedType, setEditedType] = useState<QuestionType>("SINGLE");
-  const [editedA, setEditedA] = useState("");
-  const [editedB, setEditedB] = useState("");
-  const [editedC, setEditedC] = useState("");
-  const [editedD, setEditedD] = useState("");
-  const [editedAnswers, setEditedAnswers] = useState<string[]>(["A"]);
-  const [editedExplanation, setEditedExplanation] = useState("");
-
   const [isDirectSubmitting, setIsDirectSubmitting] = useState(false);
+  const [isBatchSubmitting, setIsBatchSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [clipboardNotice, setClipboardNotice] = useState("");
+  const [batchNotice, setBatchNotice] = useState("");
 
   // 監聽 ESC 鍵關閉
   useEffect(() => {
@@ -88,65 +119,102 @@ export default function QuickAddModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  // 當貼入文本變更時，防抖 120ms + useTransition 即時解析，確保主執行緒零卡頓
+  // 當貼入文本變更時，防抖 120ms + useTransition 即時多題切分與解析
   useEffect(() => {
     if (!rawText.trim()) {
-      setParsed(null);
-      setEditedStem("");
-      setEditedA("");
-      setEditedB("");
-      setEditedC("");
-      setEditedD("");
-      setEditedAnswers(["A"]);
-      setEditedExplanation("");
+      setParsedList([]);
+      setActiveIndex(0);
       setFormError("");
+      setBatchNotice("");
       return;
     }
 
     const timer = setTimeout(() => {
       startParsingTransition(() => {
-        const res = parseQuestionText(rawText);
-        setParsed(res);
-        setEditedStem(res.stem);
-        setEditedType(res.type);
-        setEditedA(res.optionA);
-        setEditedB(res.optionB);
-        setEditedC(res.optionC);
-        setEditedD(res.optionD);
-        setEditedAnswers(res.correctAnswers);
-        setEditedExplanation(res.explanation);
+        const results = parseMultipleQuestions(rawText);
+        const mapped: EditableQuestionItem[] = results.map((res) => ({
+          stem: res.stem,
+          type: res.type,
+          optionA: res.optionA,
+          optionB: res.optionB,
+          optionC: res.optionC,
+          optionD: res.optionD,
+          correctAnswers: res.correctAnswers,
+          explanation: res.explanation,
+          warnings: res.warnings,
+        }));
+        setParsedList(mapped);
+        setActiveIndex(0);
         setFormError("");
+        setBatchNotice("");
       });
     }, 120);
 
     return () => clearTimeout(timer);
   }, [rawText]);
 
-  if (!isOpen) return null;
+  // 當前編輯中的題目
+  const currentItem = parsedList[activeIndex] || null;
+
+  // 更新當前正在檢視題目的欄位
+  const updateCurrentItem = useCallback(
+    (updater: (prev: EditableQuestionItem) => EditableQuestionItem) => {
+      setParsedList((prevList) => {
+        if (!prevList[activeIndex]) return prevList;
+        const nextList = [...prevList];
+        nextList[activeIndex] = updater(nextList[activeIndex]);
+        return nextList;
+      });
+    },
+    [activeIndex]
+  );
+
+  // 切換當前題目題型
+  const handleTypeChange = useCallback(
+    (newType: QuestionType) => {
+      updateCurrentItem((prev) => ({
+        ...prev,
+        type: newType,
+        correctAnswers:
+          newType === "SINGLE"
+            ? prev.correctAnswers.length > 0
+              ? [prev.correctAnswers[0]]
+              : ["A"]
+            : prev.correctAnswers,
+      }));
+    },
+    [updateCurrentItem]
+  );
 
   // 切換答案勾選
-  const toggleAnswer = useCallback((key: string) => {
-    setEditedAnswers((prev) => {
-      if (editedType === "SINGLE") {
-        return [key];
-      }
-      return prev.includes(key)
-        ? prev.filter((k) => k !== key)
-        : [...prev, key].sort();
-    });
-  }, [editedType]);
+  const toggleAnswer = useCallback(
+    (key: string) => {
+      updateCurrentItem((prev) => {
+        let newAnswers: string[];
+        if (prev.type === "SINGLE") {
+          newAnswers = [key];
+        } else {
+          newAnswers = prev.correctAnswers.includes(key)
+            ? prev.correctAnswers.filter((k) => k !== key)
+            : [...prev.correctAnswers, key].sort();
+        }
+        return {
+          ...prev,
+          correctAnswers: newAnswers,
+        };
+      });
+    },
+    [updateCurrentItem]
+  );
 
-  // 切換單選/複選題型
-  const handleTypeChange = useCallback((newType: QuestionType) => {
-    setEditedType(newType);
-    if (newType === "SINGLE") {
-      setEditedAnswers((prev) => (prev.length > 0 ? [prev[0]] : ["A"]));
-    }
+  // 貼入單題範例
+  const handlePasteSampleSingle = useCallback(() => {
+    setRawText(SAMPLE_TEXT_SINGLE);
   }, []);
 
-  // 貼入範例格式
-  const handlePasteSample = useCallback(() => {
-    setRawText(SAMPLE_TEXT);
+  // 貼入多題範例 (第 11 題 + 第 12 題)
+  const handlePasteSampleMulti = useCallback(() => {
+    setRawText(SAMPLE_TEXT_MULTI);
   }, []);
 
   // 讀取剪貼簿
@@ -171,64 +239,65 @@ export default function QuickAddModal({
     }
   }, []);
 
-  // 檢查無誤，帶入主表單（核心推薦流程：先帶入表單檢查確認後再儲存）
+  // 檢查無誤，帶入主表單（帶入當前選中之題目）
   const handleConfirmAndApply = useCallback(() => {
-    if (!editedStem.trim()) {
+    if (!currentItem) return;
+
+    if (!currentItem.stem.trim()) {
       setFormError("題幹內容不可為空");
       return;
     }
-    if (!editedA.trim() || !editedB.trim() || !editedC.trim() || !editedD.trim()) {
+    if (
+      !currentItem.optionA.trim() ||
+      !currentItem.optionB.trim() ||
+      !currentItem.optionC.trim() ||
+      !currentItem.optionD.trim()
+    ) {
       setFormError("A、B、C、D 四個選項皆不可為空");
       return;
     }
-    if (editedAnswers.length === 0) {
+    if (currentItem.correctAnswers.length === 0) {
       setFormError("請至少指定一個正確解答");
       return;
     }
 
     setFormError("");
     onApply({
-      stem: editedStem,
-      type: editedType,
-      optionA: editedA,
-      optionB: editedB,
-      optionC: editedC,
-      optionD: editedD,
-      correctAnswers: editedAnswers,
-      explanation: editedExplanation,
+      stem: currentItem.stem,
+      type: currentItem.type,
+      optionA: currentItem.optionA,
+      optionB: currentItem.optionB,
+      optionC: currentItem.optionC,
+      optionD: currentItem.optionD,
+      correctAnswers: currentItem.correctAnswers,
+      explanation: currentItem.explanation,
     });
-    // 清空彈窗內容，便於下次錄入下一題
     setRawText("");
+    setParsedList([]);
     onClose();
-  }, [
-    editedStem,
-    editedType,
-    editedA,
-    editedB,
-    editedC,
-    editedD,
-    editedAnswers,
-    editedExplanation,
-    onApply,
-    onClose,
-  ]);
+  }, [currentItem, onApply, onClose]);
 
-  // 檢查無誤，直接送出儲存
+  // 單題直接新增
   const handleConfirmAndDirectSave = useCallback(async () => {
-    if (!onDirectSave) {
+    if (!currentItem || !onDirectSave) {
       handleConfirmAndApply();
       return;
     }
 
-    if (!editedStem.trim()) {
+    if (!currentItem.stem.trim()) {
       setFormError("題幹內容不可為空");
       return;
     }
-    if (!editedA.trim() || !editedB.trim() || !editedC.trim() || !editedD.trim()) {
+    if (
+      !currentItem.optionA.trim() ||
+      !currentItem.optionB.trim() ||
+      !currentItem.optionC.trim() ||
+      !currentItem.optionD.trim()
+    ) {
       setFormError("A、B、C、D 四個選項皆不可為空");
       return;
     }
-    if (editedAnswers.length === 0) {
+    if (currentItem.correctAnswers.length === 0) {
       setFormError("請至少指定一個正確解答");
       return;
     }
@@ -238,18 +307,19 @@ export default function QuickAddModal({
 
     try {
       const success = await onDirectSave({
-        stem: editedStem,
-        type: editedType,
-        optionA: editedA,
-        optionB: editedB,
-        optionC: editedC,
-        optionD: editedD,
-        correctAnswers: editedAnswers,
-        explanation: editedExplanation,
+        stem: currentItem.stem,
+        type: currentItem.type,
+        optionA: currentItem.optionA,
+        optionB: currentItem.optionB,
+        optionC: currentItem.optionC,
+        optionD: currentItem.optionD,
+        correctAnswers: currentItem.correctAnswers,
+        explanation: currentItem.explanation,
       });
 
       if (success) {
         setRawText("");
+        setParsedList([]);
         onClose();
       }
     } catch (err: any) {
@@ -257,37 +327,126 @@ export default function QuickAddModal({
     } finally {
       setIsDirectSubmitting(false);
     }
-  }, [
-    onDirectSave,
-    handleConfirmAndApply,
-    editedStem,
-    editedType,
-    editedA,
-    editedB,
-    editedC,
-    editedD,
-    editedAnswers,
-    editedExplanation,
-    onClose,
-  ]);
+  }, [currentItem, onDirectSave, handleConfirmAndApply, onClose]);
 
-  const optionsList = useMemo(
-    () => [
-      { key: "A", value: editedA, setter: setEditedA, label: "選項 A" },
-      { key: "B", value: editedB, setter: setEditedB, label: "選項 B" },
-      { key: "C", value: editedC, setter: setEditedC, label: "選項 C" },
-      { key: "D", value: editedD, setter: setEditedD, label: "選項 D" },
-    ],
-    [editedA, editedB, editedC, editedD]
-  );
+  // 批次新增全部已解析題目 (多題同時新增核心功能)
+  const handleBatchSaveAll = useCallback(async () => {
+    if (parsedList.length === 0) return;
 
-  const isFormValid =
-    editedStem.trim().length > 0 &&
-    editedA.trim().length > 0 &&
-    editedB.trim().length > 0 &&
-    editedC.trim().length > 0 &&
-    editedD.trim().length > 0 &&
-    editedAnswers.length > 0;
+    // 前置驗證各題完整性
+    for (let i = 0; i < parsedList.length; i++) {
+      const q = parsedList[i];
+      if (!q.stem.trim()) {
+        setActiveIndex(i);
+        setFormError(`第 ${i + 1} 題題幹不可為空，請核對後再送出`);
+        return;
+      }
+      if (!q.optionA.trim() || !q.optionB.trim() || !q.optionC.trim() || !q.optionD.trim()) {
+        setActiveIndex(i);
+        setFormError(`第 ${i + 1} 題的 A、B、C、D 四個選項皆不可為空`);
+        return;
+      }
+      if (q.correctAnswers.length === 0) {
+        setActiveIndex(i);
+        setFormError(`第 ${i + 1} 題請至少指定一個正確解答`);
+        return;
+      }
+    }
+
+    setIsBatchSubmitting(true);
+    setFormError("");
+    setBatchNotice("正在批次新增題目至題庫中...");
+
+    try {
+      const res = await fetch("/api/questions/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questions: parsedList.map((item) => ({
+            stem: item.stem,
+            type: item.type,
+            optionA: item.optionA,
+            optionB: item.optionB,
+            optionC: item.optionC,
+            optionD: item.optionD,
+            correctAnswers: item.correctAnswers,
+            explanation: item.explanation,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "批次新增題目失敗");
+      }
+
+      let notice = `🎉 成功新增 ${data.createdCount} 道題目！`;
+      if (data.skippedCount > 0) {
+        notice += `（已自動略過 ${data.skippedCount} 題重複題目）`;
+      }
+      setBatchNotice(notice);
+
+      setTimeout(() => {
+        setRawText("");
+        setParsedList([]);
+        onClose();
+        if (onBatchSaved) {
+          onBatchSaved({
+            createdCount: data.createdCount,
+            skippedCount: data.skippedCount,
+          });
+        }
+      }, 1400);
+    } catch (err: any) {
+      setFormError(err.message || "批次新增題目發生伺服器異常");
+      setBatchNotice("");
+    } finally {
+      setIsBatchSubmitting(false);
+    }
+  }, [parsedList, onClose, onBatchSaved]);
+
+  const optionsList = useMemo(() => {
+    if (!currentItem) return [];
+    return [
+      {
+        key: "A",
+        value: currentItem.optionA,
+        setter: (val: string) => updateCurrentItem((q) => ({ ...q, optionA: val })),
+        label: "選項 A",
+      },
+      {
+        key: "B",
+        value: currentItem.optionB,
+        setter: (val: string) => updateCurrentItem((q) => ({ ...q, optionB: val })),
+        label: "選項 B",
+      },
+      {
+        key: "C",
+        value: currentItem.optionC,
+        setter: (val: string) => updateCurrentItem((q) => ({ ...q, optionC: val })),
+        label: "選項 C",
+      },
+      {
+        key: "D",
+        value: currentItem.optionD,
+        setter: (val: string) => updateCurrentItem((q) => ({ ...q, optionD: val })),
+        label: "選項 D",
+      },
+    ];
+  }, [currentItem, updateCurrentItem]);
+
+  const isCurrentFormValid =
+    currentItem &&
+    currentItem.stem.trim().length > 0 &&
+    currentItem.optionA.trim().length > 0 &&
+    currentItem.optionB.trim().length > 0 &&
+    currentItem.optionC.trim().length > 0 &&
+    currentItem.optionD.trim().length > 0 &&
+    currentItem.correctAnswers.length > 0;
+
+  if (!isOpen) return null;
+
+  const isMultiMode = parsedList.length > 1;
 
   return (
     <div
@@ -321,11 +480,11 @@ export default function QuickAddModal({
               >
                 <span>智慧快速新增</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/20 text-[#9AA5FF] border border-accent/30 font-sans font-medium">
-                  智慧解析
+                  {isMultiMode ? `多題辨識 (${parsedList.length} 題)` : "單題/多題解析"}
                 </span>
               </h2>
               <p className="text-xs text-foreground-muted">
-                貼上題目原始文本，演算法自動分離題幹、選項、答案與解析，確認後帶入表單。
+                貼上題目原始文本（支援多題同時新增），演算法自動分離題幹、選項與正解。
               </p>
             </div>
           </div>
@@ -346,11 +505,11 @@ export default function QuickAddModal({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="font-bold font-game text-foreground flex items-center gap-1.5">
                 <ClipboardPaste className="w-4 h-4 text-accent" />
-                <span>請在此貼上題目原始文字：</span>
+                <span>請在此貼上題目原始文字（支援多題同時貼入）：</span>
               </label>
 
               {/* 快捷操作按鈕組 */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={handleReadClipboard}
@@ -361,11 +520,20 @@ export default function QuickAddModal({
                 </button>
                 <button
                   type="button"
-                  onClick={handlePasteSample}
+                  onClick={handlePasteSampleMulti}
                   className="min-h-[36px] px-3 py-1.5 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 text-[11px] font-medium transition-all duration-180 flex items-center gap-1.5 touch-tactile shadow-sm"
+                  title="帶入多題範例（第 11 題 + 第 12 題）"
+                >
+                  <ListPlus className="w-3.5 h-3.5 text-purple-400" />
+                  <span>多題範例 (11 & 12)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePasteSampleSingle}
+                  className="min-h-[36px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-foreground-muted hover:text-foreground border border-white/[0.08] text-[11px] font-medium transition-all duration-180 flex items-center gap-1.5 touch-tactile"
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  <span>帶入範例格式</span>
+                  <span>單題範例</span>
                 </button>
                 {rawText && (
                   <button
@@ -388,25 +556,85 @@ export default function QuickAddModal({
               </div>
             )}
 
-            {/* 大文本輸入框 (iOS Safari 16px zero auto-zoom) */}
+            {/* 大文本輸入框 */}
             <textarea
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
-              rows={5}
-              placeholder={`請貼上完整題目，例如：\n8. 專案工作說明書（SOW）主要由下列哪一方提供？\n(A) 需求者、業主或委託人\n(B) 專案贊助者\n(C) 主承包商\n(D) 專案經理\n答案：A\n解析：SOW 由需求者或買方提供...`}
+              rows={4}
+              placeholder={`支援單題或多題一次貼入，例如：\n11. 發展專案團隊的產出為下列哪一項？\n(A) 團隊績效評估\n(B) 績效評鑑投入\n(C) 績效改善\n(D) 工作成果\n正確解答：A\n\n12. 下列哪一項指的是工作結果滿意度確認？\n(A) 控制品質\n(B) 確認範疇\n(C) 控制成本\n(D) 控制風險\n正確解答：B`}
               className="w-full px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-xs text-foreground placeholder:text-white/25 leading-relaxed shadow-inner transition-all"
             />
           </div>
 
           {/* 區塊 2: 結構化解析檢查與微調 (核心功能：給我檢查後再新增) */}
-          {parsed && (
+          {parsedList.length > 0 && currentItem && (
             <div className="space-y-4 pt-3 border-t border-white/[0.06] animate-fade-in-up">
+              {/* 多題導航分頁膠囊 (當偵測到 >= 2 道題目時顯示) */}
+              {isMultiMode && (
+                <div className="space-y-2 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-purple-950/30 via-accent/10 to-transparent border border-purple-500/25">
+                  <div className="flex items-center justify-between">
+                    <span className="font-game font-bold text-foreground text-xs flex items-center gap-1.5">
+                      <ListPlus className="w-4 h-4 text-purple-400" />
+                      <span>✨ 成功偵測到 {parsedList.length} 道題目（點擊切換檢查各題）：</span>
+                    </span>
+                    <span className="text-[11px] font-semibold text-purple-300 bg-purple-500/20 border border-purple-500/30 px-2 py-0.5 rounded-full">
+                      正在檢查第 {activeIndex + 1} 題
+                    </span>
+                  </div>
+
+                  {/* 題目切換膠囊列 */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none pt-1">
+                    {parsedList.map((item, idx) => {
+                      const isActive = idx === activeIndex;
+                      const isItemValid =
+                        item.stem.trim().length > 0 &&
+                        item.optionA.trim().length > 0 &&
+                        item.optionB.trim().length > 0 &&
+                        item.optionC.trim().length > 0 &&
+                        item.optionD.trim().length > 0 &&
+                        item.correctAnswers.length > 0;
+
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setActiveIndex(idx)}
+                          className={`min-h-[38px] px-3.5 py-1.5 rounded-xl font-game text-xs font-bold transition-all duration-180 flex items-center gap-2 shrink-0 touch-tactile ${
+                            isActive
+                              ? "bg-accent text-white shadow-glow border border-accent-bright"
+                              : "bg-white/[0.04] text-foreground-muted hover:text-foreground border border-white/[0.08] hover:bg-white/[0.08]"
+                          }`}
+                        >
+                          <span>第 {idx + 1} 題</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+                              isActive
+                                ? "bg-white/20 text-white"
+                                : "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25"
+                            }`}
+                          >
+                            正解 {item.correctAnswers.join("") || "?"}
+                          </span>
+                          {isItemValid && (
+                            <Check
+                              className={`w-3 h-3 ${
+                                isActive ? "text-emerald-300" : "text-emerald-400"
+                              }`}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* 狀態標題與偵測指標 */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
                   <span className="font-bold font-game text-foreground text-xs sm:text-sm">
-                    結構化解析預覽與檢查
+                    {isMultiMode ? `第 ${activeIndex + 1} 題檢查與微調` : "結構化解析預覽與檢查"}
                   </span>
                   <span className="text-[11px] text-emerald-300 bg-emerald-950/50 border border-emerald-500/30 px-2 py-0.5 rounded-md font-semibold">
                     已自動解析
@@ -419,7 +647,7 @@ export default function QuickAddModal({
                     type="button"
                     onClick={() => handleTypeChange("SINGLE")}
                     className={`min-h-[32px] px-3 py-1 rounded-lg font-game text-[11px] font-bold transition-all ${
-                      editedType === "SINGLE"
+                      currentItem.type === "SINGLE"
                         ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
                         : "text-foreground-muted hover:text-foreground"
                     }`}
@@ -430,7 +658,7 @@ export default function QuickAddModal({
                     type="button"
                     onClick={() => handleTypeChange("MULTIPLE")}
                     className={`min-h-[32px] px-3 py-1 rounded-lg font-game text-[11px] font-bold transition-all ${
-                      editedType === "MULTIPLE"
+                      currentItem.type === "MULTIPLE"
                         ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm"
                         : "text-foreground-muted hover:text-foreground"
                     }`}
@@ -440,15 +668,15 @@ export default function QuickAddModal({
                 </div>
               </div>
 
-              {/* 警告提示 (例如未偵測到答案時的友好提示) */}
-              {parsed.warnings.length > 0 && (
+              {/* 警告提示 */}
+              {currentItem.warnings && currentItem.warnings.length > 0 && (
                 <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-200 text-[11px] space-y-1 animate-fade-in">
                   <div className="flex items-center gap-1.5 font-bold text-amber-300">
                     <AlertTriangle className="w-3.5 h-3.5" />
                     <span>解析提示：</span>
                   </div>
                   <ul className="list-disc list-inside space-y-0.5 text-amber-200/90 pl-1">
-                    {parsed.warnings.map((w, i) => (
+                    {currentItem.warnings.map((w, i) => (
                       <li key={i}>{w}</li>
                     ))}
                   </ul>
@@ -465,12 +693,14 @@ export default function QuickAddModal({
                       <span className="text-rose-400">*</span>
                     </label>
                     <span className="text-[11px] text-foreground-muted">
-                      {editedStem.length} 字
+                      {currentItem.stem.length} 字
                     </span>
                   </div>
                   <textarea
-                    value={editedStem}
-                    onChange={(e) => setEditedStem(e.target.value)}
+                    value={currentItem.stem}
+                    onChange={(e) =>
+                      updateCurrentItem((q) => ({ ...q, stem: e.target.value }))
+                    }
                     rows={2}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-xs text-foreground placeholder:text-white/20 transition-all leading-relaxed"
                   />
@@ -490,7 +720,7 @@ export default function QuickAddModal({
 
                   <div className="grid gap-2.5">
                     {optionsList.map((opt) => {
-                      const isCorrect = editedAnswers.includes(opt.key);
+                      const isCorrect = currentItem.correctAnswers.includes(opt.key);
                       return (
                         <div
                           key={opt.key}
@@ -500,7 +730,7 @@ export default function QuickAddModal({
                               : "border-white/[0.06] bg-white/[0.02] text-foreground hover:border-white/[0.12]"
                           }`}
                         >
-                          {/* 正解切換按鈕 (Apple HIG 44px compliant) */}
+                          {/* 正解切換按鈕 */}
                           <button
                             type="button"
                             onClick={() => toggleAnswer(opt.key)}
@@ -551,14 +781,24 @@ export default function QuickAddModal({
                     </label>
                   </div>
                   <textarea
-                    value={editedExplanation}
-                    onChange={(e) => setEditedExplanation(e.target.value)}
+                    value={currentItem.explanation}
+                    onChange={(e) =>
+                      updateCurrentItem((q) => ({ ...q, explanation: e.target.value }))
+                    }
                     rows={2}
                     placeholder="解題思路或相關觀念說明（若無解析可留空）..."
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-xs text-foreground placeholder:text-white/20 transition-all leading-relaxed"
                   />
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* 批次成功訊息 */}
+          {batchNotice && (
+            <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs flex items-center gap-2.5 animate-fade-in shadow-sm">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="font-semibold">{batchNotice}</span>
             </div>
           )}
 
@@ -569,20 +809,11 @@ export default function QuickAddModal({
                 <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
                 <span>{formError}</span>
               </div>
-              {(formError.includes("重複") || formError.includes("相似") || formError.includes("存在")) && (
-                <button
-                  type="button"
-                  onClick={handleConfirmAndApply}
-                  className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 font-game text-[11px] font-bold self-start sm:self-auto shrink-0 transition-all"
-                >
-                  帶入表單查看重複題目
-                </button>
-              )}
             </div>
           )}
         </div>
 
-        {/* 4. Modal Sticky Action Footer (雙檢查防護：帶入表單檢查 或 直接儲存) */}
+        {/* 4. Modal Sticky Action Footer (支援多題批次全部新增與帶入表單) */}
         <div className="sticky bottom-0 bg-[#0a0a0c]/95 backdrop-blur-md border-t border-white/[0.08] p-4 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
           <button
             type="button"
@@ -593,36 +824,75 @@ export default function QuickAddModal({
           </button>
 
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5">
-            {/* 途徑 1: 帶入主表單進行最後檢查 (核心推薦流程) */}
-            <button
-              type="button"
-              onClick={handleConfirmAndApply}
-              disabled={!parsed || !isFormValid}
-              className={`w-full sm:w-auto min-h-[44px] px-6 py-2.5 rounded-xl text-xs font-bold font-game transition-all duration-180 flex items-center justify-center gap-2 touch-tactile shadow-md ${
-                !parsed || !isFormValid
-                  ? "bg-white/[0.05] text-white/30 border border-white/[0.08] cursor-not-allowed"
-                  : "bg-accent hover:bg-accent-bright text-white shadow-glow"
-              }`}
-            >
-              <ArrowRight className="w-4 h-4" />
-              <span>檢查無誤，帶入表單</span>
-            </button>
+            {/* 多題模式專屬：一鍵批次新增全部題目 (Recommended Action) */}
+            {isMultiMode ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleConfirmAndApply}
+                  disabled={!isCurrentFormValid}
+                  className={`w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold font-game transition-all duration-180 flex items-center justify-center gap-2 touch-tactile border ${
+                    !isCurrentFormValid
+                      ? "bg-white/[0.04] text-white/30 border-white/[0.06] cursor-not-allowed"
+                      : "bg-white/[0.06] hover:bg-white/[0.10] text-foreground border-white/[0.12]"
+                  }`}
+                  title="帶入目前檢視中的題目至新增表單"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  <span>帶入第 {activeIndex + 1} 題至表單</span>
+                </button>
 
-            {/* 途徑 2: 若有 onDirectSave，支援直接一鍵儲存 */}
-            {onDirectSave && (
-              <button
-                type="button"
-                onClick={handleConfirmAndDirectSave}
-                disabled={!parsed || !isFormValid || isDirectSubmitting}
-                className={`w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl text-xs font-bold font-game transition-all duration-180 flex items-center justify-center gap-2 touch-tactile ${
-                  !parsed || !isFormValid || isDirectSubmitting
-                    ? "bg-white/[0.03] text-white/25 border border-white/[0.06] cursor-not-allowed"
-                    : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_18px_rgba(16,185,129,0.3)]"
-                }`}
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>{isDirectSubmitting ? "儲存中..." : "檢查無誤，直接新增"}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={handleBatchSaveAll}
+                  disabled={isBatchSubmitting}
+                  className={`w-full sm:w-auto min-h-[44px] px-6 py-2.5 rounded-xl text-xs font-bold font-game transition-all duration-180 flex items-center justify-center gap-2 touch-tactile shadow-md ${
+                    isBatchSubmitting
+                      ? "bg-emerald-800 text-white/50 cursor-wait"
+                      : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.35)]"
+                  }`}
+                >
+                  <ListPlus className="w-4 h-4" />
+                  <span>
+                    {isBatchSubmitting
+                      ? "批次儲存中..."
+                      : `檢查無誤，全部新增 (${parsedList.length} 題)`}
+                  </span>
+                </button>
+              </>
+            ) : (
+              /* 單題模式專屬流程 */
+              <>
+                <button
+                  type="button"
+                  onClick={handleConfirmAndApply}
+                  disabled={!currentItem || !isCurrentFormValid}
+                  className={`w-full sm:w-auto min-h-[44px] px-6 py-2.5 rounded-xl text-xs font-bold font-game transition-all duration-180 flex items-center justify-center gap-2 touch-tactile shadow-md ${
+                    !currentItem || !isCurrentFormValid
+                      ? "bg-white/[0.05] text-white/30 border border-white/[0.08] cursor-not-allowed"
+                      : "bg-accent hover:bg-accent-bright text-white shadow-glow"
+                  }`}
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  <span>檢查無誤，帶入表單</span>
+                </button>
+
+                {onDirectSave && (
+                  <button
+                    type="button"
+                    onClick={handleConfirmAndDirectSave}
+                    disabled={!currentItem || !isCurrentFormValid || isDirectSubmitting}
+                    className={`w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl text-xs font-bold font-game transition-all duration-180 flex items-center justify-center gap-2 touch-tactile ${
+                      !currentItem || !isCurrentFormValid || isDirectSubmitting
+                        ? "bg-white/[0.03] text-white/25 border border-white/[0.06] cursor-not-allowed"
+                        : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_18px_rgba(16,185,129,0.3)]"
+                    }`}
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    <span>{isDirectSubmitting ? "儲存中..." : "檢查無誤，直接新增"}</span>
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

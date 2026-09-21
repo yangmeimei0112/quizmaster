@@ -301,21 +301,21 @@ D. 易於向利害關係人報告時程
     },
   },
   {
-    name: "17. Multiple choice all correct: 答案：全",
-    input: `題目：依據敏捷價值觀，下列何者為重要核心？
-A. 個人與互動
-B. 可用的軟體
-C. 與客戶合作
-D. 回應變更
-答案：全`,
+    name: "18. Single Question with 正確解答：C",
+    input: `9. 專案生命週期中，哪一階段通常耗費最多成本與人力？
+(A) 起始階段
+(B) 規劃階段
+(C) 執行階段
+(D) 結束階段
+正確解答：C`,
     expected: {
-      stem: "依據敏捷價值觀，下列何者為重要核心？",
-      optionA: "個人與互動",
-      optionB: "可用的軟體",
-      optionC: "與客戶合作",
-      optionD: "回應變更",
-      correctAnswers: ["A", "B", "C", "D"],
-      type: "MULTIPLE",
+      stem: "專案生命週期中，哪一階段通常耗費最多成本與人力？",
+      optionA: "起始階段",
+      optionB: "規劃階段",
+      optionC: "執行階段",
+      optionD: "結束階段",
+      correctAnswers: ["C"],
+      type: "SINGLE",
     },
   },
 ];
@@ -348,9 +348,78 @@ for (const tc of cases) {
   }
 }
 
+// 多題同時新增解析測試 (Multi-Question Batch Parsing Tests)
+import { parseMultipleQuestions } from "../src/lib/questionParser";
+
+const multiQuestionInput = `11. 發展專案團隊（Develop Project Team）的產出（Output）為下列哪一項？
+(A) 團隊績效評估（Team Performance Assessment）
+
+(B) 績效評鑑的投入（Input）與表揚獎勵系統
+
+(C) 績效改善、績效評鑑的投入（Input）與績效報告（Performance Report）
+
+(D) 工作成果、績效評鑑的投入（Input）與績效報告（Performance Report）
+
+正確解答：A
+
+12. 下列哪一項指的是工作結果的滿意度確認？
+(A) 控制品質（Control Quality）
+
+(B) 確認範疇（Validate Scope）
+
+(C) 控制成本（Control Costs）
+
+(D) 控制風險（Control Risks）
+
+正確解答：B`;
+
+console.log("\n🧪 執行多題同時解析測試...");
+const multiResults = parseMultipleQuestions(multiQuestionInput);
+
+if (multiResults.length !== 2) {
+  console.error(`❌ Multi-Question Count Mismatch: expected 2 but got ${multiResults.length}`);
+  failed++;
+} else {
+  console.log(`✅ PASS: Successfully split into 2 questions!`);
+  
+  // 檢驗第 11 題
+  const q1 = multiResults[0];
+  if (
+    q1.stem === "發展專案團隊（Develop Project Team）的產出（Output）為下列哪一項？" &&
+    q1.optionA === "團隊績效評估（Team Performance Assessment）" &&
+    q1.optionB === "績效評鑑的投入（Input）與表揚獎勵系統" &&
+    q1.optionC === "績效改善、績效評鑑的投入（Input）與績效報告（Performance Report）" &&
+    q1.optionD === "工作成果、績效評鑑的投入（Input）與績效報告（Performance Report）" &&
+    JSON.stringify(q1.correctAnswers) === JSON.stringify(["A"]) &&
+    q1.type === "SINGLE"
+  ) {
+    console.log("✅ PASS: Multi-Question Q1 (第11題) verified correctly");
+  } else {
+    console.error("❌ Q1 Mismatch:", q1);
+    failed++;
+  }
+
+  // 檢驗第 12 題
+  const q2 = multiResults[1];
+  if (
+    q2.stem === "下列哪一項指的是工作結果的滿意度確認？" &&
+    q2.optionA === "控制品質（Control Quality）" &&
+    q2.optionB === "確認範疇（Validate Scope）" &&
+    q2.optionC === "控制成本（Control Costs）" &&
+    q2.optionD === "控制風險（Control Risks）" &&
+    JSON.stringify(q2.correctAnswers) === JSON.stringify(["B"]) &&
+    q2.type === "SINGLE"
+  ) {
+    console.log("✅ PASS: Multi-Question Q2 (第12題) verified correctly");
+  } else {
+    console.error("❌ Q2 Mismatch:", q2);
+    failed++;
+  }
+}
+
 if (failed > 0) {
   console.error(`\n❌ Total Failures: ${failed}`);
   process.exit(1);
 } else {
-  console.log(`\n🎉 All ${cases.length} comprehensive unit tests passed successfully!`);
+  console.log(`\n🎉 All single & multi-question tests passed successfully!`);
 }

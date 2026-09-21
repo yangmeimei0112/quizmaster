@@ -62,7 +62,7 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
 
   // 1. 檢測題前嵌入之答案（例如「(A) 8. 專案工作...」或「【B】第5題：...」）
   const leadingAnswerRegex =
-    /^\s*(?:[\(（\[【]\s*([A-Da-d1-4])\s*[\)）\]】]|(?:標準答案|答案|解答|正解)\s*[:：為是選]?\s*([A-Da-d1-4]))\s*(?=(?:第\s*\d|\d+[\.、\s\)\)]|Q\d|【))/i;
+    /^\s*(?:[\(（\[【]\s*([A-Da-d1-4])\s*[\)）\]】]|(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解)\s*[:：為是選]?\s*([A-Da-d1-4]))\s*(?=(?:第\s*\d|\d+[\.、\s\)\)]|Q\d|【))/i;
   const leadingAnsMatch = workingText.match(leadingAnswerRegex);
   if (leadingAnsMatch) {
     const rawKey = leadingAnsMatch[1] || leadingAnsMatch[2];
@@ -100,7 +100,7 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
 
     // 檢查解析內是否又夾帶了答案（例如「解析：... \n 答案：A」）
     const innerAnswerRegex =
-      /(?:^|\n)\s*(?:(?:【?\s*(?:標準答案|正確答案|本題答案|參考答案|答案|解答|正解|Ans(?:wer)?|Key)\s*】?)\s*(?:[:：]|為|是|選|\.|\s)?\s*|【\s*(?:標準答案|正確答案|本題答案|參考答案|答案|解答|正解)\s*】\s*)([^\r\n]+)/i;
+      /(?:^|\n)\s*(?:(?:【?\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解|Ans(?:wer)?|Key)\s*】?)\s*(?:[:：]|為|是|選|\.|\s)?\s*|【\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解)\s*】\s*)([^\r\n]+)/i;
     const innerAnsMatch = rawExp.match(innerAnswerRegex);
     if (innerAnsMatch && !result.detectedAnswer) {
       const keys = extractAnswerKeys(innerAnsMatch[1]);
@@ -119,7 +119,7 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
 
   // 4. 提取答案 (Answer)
   const answerRegex =
-    /(?:^|\n)\s*(?:(?:【?\s*(?:標準答案|正確答案|本題答案|參考答案|答案|解答|正解|Ans(?:wer)?|Key)\s*】?)\s*(?:[:：]|為|是|選|\.|\s)?\s*|【\s*(?:標準答案|正確答案|本題答案|參考答案|答案|解答|正解)\s*】\s*)([^\r\n]+)/i;
+    /(?:^|\n)\s*(?:(?:【?\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解|Ans(?:wer)?|Key)\s*】?)\s*(?:[:：]|為|是|選|\.|\s)?\s*|【\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解)\s*】\s*)([^\r\n]+)/i;
   const answerMatch = workingText.match(answerRegex);
   if (answerMatch && answerMatch.index !== undefined) {
     const keys = extractAnswerKeys(answerMatch[1]);
@@ -569,4 +569,93 @@ function findMarkerMatch(
   const endIndex = startIndex + fullMatch.length;
 
   return { startIndex, endIndex };
+}
+
+/**
+ * 將貼入的原始大文本切分為多個題目的文字區塊
+ *
+ * 切分邏輯原則：
+ * 1. 一道題目通常包含：題幹 -> 選項 (A)~(D) -> 正確解答/答案 -> 詳細解析。
+ * 2. 一個新的題目邊界只會在「當前題目已經出現過選項或答案/解析」之後，遇到下一道題目的標頭（例如 12.、第12題、Q12 等）時觸發。
+ * 3. 題幹內部的條列清單（例如「1. 限制一 \n 2. 限制二」）因為此時尚未出現選項 (A)，絕不誤切為新題目。
+ * 4. 同時相容以空行區隔且每題皆具備選項標記的試題。
+ */
+export function splitQuestionChunks(rawText: string): string[] {
+  const text = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!text) return [];
+
+  const lines = text.split("\n");
+  const chunks: string[][] = [];
+  let currentChunk: string[] = [];
+
+  let seenOptionInChunk = false;
+  let seenAnswerOrExpInChunk = false;
+
+  // 選項行偵測（支援 (A)、（A）、[A]、【A】、A.、A、及 (1)、（1）等）
+  const optionMarkerRegex =
+    /^\s*(?:[\(（\[【]\s*[A-Da-d1-4]\s*[\)）\]】]|[A-Da-d1-4][\.\、\:\s]|(?:選項\s*)?[A-Da-d1-4]\s*[:：])/i;
+
+  // 行內是否含有選項特徵（例如單行並列選項 "(A) ... (B) ..."）
+  const inlineOptionRegex =
+    /(?:^|\s|[\(（\[【])[A-Da-d][\.\、\)）\]】]\s+/;
+
+  // 答案或解析行偵測
+  const answerOrExpRegex =
+    /^\s*(?:(?:【?\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解|Ans(?:wer)?|Key|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明|備註)\s*】?)\s*(?:[:：]|為|是|選|\.|\s)?|【\s*(?:標準答案|標準解答|正確答案|正確解答|答案|解答|正解|解析|詳解)\s*】)/i;
+
+  // 題號開頭標記（例如 11.、11、第11題：、Q11:、[11]、【11】、(11)、以及【單選題】、【複選題】等）
+  const questionHeaderRegex =
+    /^\s*(?:第\s*\d{1,4}\s*[題题]\s*[:：\.、\s]*|Q(?:uestion)?\s*[\d]{1,4}\s*[:：\.、\s]*|\d{1,4}[\.、]\s*|\d{1,4}\s*[\:：\)\）\]】]\s*|\d{1,4}\s+(?=[^\d\.\s])|[\(（\[【]\s*\d{1,4}\s*[\)）\]】]\s*[:：\.、\s]*|【\s*(?:單選(?:題)?|複選(?:題)?|多選(?:題)?|第\s*\d+\s*題)[\s\S]*?】)/i;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // 檢查此行是否為選項標記
+    if (optionMarkerRegex.test(trimmed) || inlineOptionRegex.test(trimmed)) {
+      seenOptionInChunk = true;
+    }
+    // 檢查此行是否為答案或解析
+    if (answerOrExpRegex.test(trimmed)) {
+      seenAnswerOrExpInChunk = true;
+    }
+
+    // 判斷是否為下一道題目的起始行：
+    // 條件：當前區塊已累積了一定內容，且已經看過選項或答案/解析，此時遇到新題號標頭
+    const isNewQuestionHeader = questionHeaderRegex.test(trimmed);
+    const hasSufficientContent = seenOptionInChunk || seenAnswerOrExpInChunk;
+
+    if (isNewQuestionHeader && hasSufficientContent && currentChunk.length > 0) {
+      // 封裝前一道題目
+      chunks.push(currentChunk);
+      currentChunk = [line];
+      seenOptionInChunk = false;
+      seenAnswerOrExpInChunk = false;
+    } else {
+      currentChunk.push(line);
+    }
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  const result = chunks
+    .map((c) => c.join("\n").trim())
+    .filter((chunk) => chunk.length > 0);
+
+  return result.length > 0 ? result : [text];
+}
+
+/**
+ * 智慧多題解析入口函式
+ * 回傳 ParsedQuestionResult 陣列，即使只有單一題目亦封裝於長度為 1 之陣列中回傳
+ */
+export function parseMultipleQuestions(rawText: string): ParsedQuestionResult[] {
+  const chunks = splitQuestionChunks(rawText);
+  if (chunks.length === 0) {
+    return [parseQuestionText(rawText)];
+  }
+
+  return chunks.map((chunk) => parseQuestionText(chunk));
 }

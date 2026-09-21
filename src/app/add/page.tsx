@@ -210,6 +210,16 @@ export default function AddQuestionPage() {
     }
   }, [handleQuickApply]);
 
+  // 智慧快速新增：批次新增多題完成通知
+  const handleBatchSaved = useCallback((data: { createdCount: number; skippedCount: number }) => {
+    let msg = `🎉 成功批次新增 ${data.createdCount} 道題目！`;
+    if (data.skippedCount > 0) {
+      msg += `（已自動略過 ${data.skippedCount} 題重複題目）`;
+    }
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(""), 6000);
+  }, []);
+
   // 表單驗證與送出
   const handleSubmit = useCallback(async (force: boolean = false) => {
     setErrorMsg("");
@@ -717,6 +727,7 @@ export default function AddQuestionPage() {
         onClose={() => setShowQuickAddModal(false)}
         onApply={handleQuickApply}
         onDirectSave={handleDirectSave}
+        onBatchSaved={handleBatchSaved}
       />
     </div>
   );
