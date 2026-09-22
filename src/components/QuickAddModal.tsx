@@ -22,6 +22,7 @@ import {
 import { QuestionType, QuestionDuplicateStatus, SimilarMatch } from "@/types/question";
 import { parseMultipleQuestions, ParsedQuestionResult } from "@/lib/questionParser";
 import { normalizeText, calculateSimilarity } from "@/lib/similarity";
+import ImageAttachmentField from "@/components/ImageAttachmentField";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ interface QuickAddModalProps {
   onApply: (data: {
     stem: string;
     type: QuestionType;
+    imageUrl?: string;
     optionA: string;
     optionB: string;
     optionC: string;
@@ -39,6 +41,7 @@ interface QuickAddModalProps {
   onDirectSave?: (data: {
     stem: string;
     type: QuestionType;
+    imageUrl?: string;
     optionA: string;
     optionB: string;
     optionC: string;
@@ -52,6 +55,7 @@ interface QuickAddModalProps {
 interface EditableQuestionItem {
   stem: string;
   type: QuestionType;
+  imageUrl?: string;
   optionA: string;
   optionB: string;
   optionC: string;
@@ -135,6 +139,7 @@ export default function QuickAddModal({
         const mapped: EditableQuestionItem[] = results.map((res) => ({
           stem: res.stem,
           type: res.type,
+          imageUrl: res.imageUrl || "",
           optionA: res.optionA,
           optionB: res.optionB,
           optionC: res.optionC,
@@ -469,6 +474,7 @@ export default function QuickAddModal({
     onApply({
       stem: currentItem.stem,
       type: currentItem.type,
+      imageUrl: currentItem.imageUrl || undefined,
       optionA: currentItem.optionA,
       optionB: currentItem.optionB,
       optionC: currentItem.optionC,
@@ -527,6 +533,7 @@ export default function QuickAddModal({
       const success = await onDirectSave({
         stem: currentItem.stem,
         type: currentItem.type,
+        imageUrl: currentItem.imageUrl || undefined,
         optionA: currentItem.optionA,
         optionB: currentItem.optionB,
         optionC: currentItem.optionC,
@@ -590,6 +597,7 @@ export default function QuickAddModal({
           questions: parsedList.map((item) => ({
             stem: item.stem,
             type: item.type,
+            imageUrl: item.imageUrl || null,
             optionA: item.optionA,
             optionB: item.optionB,
             optionC: item.optionC,
@@ -678,6 +686,7 @@ export default function QuickAddModal({
           questions: nonDuplicateItems.map((item) => ({
             stem: item.stem,
             type: item.type,
+            imageUrl: item.imageUrl || null,
             optionA: item.optionA,
             optionB: item.optionB,
             optionC: item.optionC,
@@ -1248,6 +1257,16 @@ export default function QuickAddModal({
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-sm text-foreground placeholder:text-white/20 transition-all leading-relaxed"
                   />
                 </div>
+
+                {/* 題目附圖 (選填) */}
+                <ImageAttachmentField
+                  value={currentItem.imageUrl || ""}
+                  onChange={(url) =>
+                    updateCurrentItem((q) => ({ ...q, imageUrl: url }))
+                  }
+                  compact={true}
+                  label="題目附圖 (選填)"
+                />
 
                 {/* 2. 四個選項預覽與正解指定 */}
                 <div className="space-y-2.5">

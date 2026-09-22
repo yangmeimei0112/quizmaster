@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import fs from "fs";
+import path from "path";
 import {
   Document,
   Packer,
@@ -12,7 +14,94 @@ import {
   AlignmentType,
   BorderStyle,
   ShadingType,
+  ImageRun,
 } from "docx";
+
+function createImageParagraph(imageUrl?: string | null): Paragraph | null {
+  if (!imageUrl || !imageUrl.trim()) return null;
+  const trimmed = imageUrl.trim();
+
+  // 嘗試從本機讀取 public/uploads 圖片嵌入 DOCX
+  const uploadMatch = trimmed.match(/^\/?(uploads\/.+)$/);
+  if (uploadMatch) {
+    try {
+      const localPath = path.join(process.cwd(), "public", uploadMatch[1]);
+      if (fs.existsSync(localPath)) {
+        const ext = path.extname(localPath).toLowerCase().replace(".", "");
+        if (ext === "png" || ext === "jpg" || ext === "jpeg" || ext === "gif") {
+          const imageType = ext === "jpeg" ? "jpg" : (ext as "png" | "jpg" | "gif");
+          const fileBuffer = fs.readFileSync(localPath);
+          return new Paragraph({
+            spacing: { before: 80, after: 120 },
+            indent: { left: 360 },
+            children: [
+              new ImageRun({
+                type: imageType,
+                data: fileBuffer,
+                transformation: {
+                  width: 320,
+                  height: 200,
+                },
+              }),
+            ],
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Docx image embedding error, fallback to text paragraph:", err);
+    }
+  }
+
+  // 若為 Base64 Data URL，嘗試解碼為 Buffer 嵌入
+  if (trimmed.startsWith("data:image/")) {
+    try {
+      const match = trimmed.match(/^data:image\/(png|jpeg|jpg|gif);base64,(.+)$/);
+      if (match) {
+        const rawType = match[1];
+        const imageType = rawType === "jpeg" ? "jpg" : (rawType as "png" | "jpg" | "gif");
+        const fileBuffer = Buffer.from(match[2], "base64");
+        return new Paragraph({
+          spacing: { before: 80, after: 120 },
+          indent: { left: 360 },
+          children: [
+            new ImageRun({
+              type: imageType,
+              data: fileBuffer,
+              transformation: {
+                width: 320,
+                height: 200,
+              },
+            }),
+          ],
+        });
+      }
+    } catch (err) {
+      console.warn("Docx base64 image embedding error:", err);
+    }
+  }
+
+  // 平穩相容降級：轉為標準段落
+  return new Paragraph({
+    spacing: { before: 60, after: 100 },
+    indent: { left: 360 },
+    children: [
+      new TextRun({
+        text: "【題目附圖】：",
+        bold: true,
+        size: 20,
+        color: "4F46E5",
+        font: "Microsoft JhengHei",
+      }),
+      new TextRun({
+        text: trimmed,
+        size: 20,
+        color: "2563EB",
+        underline: {},
+        font: "Microsoft JhengHei",
+      }),
+    ],
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -447,6 +536,11 @@ export async function POST(req: NextRequest) {
             })
           );
 
+          const imgPara = createImageParagraph(item.imageUrl);
+          if (imgPara) {
+            docChildren.push(imgPara);
+          }
+
           // 四個選項 (A, B, C, D)
           const options = [
             { key: "A", text: item.optionA },
@@ -778,6 +872,11 @@ export async function POST(req: NextRequest) {
             children: stemRuns,
           })
         );
+
+        const imgPara = createImageParagraph(q.imageUrl);
+        if (imgPara) {
+          docChildren.push(imgPara);
+        }
 
         // 選項 A, B, C, D
         const options = [

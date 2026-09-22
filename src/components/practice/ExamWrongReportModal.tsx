@@ -106,6 +106,16 @@ export default function ExamWrongReportModal({
 
   if (!isOpen) return null;
 
+  // 格式化附圖網址以利跨平台／Google 文件直接加載
+  const resolveImageUrlForExport = (url?: string | null) => {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (trimmed.startsWith("/") && typeof window !== "undefined") {
+      return `${window.location.origin}${trimmed}`;
+    }
+    return trimmed;
+  };
+
   // 產生標準 Google Docs 富文本 HTML
   const generateGoogleDocsHtml = () => {
     const escapeHtml = (str: string) => {
@@ -210,6 +220,14 @@ export default function ExamWrongReportModal({
               ${formatHtmlText(q.stem)}
             </p>
 
+            ${
+              q.imageUrl
+                ? `<div style="margin: 6px 0 8px 20px;"><img src="${escapeHtml(
+                    resolveImageUrlForExport(q.imageUrl)
+                  )}" style="max-width: 420px; max-height: 280px; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1;" alt="題目附圖" /></div>`
+                : ""
+            }
+
             <p style="margin: 2px 0 2px 20px; font-size: 9.5pt; color: #334155;"><strong>(A)</strong> ${formatHtmlText(q.optionA)}</p>
             <p style="margin: 2px 0 2px 20px; font-size: 9.5pt; color: #334155;"><strong>(B)</strong> ${formatHtmlText(q.optionB)}</p>
             <p style="margin: 2px 0 2px 20px; font-size: 9.5pt; color: #334155;"><strong>(C)</strong> ${formatHtmlText(q.optionC)}</p>
@@ -262,6 +280,7 @@ export default function ExamWrongReportModal({
         originalIndex: item.originalIndex,
         stem: item.question.stem,
         type: item.question.type,
+        imageUrl: item.question.imageUrl,
         optionA: item.question.optionA,
         optionB: item.question.optionB,
         optionC: item.question.optionC,
@@ -532,6 +551,17 @@ export default function ExamWrongReportModal({
                   <span class="type-tag">【${typeLabel}】</span>
                   ${formatHtmlText(q.stem)}
                 </div>
+                ${
+                  q.imageUrl
+                    ? `
+                  <div style="margin: 6px 0 8px 18px;">
+                    <img src="${escapeHtml(
+                      resolveImageUrlForExport(q.imageUrl)
+                    )}" style="max-width: 360px; max-height: 240px; object-fit: contain; border-radius: 4px; border: 1px solid #cbd5e1;" alt="題目附圖" />
+                  </div>
+                `
+                    : ""
+                }
                 <div class="option-row"><strong>(A)</strong> ${formatHtmlText(q.optionA)}</div>
                 <div class="option-row"><strong>(B)</strong> ${formatHtmlText(q.optionB)}</div>
                 <div class="option-row"><strong>(C)</strong> ${formatHtmlText(q.optionC)}</div>
@@ -626,6 +656,7 @@ export default function ExamWrongReportModal({
             const statusText = item.isCorrect ? "(正確 ✓)" : item.isUnanswered ? "(未填答 ✗)" : "(答錯 ✗)";
             return (
               `第 ${item.originalIndex} 題. 【${typeLabel}】 ${q.stem}\n` +
+              (q.imageUrl ? `【附圖】：${q.imageUrl}\n` : "") +
               `(A) ${q.optionA}\n(B) ${q.optionB}\n(C) ${q.optionC}\n(D) ${q.optionD}\n` +
               `【考生填答】：${item.userAnswer} ${statusText}\n` +
               `【標準答案】：${item.correctAnswers}\n` +

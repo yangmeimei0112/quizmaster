@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
       category,
       difficulty = "MEDIUM",
       tags,
+      imageUrl,
       forceCreate = false,
     } = body;
 
@@ -177,6 +178,7 @@ export async function POST(req: NextRequest) {
         category: category ? category.trim() : null,
         difficulty: difficulty || "MEDIUM",
         tags: tags ? tags.trim() : null,
+        imageUrl: imageUrl ? imageUrl.trim() : null,
       },
     });
 

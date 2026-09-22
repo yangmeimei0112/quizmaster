@@ -3,6 +3,7 @@ import { QuestionType } from "@/types/question";
 export interface ParsedQuestionResult {
   stem: string;
   type: QuestionType;
+  imageUrl?: string;
   optionA: string;
   optionB: string;
   optionC: string;
@@ -59,6 +60,43 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
   let workingText = text.replace(/[\uFF21-\uFF3A\uFF41-\uFF5A]/g, (ch) =>
     String.fromCharCode(ch.charCodeAt(0) - 0xfee0)
   );
+
+  // 檢測附圖標記（支援「【附圖】：https://...」、「【附圖：URL】」、「[附圖: URL]」、「[附圖]：URL」、「（附圖：URL）」、「![...](url)」或「附圖：/uploads/...」）
+  let extractedImageUrl: string | undefined;
+
+  // 1. Markdown 圖片語法：![alt](url)
+  const mdImgMatch = workingText.match(/!\[.*?\]\(\s*([^\s\)]+)\s*\)/i);
+  if (mdImgMatch) {
+    extractedImageUrl = mdImgMatch[1].trim();
+    workingText = workingText.replace(mdImgMatch[0], "").trim();
+  } else {
+    // 2. 括號包覆整段標籤與網址：【附圖：URL】 或 [附圖: URL] 或 （附圖：URL） 或 (附圖: URL)
+    const enclosedMatch = workingText.match(
+      /[【\[（\(]\s*(?:附圖|題目附圖|圖片|圖示|Image|Img)\s*[:：]?\s*(https?:\/\/[^\s\]】）\)\"\'\>]+|\/?uploads\/[^\s\]】）\)\"\'\>]+|data:image\/[^\s\]】）\)\"\'\>]+)\s*[】\]）\)]/i
+    );
+    if (enclosedMatch) {
+      extractedImageUrl = enclosedMatch[1].trim();
+      workingText = workingText.replace(enclosedMatch[0], "").trim();
+    } else {
+      // 3. 標籤獨立或無外層括號：【附圖】：URL 或 [附圖]：URL 或 附圖：URL 或 題目附圖: URL
+      const standardMatch = workingText.match(
+        /(?:[【\[（\(]?\s*(?:附圖|題目附圖|圖片|圖示|Image|Img)\s*[】\]）\)]?\s*[:：]?\s*)(https?:\/\/[^\s\)\"\'\>]+|\/?uploads\/[^\s\)\"\'\>]+|data:image\/[^\s\)\"\'\>]+)/i
+      );
+      if (standardMatch) {
+        let rawUrl = standardMatch[1].trim();
+        rawUrl = rawUrl.replace(/[】\]）\)\>]+$/, "");
+        extractedImageUrl = rawUrl;
+        workingText = workingText.replace(standardMatch[0], "").trim();
+      }
+    }
+  }
+
+  if (extractedImageUrl) {
+    if (extractedImageUrl.startsWith("uploads/")) {
+      extractedImageUrl = "/" + extractedImageUrl;
+    }
+    result.imageUrl = extractedImageUrl;
+  }
 
   // 1. 檢測題前嵌入之答案（例如「(A) 8. 專案工作...」或「【B】第5題：...」）
   const leadingAnswerRegex =

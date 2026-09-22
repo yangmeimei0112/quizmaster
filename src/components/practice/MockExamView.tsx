@@ -17,10 +17,12 @@ import {
   Flame,
   ArrowLeft,
   FileText,
+  Maximize2,
 } from "lucide-react";
 import { Question } from "@/types/question";
 import { useAuth } from "@/lib/AuthContext";
 import ExamWrongReportModal from "./ExamWrongReportModal";
+import ImageLightboxModal from "../ImageLightboxModal";
 
 interface MockExamViewProps {
   questions: Question[]; // 50 questions
@@ -39,6 +41,7 @@ export default function MockExamView({
   const TOTAL_TIME_SECONDS = 60 * 60;
   const [timeRemaining, setTimeRemaining] = useState(TOTAL_TIME_SECONDS);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null);
 
   // 每題使用者的作答紀錄：questionId -> string[]
   const [userAnswers, setUserAnswers] = useState<Record<string, string[]>>({});
@@ -456,6 +459,35 @@ export default function MockExamView({
                 ? "請點選一個正確選項："
                 : "本題為複選題，請點選一個或多個選項："}
             </p>
+
+            {/* 題目附圖 */}
+            {currentQ.imageUrl && (
+              <div className="pt-2 pb-1">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setLightboxImageUrl(currentQ.imageUrl!)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setLightboxImageUrl(currentQ.imageUrl!);
+                    }
+                  }}
+                  className="group relative inline-block rounded-2xl overflow-hidden border border-white/[0.12] bg-black/50 hover:border-cyan-500/50 p-2 cursor-pointer transition-all max-w-full"
+                  title="點擊放大檢視附圖"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={currentQ.imageUrl}
+                    alt="題目附圖"
+                    className="max-h-60 sm:max-h-72 w-auto object-contain rounded-xl transition-transform group-hover:scale-[1.01]"
+                  />
+                  <div className="absolute bottom-3 right-3 bg-black/80 text-white text-xs px-2.5 py-1 rounded-lg border border-white/20 flex items-center gap-1 opacity-90 group-hover:opacity-100 shadow-md">
+                    <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>點擊放大</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 選項卡片列表 */}
@@ -857,6 +889,35 @@ export default function MockExamView({
                       <p className="text-sm font-semibold text-foreground leading-relaxed break-words whitespace-pre-wrap">
                         {q.stem}
                       </p>
+
+                      {/* 題目附圖 */}
+                      {q.imageUrl && (
+                        <div className="pt-2">
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setLightboxImageUrl(q.imageUrl!)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                setLightboxImageUrl(q.imageUrl!);
+                              }
+                            }}
+                            className="group relative inline-block rounded-xl overflow-hidden border border-white/[0.08] bg-black/40 hover:border-cyan-500/40 p-1.5 cursor-pointer transition-all max-w-full"
+                            title="點擊放大檢視附圖"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={q.imageUrl}
+                              alt="題目附圖"
+                              className="max-h-40 sm:max-h-48 w-auto object-contain rounded-lg transition-transform group-hover:scale-[1.01]"
+                            />
+                            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] px-2 py-0.5 rounded border border-white/20 flex items-center gap-1 opacity-90 group-hover:opacity-100">
+                              <Maximize2 className="w-3 h-3 text-cyan-400" />
+                              <span>放大</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -939,6 +1000,12 @@ export default function MockExamView({
         scoreResults={scoreResults}
         elapsedSeconds={elapsedSeconds}
         completedAt={completedAt}
+      />
+
+      {/* 燈箱放大檢視 */}
+      <ImageLightboxModal
+        imageUrl={lightboxImageUrl}
+        onClose={() => setLightboxImageUrl(null)}
       />
     </div>
   );

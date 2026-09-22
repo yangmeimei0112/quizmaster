@@ -22,9 +22,13 @@ import {
   FileDown,
   Eye,
   EyeOff,
+  Maximize2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Question, QuestionType } from "@/types/question";
 import ExportModal from "@/components/ExportModal";
+import ImageAttachmentField from "@/components/ImageAttachmentField";
+import ImageLightboxModal from "@/components/ImageLightboxModal";
 import { getCachedQuestions, setCachedQuestions } from "@/lib/questionsCache";
 
 // 骨架屏載入卡片元件，保持卡片版面高度穩定，消除頁面切換瞬態白閃與抽動
@@ -75,6 +79,7 @@ interface QuestionCardItemProps {
   onToggleExplanation: (id: string) => void;
   handleOpenEdit: (q: Question) => void;
   handleDelete: (id: string) => void;
+  onOpenImage?: (url: string) => void;
 }
 
 const QuestionCardItem = memo(function QuestionCardItem({
@@ -89,6 +94,7 @@ const QuestionCardItem = memo(function QuestionCardItem({
   onToggleExplanation,
   handleOpenEdit,
   handleDelete,
+  onOpenImage,
 }: QuestionCardItemProps) {
   const correctSet = useMemo(() => new Set(q.correctAnswers.split(",")), [q.correctAnswers]);
 
@@ -189,6 +195,39 @@ const QuestionCardItem = memo(function QuestionCardItem({
         }`}>
           {q.stem}
         </h3>
+
+        {/* 題目附圖縮圖 */}
+        {q.imageUrl && (
+          <div className="pt-1.5 flex items-center">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onOpenImage) onOpenImage(q.imageUrl!);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.stopPropagation();
+                  if (onOpenImage) onOpenImage(q.imageUrl!);
+                }
+              }}
+              className="inline-flex items-center gap-2 p-1.5 rounded-xl border border-white/[0.08] bg-black/40 hover:border-cyan-500/40 hover:bg-white/[0.04] transition-all group cursor-pointer"
+              title="點擊放大檢視附圖"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={q.imageUrl}
+                alt="題目附圖"
+                className="h-16 sm:h-20 w-auto max-w-[220px] object-contain rounded-lg border border-white/[0.06]"
+              />
+              <span className="text-[11px] text-foreground-muted group-hover:text-cyan-300 pr-2 flex items-center gap-1 font-medium">
+                <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+                附圖 (點擊放大)
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 手風琴折疊內容 (CSS Grid 0fr -> 1fr 純 CSS 平滑微動態) */}
@@ -302,6 +341,7 @@ export default function QuestionsPage() {
   // 編輯 Modal 狀態
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [editStem, setEditStem] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
   const [editType, setEditType] = useState<QuestionType>("SINGLE");
   const [editOptA, setEditOptA] = useState("");
   const [editOptB, setEditOptB] = useState("");
@@ -310,6 +350,9 @@ export default function QuestionsPage() {
   const [editAnswers, setEditAnswers] = useState<string[]>([]);
   const [editExplanation, setEditExplanation] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // 燈箱放大檢視圖片網址
+  const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null);
 
   // 刪除確認
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -489,6 +532,7 @@ export default function QuestionsPage() {
   const handleOpenEdit = useCallback((q: Question) => {
     setEditingQuestion(q);
     setEditStem(q.stem);
+    setEditImageUrl(q.imageUrl || "");
     setEditType(q.type);
     setEditOptA(q.optionA);
     setEditOptB(q.optionB);
@@ -515,6 +559,7 @@ export default function QuestionsPage() {
         body: JSON.stringify({
           stem: editStem,
           type: editType,
+          imageUrl: editImageUrl ? editImageUrl.trim() : null,
           optionA: editOptA,
           optionB: editOptB,
           optionC: editOptC,
@@ -747,6 +792,7 @@ export default function QuestionsPage() {
               onToggleExplanation={toggleExplanation}
               handleOpenEdit={handleOpenEdit}
               handleDelete={handleDelete}
+              onOpenImage={setLightboxImageUrl}
             />
           ))}
         </div>
@@ -827,6 +873,14 @@ export default function QuestionsPage() {
                   className="w-full px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-base sm:text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-white/30"
                 />
               </div>
+
+              {/* 題目附圖 (選填) */}
+              <ImageAttachmentField
+                value={editImageUrl}
+                onChange={setEditImageUrl}
+                compact={true}
+                label="題目附圖 (選填)"
+              />
 
               {/* 選項 A-D 與答案設定 (Apple HIG 44px 觸控熱區) */}
               <div className="space-y-2.5">
@@ -912,6 +966,12 @@ export default function QuestionsPage() {
         onClose={() => setIsExportModalOpen(false)}
         questions={questions}
         typeFilter={selectedType}
+      />
+
+      {/* 燈箱放大檢視 */}
+      <ImageLightboxModal
+        imageUrl={lightboxImageUrl}
+        onClose={() => setLightboxImageUrl(null)}
       />
     </div>
   );

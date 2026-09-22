@@ -190,6 +190,16 @@ export default function ExportModal({
     return escaped;
   };
 
+  // 格式化附圖網址以利跨平台／Google 文件直接加載
+  const resolveImageUrlForExport = (url?: string | null) => {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (trimmed.startsWith("/") && typeof window !== "undefined") {
+      return `${window.location.origin}${trimmed}`;
+    }
+    return trimmed;
+  };
+
   // 產生 Rich Text HTML (針對 Google Docs 排版)
   const generateGoogleDocsHtml = () => {
     let html = `
@@ -215,6 +225,13 @@ export default function ExportModal({
       html += `
         <div style="margin-bottom: 16px; page-break-inside: avoid;">
           <p style="font-size: 11pt; font-weight: bold; margin: 0 0 6px 0; color: #0f172a; white-space: pre-wrap; word-break: break-word;">${idx + 1}. <span style="color: ${q.type === "SINGLE" ? "#2563eb" : "#7c3aed"}; font-weight: bold;">【${typeLabel}】</span> ${formatHtmlText(q.stem)}</p>
+          ${
+            q.imageUrl
+              ? `<div style="margin: 6px 0 8px 24px;"><img src="${escapeHtml(
+                  resolveImageUrlForExport(q.imageUrl)
+                )}" style="max-width: 420px; max-height: 280px; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1;" alt="題目附圖" /></div>`
+              : ""
+          }
           <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b; white-space: pre-wrap; word-break: break-word;"><strong>(A)</strong> ${formatHtmlText(q.optionA)}</p>
           <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b; white-space: pre-wrap; word-break: break-word;"><strong>(B)</strong> ${formatHtmlText(q.optionB)}</p>
           <p style="margin: 2px 0 2px 24px; font-size: 10pt; color: #1e293b; white-space: pre-wrap; word-break: break-word;"><strong>(C)</strong> ${formatHtmlText(q.optionC)}</p>
@@ -297,6 +314,7 @@ export default function ExportModal({
 
         return (
           `${idx + 1}. 【${typeLabel}】 ${q.stem}\n` +
+          (q.imageUrl ? `【附圖】：${q.imageUrl}\n` : "") +
           `(A) ${q.optionA}\n(B) ${q.optionB}\n(C) ${q.optionC}\n(D) ${q.optionD}\n` +
           (includeExplanation || includeAnswers ? `【標準答案】：${q.correctAnswers}\n` : "") +
           (includeExplanation ? `【題目解析】：${explanationText}\n` : "")
@@ -516,6 +534,17 @@ export default function ExportModal({
                   ${idx + 1}. <span class="type-tag ${isSingle ? "single-tag" : "multi-tag"}">【${typeLabel}】</span>
                   ${formatHtmlText(q.stem)}
                 </div>
+                ${
+                  q.imageUrl
+                    ? `
+                  <div style="margin: 6px 0 8px 20px;">
+                    <img src="${escapeHtml(
+                      resolveImageUrlForExport(q.imageUrl)
+                    )}" style="max-width: 360px; max-height: 240px; object-fit: contain; border-radius: 4px; border: 1px solid #cbd5e1;" alt="題目附圖" />
+                  </div>
+                `
+                    : ""
+                }
                 <div class="option-row"><span class="${bubbleClass}"></span><strong>(A)</strong> ${formatHtmlText(q.optionA)}</div>
                 <div class="option-row"><span class="${bubbleClass}"></span><strong>(B)</strong> ${formatHtmlText(q.optionB)}</div>
                 <div class="option-row"><span class="${bubbleClass}"></span><strong>(C)</strong> ${formatHtmlText(q.optionC)}</div>

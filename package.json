@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "node scripts/sync-db-provider.js && prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node scripts/test_image_attachment.js && node scripts/test_image_edge_cases.js && node scripts/test_parser_patterns.js"
   },
   "dependencies": {
     "@prisma/client": "^5.21.1",

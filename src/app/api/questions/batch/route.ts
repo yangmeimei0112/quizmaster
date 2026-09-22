@@ -111,11 +111,13 @@ export async function POST(req: NextRequest) {
 
       // 建立此題
       try {
+        const imageUrl = q.imageUrl && typeof q.imageUrl === "string" ? q.imageUrl.trim() || null : null;
         const created = await prisma.question.create({
           data: {
             stem,
             normalizedStem: normStem,
             type,
+            imageUrl,
             optionA,
             optionB,
             optionC,
@@ -125,7 +127,8 @@ export async function POST(req: NextRequest) {
               ? explanation.replace(/^\r?\n+|\s+$/g, "")
               : null,
             category,
-            difficulty: "MEDIUM",
+            difficulty: q.difficulty || "MEDIUM",
+            tags: q.tags ? q.tags.trim() : null,
           },
         });
 

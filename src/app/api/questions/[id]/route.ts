@@ -41,6 +41,7 @@ export async function PUT(
       category,
       difficulty,
       tags,
+      imageUrl,
     } = body;
 
     let answersStr = "";
@@ -60,6 +61,13 @@ export async function PUT(
         optionB: optionB ? optionB.trim() : undefined,
         optionC: optionC ? optionC.trim() : undefined,
         optionD: optionD ? optionD.trim() : undefined,
+        correctAnswers: answersStr ? answersStr : undefined,
+        imageUrl:
+          imageUrl !== undefined
+            ? imageUrl && imageUrl.trim()
+              ? imageUrl.trim()
+              : null
+            : undefined,
         explanation:
           explanation !== undefined
             ? explanation && explanation.trim()

@@ -16,12 +16,14 @@ import {
   Check,
   AlertTriangle,
   FileDown,
+  Maximize2,
 } from "lucide-react";
 import { Question } from "@/types/question";
 import { getCachedQuestions, setCachedQuestions } from "@/lib/questionsCache";
 import MockExamView from "@/components/practice/MockExamView";
 import WrongQuestionsRanking from "@/components/practice/WrongQuestionsRanking";
 import ExportModal from "@/components/ExportModal";
+import ImageLightboxModal from "@/components/ImageLightboxModal";
 
 type PracticeMode = "NONE" | "INSTANT" | "MOCK_EXAM";
 
@@ -31,6 +33,7 @@ export default function PracticePage() {
   const [mockExamQueue, setMockExamQueue] = useState<Question[]>([]);
   const [mockExamKey, setMockExamKey] = useState(1);
   const [isLoading, setIsLoading] = useState(() => !getCachedQuestions());
+  const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null);
 
   // 模式：NONE (大廳) | INSTANT (即時隨機練習) | MOCK_EXAM (60分鐘模擬考)
   const [quizMode, setQuizMode] = useState<PracticeMode>("NONE");
@@ -398,6 +401,35 @@ export default function PracticePage() {
                 ? "請點選一個正確選項作答："
                 : "本題為複選題，可點選多個選項作答："}
             </p>
+
+            {/* 題目附圖 */}
+            {currentQ.imageUrl && (
+              <div className="pt-2 pb-1">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setLightboxImageUrl(currentQ.imageUrl!)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setLightboxImageUrl(currentQ.imageUrl!);
+                    }
+                  }}
+                  className="group relative inline-block rounded-2xl overflow-hidden border border-white/[0.12] bg-black/50 hover:border-cyan-500/50 p-2 cursor-pointer transition-all max-w-full"
+                  title="點擊放大檢視附圖"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={currentQ.imageUrl}
+                    alt="題目附圖"
+                    className="max-h-64 sm:max-h-80 w-auto object-contain rounded-xl transition-transform group-hover:scale-[1.01]"
+                  />
+                  <div className="absolute bottom-3 right-3 bg-black/80 text-white text-xs px-2.5 py-1 rounded-lg border border-white/20 flex items-center gap-1 opacity-90 group-hover:opacity-100 shadow-md">
+                    <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>點擊放大</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 4 個選項作答區塊 */}
@@ -538,6 +570,12 @@ export default function PracticePage() {
             </div>
           )}
         </div>
+
+        {/* 燈箱放大檢視 */}
+        <ImageLightboxModal
+          imageUrl={lightboxImageUrl}
+          onClose={() => setLightboxImageUrl(null)}
+        />
       </div>
     );
   }
@@ -784,6 +822,12 @@ export default function PracticePage() {
         onClose={() => setIsExportModalOpen(false)}
         questions={allQuestions}
         initialMode="RANDOM_50"
+      />
+
+      {/* 燈箱放大檢視 */}
+      <ImageLightboxModal
+        imageUrl={lightboxImageUrl}
+        onClose={() => setLightboxImageUrl(null)}
       />
     </div>
   );

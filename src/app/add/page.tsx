@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { SimilarMatch, QuestionType } from "@/types/question";
 import QuickAddModal from "@/components/QuickAddModal";
+import ImageAttachmentField from "@/components/ImageAttachmentField";
 import { invalidateQuestionsCache } from "@/lib/questionsCache";
 
 export default function AddQuestionPage() {
@@ -28,6 +29,7 @@ export default function AddQuestionPage() {
   // 表單狀態
   const [stem, setStem] = useState("");
   const [type, setType] = useState<QuestionType>("SINGLE");
+  const [imageUrl, setImageUrl] = useState("");
   const [optionA, setOptionA] = useState("");
   const [optionB, setOptionB] = useState("");
   const [optionC, setOptionC] = useState("");
@@ -125,6 +127,7 @@ export default function AddQuestionPage() {
   const handleQuickApply = useCallback((data: {
     stem: string;
     type: QuestionType;
+    imageUrl?: string;
     optionA: string;
     optionB: string;
     optionC: string;
@@ -134,6 +137,7 @@ export default function AddQuestionPage() {
   }) => {
     setStem(data.stem);
     setType(data.type);
+    setImageUrl(data.imageUrl || "");
     setOptionA(data.optionA);
     setOptionB(data.optionB);
     setOptionC(data.optionC);
@@ -149,6 +153,7 @@ export default function AddQuestionPage() {
   const handleDirectSave = useCallback(async (data: {
     stem: string;
     type: QuestionType;
+    imageUrl?: string;
     optionA: string;
     optionB: string;
     optionC: string;
@@ -163,6 +168,7 @@ export default function AddQuestionPage() {
         body: JSON.stringify({
           stem: data.stem,
           type: data.type,
+          imageUrl: data.imageUrl || undefined,
           optionA: data.optionA,
           optionB: data.optionB,
           optionC: data.optionC,
@@ -195,6 +201,7 @@ export default function AddQuestionPage() {
 
       // 清空表單
       setStem("");
+      setImageUrl("");
       setOptionA("");
       setOptionB("");
       setOptionC("");
@@ -260,6 +267,7 @@ export default function AddQuestionPage() {
         body: JSON.stringify({
           stem,
           type,
+          imageUrl: imageUrl || undefined,
           optionA,
           optionB,
           optionC,
@@ -288,6 +296,7 @@ export default function AddQuestionPage() {
 
       // 重置表單但保留分類與題型方便連續錄入
       setStem("");
+      setImageUrl("");
       setOptionA("");
       setOptionB("");
       setOptionC("");
@@ -307,6 +316,7 @@ export default function AddQuestionPage() {
     }
   }, [
     stem,
+    imageUrl,
     optionA,
     optionB,
     optionC,
@@ -549,6 +559,16 @@ export default function AddQuestionPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* 題目附圖 (選填) */}
+        <div className="pt-1">
+          <ImageAttachmentField
+            value={imageUrl}
+            onChange={setImageUrl}
+            disabled={isSubmitting}
+            label="題目附圖（選填）"
+          />
         </div>
 
         {/* 2. 四個選項輸入 (A, B, C, D) */}

@@ -15,6 +15,7 @@ export interface Question {
   category?: string | null;
   difficulty: Difficulty;
   tags?: string | null;
+  imageUrl?: string | null;
   wrongCount?: number;
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -46,6 +47,7 @@ export interface QuestionFormData {
   optionC: string;
   optionD: string;
   correctAnswers: string[]; // ["A"] or ["A", "C"]
+  imageUrl?: string;
   explanation?: string;
   category?: string;
   difficulty: Difficulty;
