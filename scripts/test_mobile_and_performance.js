@@ -184,7 +184,7 @@ const keyTouchElements = [
   { file: "src/components/practice/WrongQuestionsRanking.tsx", expected: ["min-h-[44px]", "min-w-[44px] min-h-[44px]"] },
   { file: "src/app/add/page.tsx", expected: ["min-h-[48px]", "w-11 h-11 min-w-[44px] min-h-[44px]", "min-h-[44px] inline-flex items-center gap-1.5"] },
   { file: "src/app/questions/page.tsx", expected: ["w-11 h-11 min-w-[44px] min-h-[44px]", "min-h-[44px] px-3 sm:px-4 py-2"] },
-  { file: "src/app/guide/page.tsx", expected: ["min-h-[44px] px-3.5 py-2 rounded-xl", "min-h-[44px] px-4 py-2.5 rounded-xl", "min-h-[46px]"] },
+  { file: "src/app/battle/page.tsx", expected: ["min-h-[44px]", "min-h-[48px]", "min-h-[52px]"] },
   { file: "src/app/page.tsx", expected: ["min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent", "min-h-[44px] px-2 text-xs text-[#8B96F8]"] },
 ];
 

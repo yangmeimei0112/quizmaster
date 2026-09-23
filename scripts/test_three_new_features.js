@@ -356,37 +356,36 @@ async function runTests() {
   if (bufExam.length < 10000) throw new Error("50題模擬試卷 DOCX 檔案大小異常過小");
 
   // -------------------------------------------------------------
-  // 測試 3：導覽列「引導小精靈」與 /guide 頁面檢查
+  // 測試 3：導覽列「⚔️ 多人對戰」與 /battle 頁面檢查
   // -------------------------------------------------------------
-  console.log("\n[測試 3] 驗證導覽列「引導小精靈」分頁與 /guide 頁面...");
+  console.log("\n[測試 3] 驗證導覽列「⚔️ 多人對戰」分頁與 /battle 頁面...");
 
   const navbarPath = path.join(__dirname, "../src/components/Navbar.tsx");
   const navbarContent = fs.readFileSync(navbarPath, "utf-8");
-  if (!navbarContent.includes("/guide") || !navbarContent.includes("引導小精靈")) {
-    throw new Error("Navbar.tsx 未包含引導小精靈分頁連結");
+  if (!navbarContent.includes("/battle") || !navbarContent.includes("多人對戰")) {
+    throw new Error("Navbar.tsx 未包含多人對戰分頁連結");
   }
-  console.log("  ✓ Navbar.tsx 成功包含 /guide 導覽項目與「引導小精靈」標籤");
+  console.log("  ✓ Navbar.tsx 成功包含 /battle 導覽項目與「⚔️ 多人對戰」標籤");
 
-  const guidePath = path.join(__dirname, "../src/app/guide/page.tsx");
-  if (!fs.existsSync(guidePath)) {
-    throw new Error("src/app/guide/page.tsx 不存在");
+  const battlePath = path.join(__dirname, "../src/app/battle/page.tsx");
+  if (!fs.existsSync(battlePath)) {
+    throw new Error("src/app/battle/page.tsx 不存在");
   }
-  const guideContent = fs.readFileSync(guidePath, "utf-8");
+  const battleContent = fs.readFileSync(battlePath, "utf-8");
   const requiredKeywords = [
-    "快速新增題目",
-    "四合一防重複",
-    "題庫管理",
-    "60分鐘沉浸式",
-    "錯題排行榜",
-    "Google 文件試卷",
-    "快捷鍵",
+    "多人即時對戰",
+    "創建對戰房間",
+    "輸入 4 碼",
+    "12 款日系可愛動物頭像",
+    "街機老虎機抽卡過場",
+    "3 級榮耀結算頒獎台",
   ];
   for (const kw of requiredKeywords) {
-    if (!guideContent.includes(kw)) {
-      throw new Error(`Guide 頁面未包含核心關鍵字: ${kw}`);
+    if (!battleContent.includes(kw)) {
+      throw new Error(`Battle 頁面未包含核心關鍵字: ${kw}`);
     }
   }
-  console.log("  ✓ src/app/guide/page.tsx 成功包含所有六大核心功能與操作示意說明");
+  console.log("  ✓ src/app/battle/page.tsx 成功包含多人對戰房間創建、加入與核心功能說明");
 
   console.log("\n==================================================");
   console.log("🎉 所有三大新功能自動化測試全數通過！(0 錯誤)");
