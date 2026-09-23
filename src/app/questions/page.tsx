@@ -29,6 +29,7 @@ import { Question, QuestionType } from "@/types/question";
 import ExportModal from "@/components/ExportModal";
 import ImageAttachmentField from "@/components/ImageAttachmentField";
 import ImageLightboxModal from "@/components/ImageLightboxModal";
+import ExplanationCard from "@/components/ExplanationCard";
 import { getCachedQuestions, setCachedQuestions, invalidateQuestionsCache } from "@/lib/questionsCache";
 import { normalizeAnswers } from "@/lib/answerUtils";
 
@@ -307,13 +308,17 @@ const QuestionCardItem = memo(function QuestionCardItem({
 
               {/* 解析手風琴展開容器 */}
               {isExplanationOpen && q.explanation && q.explanation.trim() && (
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs text-foreground-muted leading-relaxed transition-all duration-250 ease-out animate-in fade-in">
-                  <p className="font-bold font-game text-foreground mb-1.5 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    解析與考點說明：
-                  </p>
-                  <p className="text-foreground-subtle leading-relaxed break-words whitespace-pre-wrap">{q.explanation}</p>
-                </div>
+                <ExplanationCard
+                  explanation={q.explanation}
+                  correctAnswers={q.correctAnswers}
+                  options={{
+                    A: q.optionA,
+                    B: q.optionB,
+                    C: q.optionC,
+                    D: q.optionD,
+                  }}
+                  questionType={q.type}
+                />
               )}
             </div>
           </div>

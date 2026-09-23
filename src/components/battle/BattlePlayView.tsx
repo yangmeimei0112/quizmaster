@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { BattleRoom, BattleQuestion, BattlePlayer } from "@/lib/battleStore";
 import { battleAudio } from "@/lib/battleAudio";
 import { compareAnswers } from "@/lib/answerUtils";
+import ExplanationCard from "@/components/ExplanationCard";
 import CompetitorLiveBoard from "./CompetitorLiveBoard";
 import AnimalAvatar from "./AnimalAvatar";
 import {
@@ -405,25 +406,38 @@ export default function BattlePlayView({
 
               {/* Instant Explanation / Next Button after submit */}
               {hasSubmitted && (
-                <div className="mt-6 pt-4 border-t border-white/[0.08] flex items-center justify-between gap-3 animate-fade-in">
-                  <div className="text-xs text-foreground-muted">
+                <div className="mt-6 pt-4 border-t border-white/[0.08] flex flex-col gap-3 animate-fade-in">
+                  <div className="w-full text-xs text-foreground-muted">
                     {currentQ.explanation ? (
-                      <span className="line-clamp-2 leading-relaxed">
-                        💡 <strong>解析：</strong> {currentQ.explanation}
-                      </span>
+                      <ExplanationCard
+                        explanation={currentQ.explanation}
+                        correctAnswers={currentQ.correctAnswers}
+                        userAnswer={selectedAnswers}
+                        options={{
+                          A: currentQ.optionA,
+                          B: currentQ.optionB,
+                          C: currentQ.optionC,
+                          D: currentQ.optionD,
+                        }}
+                        questionType={currentQ.type}
+                        compact={true}
+                        className="w-full"
+                      />
                     ) : (
                       <span>答題完畢，正在前往下一題...</span>
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={advanceNextQuestion}
-                    className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold font-game bg-white/[0.08] hover:bg-white/[0.15] text-foreground border border-white/10 transition-colors shrink-0 flex items-center gap-1.5 touch-tactile"
-                  >
-                    <span>下一題</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={advanceNextQuestion}
+                      className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold font-game bg-white/[0.08] hover:bg-white/[0.15] text-foreground border border-white/10 transition-colors shrink-0 flex items-center gap-1.5 touch-tactile"
+                    >
+                      <span>下一題</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

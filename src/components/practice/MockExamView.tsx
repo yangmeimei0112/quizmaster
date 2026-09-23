@@ -23,6 +23,7 @@ import { Question } from "@/types/question";
 import { useAuth } from "@/lib/AuthContext";
 import ExamWrongReportModal from "./ExamWrongReportModal";
 import ImageLightboxModal from "../ImageLightboxModal";
+import ExplanationCard from "@/components/ExplanationCard";
 import { compareAnswers, normalizeAnswers, formatAnswerDisplay } from "@/lib/answerUtils";
 
 interface MockExamViewProps {
@@ -971,15 +972,18 @@ export default function MockExamView({
 
                 {/* 詳解說明 */}
                 {q.explanation && (
-                  <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs text-foreground-muted space-y-1">
-                    <div className="font-bold text-foreground flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                      <span>題目詳解與考點：</span>
-                    </div>
-                    <p className="text-foreground-subtle leading-relaxed break-words whitespace-pre-wrap">
-                      {q.explanation}
-                    </p>
-                  </div>
+                  <ExplanationCard
+                    explanation={q.explanation}
+                    correctAnswers={q.correctAnswers}
+                    userAnswer={userAnsList}
+                    options={{
+                      A: q.optionA,
+                      B: q.optionB,
+                      C: q.optionC,
+                      D: q.optionD,
+                    }}
+                    questionType={q.type}
+                  />
                 )}
               </div>
             );

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { Question } from "@/types/question";
+import ExplanationCard from "@/components/ExplanationCard";
 
 interface WrongRecord {
   id: string;
@@ -398,9 +399,19 @@ export default function WrongQuestionsRanking({
                               )}
                             </div>
                             {q.explanation && (
-                              <p className="text-[11px] text-emerald-300/80 leading-relaxed pt-1 border-t border-emerald-500/20 break-words whitespace-pre-wrap">
-                                {q.explanation}
-                              </p>
+                              <ExplanationCard
+                                explanation={q.explanation}
+                                correctAnswers={q.correctAnswers}
+                                userAnswer={item.lastUserAnswer}
+                                options={{
+                                  A: q.optionA,
+                                  B: q.optionB,
+                                  C: q.optionC,
+                                  D: q.optionD,
+                                }}
+                                questionType={q.type}
+                                className="mt-2.5"
+                              />
                             )}
                           </div>
                         </div>
@@ -565,9 +576,18 @@ export default function WrongQuestionsRanking({
                               </span>
                             </div>
                             {q.explanation && (
-                              <p className="text-[11px] text-emerald-300/80 leading-relaxed pt-1 border-t border-emerald-500/20 break-words whitespace-pre-wrap">
-                                {q.explanation}
-                              </p>
+                              <ExplanationCard
+                                explanation={q.explanation}
+                                correctAnswers={q.correctAnswers}
+                                options={{
+                                  A: q.optionA,
+                                  B: q.optionB,
+                                  C: q.optionC,
+                                  D: q.optionD,
+                                }}
+                                questionType={q.type}
+                                className="mt-2.5"
+                              />
                             )}
                           </div>
                         </div>
@@ -723,9 +743,19 @@ export default function WrongQuestionsRanking({
                             <span className="font-bold mr-1">標準解答：</span>
                             <span className="font-mono font-black">{q.correctAnswers}</span>
                             {q.explanation && (
-                              <p className="text-[11px] text-emerald-300/80 mt-1 pt-1 border-t border-emerald-500/20 break-words whitespace-pre-wrap">
-                                {q.explanation}
-                              </p>
+                              <ExplanationCard
+                                explanation={q.explanation}
+                                correctAnswers={q.correctAnswers}
+                                userAnswer={activeTab === "personal" ? item.lastUserAnswer : undefined}
+                                options={{
+                                  A: q.optionA,
+                                  B: q.optionB,
+                                  C: q.optionC,
+                                  D: q.optionD,
+                                }}
+                                questionType={q.type}
+                                className="mt-2.5"
+                              />
                             )}
                           </div>
                         </div>

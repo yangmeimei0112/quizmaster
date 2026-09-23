@@ -24,6 +24,7 @@ import MockExamView from "@/components/practice/MockExamView";
 import WrongQuestionsRanking from "@/components/practice/WrongQuestionsRanking";
 import ExportModal from "@/components/ExportModal";
 import ImageLightboxModal from "@/components/ImageLightboxModal";
+import ExplanationCard from "@/components/ExplanationCard";
 
 type PracticeMode = "NONE" | "INSTANT" | "MOCK_EXAM";
 
@@ -540,15 +541,19 @@ export default function PracticePage() {
               )}
 
               {currentQ.explanation && currentQ.explanation.trim() && (
-                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-xs text-foreground-muted space-y-1.5 leading-relaxed animate-fade-in-up">
-                  <p className="font-bold font-game text-foreground flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    題目詳解與考點：
-                  </p>
-                  <p className="text-foreground-subtle leading-relaxed break-words whitespace-pre-wrap">
-                    {currentQ.explanation}
-                  </p>
-                </div>
+                <ExplanationCard
+                  explanation={currentQ.explanation}
+                  correctAnswers={currentQ.correctAnswers}
+                  userAnswer={selectedAnswers}
+                  options={{
+                    A: currentQ.optionA,
+                    B: currentQ.optionB,
+                    C: currentQ.optionC,
+                    D: currentQ.optionD,
+                  }}
+                  questionType={currentQ.type}
+                  className="animate-fade-in-up"
+                />
               )}
 
               <div className="flex justify-end w-full">
