@@ -36,15 +36,27 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const [questions, allQuestions] = await Promise.all([
-      prisma.question.findMany({
-        where,
+    const hasFilters = Object.keys(where).length > 0;
+
+    let questions: any[];
+    let allQuestions: Array<{ type: string; category: string | null }>;
+
+    if (!hasFilters) {
+      questions = await prisma.question.findMany({
         orderBy: { createdAt: "desc" },
-      }),
-      prisma.question.findMany({
-        select: { type: true, category: true },
-      }),
-    ]);
+      });
+      allQuestions = questions;
+    } else {
+      [questions, allQuestions] = await Promise.all([
+        prisma.question.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.question.findMany({
+          select: { type: true, category: true },
+        }),
+      ]);
+    }
 
     const totalCount = allQuestions.length;
     const singleCount = allQuestions.filter((x) => x.type === "SINGLE").length;

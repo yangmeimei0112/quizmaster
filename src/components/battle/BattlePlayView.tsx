@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { BattleRoom, BattleQuestion, BattlePlayer } from "@/lib/battleStore";
 import { battleAudio } from "@/lib/battleAudio";
+import { compareAnswers } from "@/lib/answerUtils";
 import CompetitorLiveBoard from "./CompetitorLiveBoard";
 import AnimalAvatar from "./AnimalAvatar";
 import {
@@ -62,16 +63,52 @@ export default function BattlePlayView({
   const currentQ = orderedQuestions[currentIndex] || orderedQuestions[0];
   const autoNextTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Poll room updates for live scoreboard
+  // Poll room updates for live scoreboard with Smart Adaptive Polling
+  const isFetchingRef = useRef(false);
   useEffect(() => {
-    const interval = setInterval(async () => {
-      const updated = await onRefreshRoom();
-      if (updated && updated.stage === "FINISHED") {
-        onFinishBattle();
-      }
-    }, 1200);
+    let timer: NodeJS.Timeout | null = null;
+    let isActive = true;
 
-    return () => clearInterval(interval);
+    const poll = async () => {
+      if (!isActive || isFetchingRef.current) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        // Slow down polling when user has tab hidden/backgrounded
+        timer = setTimeout(poll, 4000);
+        return;
+      }
+
+      isFetchingRef.current = true;
+      try {
+        const updated = await onRefreshRoom();
+        if (updated && updated.stage === "FINISHED" && isActive) {
+          onFinishBattle();
+          return;
+        }
+      } catch (err) {
+        // Silently tolerate transient network glitches
+      } finally {
+        isFetchingRef.current = false;
+        if (isActive) {
+          timer = setTimeout(poll, 1200);
+        }
+      }
+    };
+
+    timer = setTimeout(poll, 1200);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && isActive) {
+        poll();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isActive = false;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [onRefreshRoom, onFinishBattle]);
 
   // Clean timer on unmount
@@ -123,14 +160,7 @@ export default function BattlePlayView({
     if (hasSubmitted || !currentQ) return;
     setHasSubmitted(true);
 
-    const correctList = (currentQ.correctAnswers || "")
-      .split(",")
-      .map((x) => x.trim().toUpperCase())
-      .filter(Boolean);
-
-    const isCorrect =
-      answers.length === correctList.length &&
-      answers.every((ans) => correctList.includes(ans));
+    const isCorrect = compareAnswers(answers, currentQ.correctAnswers);
 
     let newCorrect = stats.correct;
     let newWrong = stats.wrong;

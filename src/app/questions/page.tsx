@@ -29,7 +29,8 @@ import { Question, QuestionType } from "@/types/question";
 import ExportModal from "@/components/ExportModal";
 import ImageAttachmentField from "@/components/ImageAttachmentField";
 import ImageLightboxModal from "@/components/ImageLightboxModal";
-import { getCachedQuestions, setCachedQuestions } from "@/lib/questionsCache";
+import { getCachedQuestions, setCachedQuestions, invalidateQuestionsCache } from "@/lib/questionsCache";
+import { normalizeAnswers } from "@/lib/answerUtils";
 
 // 骨架屏載入卡片元件，保持卡片版面高度穩定，消除頁面切換瞬態白閃與抽動
 function QuestionCardSkeleton({ index }: { index: number }) {
@@ -96,7 +97,7 @@ const QuestionCardItem = memo(function QuestionCardItem({
   handleDelete,
   onOpenImage,
 }: QuestionCardItemProps) {
-  const correctSet = useMemo(() => new Set(q.correctAnswers.split(",")), [q.correctAnswers]);
+  const correctSet = useMemo(() => new Set(normalizeAnswers(q.correctAnswers)), [q.correctAnswers]);
 
   const options = useMemo(
     () => [
@@ -517,6 +518,8 @@ export default function QuestionsPage() {
           const next = prev.filter((q) => q.id !== id);
           if (!searchTerm.trim() && selectedType === "ALL") {
             setCachedQuestions(next);
+          } else {
+            invalidateQuestionsCache();
           }
           return next;
         });
@@ -538,7 +541,7 @@ export default function QuestionsPage() {
     setEditOptB(q.optionB);
     setEditOptC(q.optionC);
     setEditOptD(q.optionD);
-    setEditAnswers(q.correctAnswers.split(",").filter(Boolean));
+    setEditAnswers(normalizeAnswers(q.correctAnswers));
     setEditExplanation(q.explanation || "");
   }, []);
 
@@ -575,6 +578,8 @@ export default function QuestionsPage() {
           const next = prev.map((item) => (item.id === updated.id ? updated : item));
           if (!searchTerm.trim() && selectedType === "ALL") {
             setCachedQuestions(next);
+          } else {
+            invalidateQuestionsCache();
           }
           return next;
         });

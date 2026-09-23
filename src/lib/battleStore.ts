@@ -66,11 +66,25 @@ if (!globalForBattle.__battleRoomsStore) {
 
 const roomsStore = globalForBattle.__battleRoomsStore;
 
-// Clean up stale rooms older than 2 hours
-function cleanupStaleRooms() {
-  const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+let lastCleanupTime = 0;
+
+// Clean up stale rooms older than 2 hours or empty rooms older than 5 minutes
+export function cleanupStaleRooms(force: boolean = false) {
+  const now = Date.now();
+  // Throttle automatic cleanups to at most once per 60 seconds unless forced
+  if (!force && now - lastCleanupTime < 60000) {
+    return;
+  }
+  lastCleanupTime = now;
+
+  const twoHoursAgo = now - 2 * 60 * 60 * 1000;
+  const fiveMinutesAgo = now - 5 * 60 * 1000;
+
   for (const [code, room] of roomsStore.entries()) {
-    if (room.updatedAt < twoHoursAgo) {
+    if (
+      room.updatedAt < twoHoursAgo ||
+      (room.players.length === 0 && room.updatedAt < fiveMinutesAgo)
+    ) {
       roomsStore.delete(code);
     }
   }
@@ -79,7 +93,7 @@ function cleanupStaleRooms() {
 // 4-character code generator (excluding easily confused chars: 0/O, 1/I)
 const CODE_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 export function generateRoomCode(): string {
-  cleanupStaleRooms();
+  cleanupStaleRooms(true);
   for (let attempt = 0; attempt < 100; attempt++) {
     let code = "";
     for (let i = 0; i < 4; i++) {
@@ -150,9 +164,16 @@ export function createRoom(
 }
 
 export function getRoom(code: string): BattleRoom | null {
+  cleanupStaleRooms();
   const upperCode = code.trim().toUpperCase();
   const room = roomsStore.get(upperCode);
   if (!room) return null;
+
+  // Check if room has expired (> 2 hours inactive)
+  if (Date.now() - room.updatedAt > 2 * 60 * 60 * 1000) {
+    roomsStore.delete(upperCode);
+    return null;
+  }
 
   // Auto transition from DRAWING to PLAYING if drawing animation time (7.5s) has passed
   if (room.stage === "DRAWING" && room.drawingStartTime) {

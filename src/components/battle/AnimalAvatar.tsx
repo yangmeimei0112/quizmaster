@@ -30,6 +30,7 @@ export default function AnimalAvatar({
   animate = false,
 }: AnimalAvatarProps) {
   const avatar = getAnimalAvatar(id);
+  const uid = React.useId().replace(/[:]/g, "_");
 
   // Render high-fidelity Japanese Kawaii / Chibi SVG illustration for each animal
   const renderAnimalFace = (avatarId: string) => {
@@ -39,7 +40,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="shiba-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-shiba-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#FB7185" stopOpacity="0.65" />
                 <stop offset="100%" stopColor="#FB7185" stopOpacity="0" />
               </radialGradient>
@@ -60,8 +61,8 @@ export default function AnimalAvatar({
             />
 
             {/* Soft Peach Blushes */}
-            <ellipse cx="26" cy="63" rx="6.5" ry="4.5" fill="url(#shiba-blush)" />
-            <ellipse cx="74" cy="63" rx="6.5" ry="4.5" fill="url(#shiba-blush)" />
+            <ellipse cx="26" cy="63" rx="6.5" ry="4.5" fill={`url(#${uid}-shiba-blush)`} />
+            <ellipse cx="74" cy="63" rx="6.5" ry="4.5" fill={`url(#${uid}-shiba-blush)`} />
 
             {/* Cute Mochi Eyebrow Dots */}
             <ellipse cx="35" cy="38" rx="3.5" ry="2.5" fill="#FFFBEB" />
@@ -93,7 +94,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="panda-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-panda-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#F472B6" stopOpacity="0.6" />
                 <stop offset="100%" stopColor="#F472B6" stopOpacity="0" />
               </radialGradient>
@@ -121,8 +122,8 @@ export default function AnimalAvatar({
             <circle cx="68" cy="52" r="1" fill="#FFFFFF" opacity="0.8" />
 
             {/* Rosy Baby Pink Blushes */}
-            <ellipse cx="23" cy="65" rx="7" ry="4.5" fill="url(#panda-blush)" />
-            <ellipse cx="77" cy="65" rx="7" ry="4.5" fill="url(#panda-blush)" />
+            <ellipse cx="23" cy="65" rx="7" ry="4.5" fill={`url(#${uid}-panda-blush)`} />
+            <ellipse cx="77" cy="65" rx="7" ry="4.5" fill={`url(#${uid}-panda-blush)`} />
 
             {/* Cute Black Button Nose & Innocent Smile */}
             <ellipse cx="50" cy="62" rx="4.5" ry="3" fill="#0F172A" />
@@ -139,7 +140,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="fox-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-fox-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#F87171" stopOpacity="0.6" />
                 <stop offset="100%" stopColor="#F87171" stopOpacity="0" />
               </radialGradient>
@@ -163,8 +164,8 @@ export default function AnimalAvatar({
             <path d="M 50,38 Q 47,44 50,49 Q 53,44 50,38 Z" fill="#FFF7ED" />
 
             {/* Blushes */}
-            <ellipse cx="26" cy="62" rx="6" ry="4" fill="url(#fox-blush)" />
-            <ellipse cx="74" cy="62" rx="6" ry="4" fill="url(#fox-blush)" />
+            <ellipse cx="26" cy="62" rx="6" ry="4" fill={`url(#${uid}-fox-blush)`} />
+            <ellipse cx="74" cy="62" rx="6" ry="4" fill={`url(#${uid}-fox-blush)`} />
 
             {/* Sparkly Almond Anime Eyes */}
             <g id="fox-left-eye">
@@ -190,7 +191,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="lion-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-lion-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#FB923C" stopOpacity="0.65" />
                 <stop offset="100%" stopColor="#FB923C" stopOpacity="0" />
               </radialGradient>
@@ -225,8 +226,8 @@ export default function AnimalAvatar({
             <ellipse cx="50" cy="66" rx="14" ry="10" fill="#FEF08A" />
 
             {/* Warm Sunset Blushes */}
-            <ellipse cx="28" cy="62" rx="5.5" ry="3.5" fill="url(#lion-blush)" />
-            <ellipse cx="72" cy="62" rx="5.5" ry="3.5" fill="url(#lion-blush)" />
+            <ellipse cx="28" cy="62" rx="5.5" ry="3.5" fill={`url(#${uid}-lion-blush)`} />
+            <ellipse cx="72" cy="62" rx="5.5" ry="3.5" fill={`url(#${uid}-lion-blush)`} />
 
             {/* Radiant Big Eyes */}
             <g id="lion-left-eye">
@@ -251,7 +252,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="tiger-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-tiger-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#FB7185" stopOpacity="0.65" />
                 <stop offset="100%" stopColor="#FB7185" stopOpacity="0" />
               </radialGradient>
@@ -278,8 +279,8 @@ export default function AnimalAvatar({
             <ellipse cx="50" cy="67" rx="16" ry="11" fill="#FFF7ED" />
 
             {/* Blushes */}
-            <ellipse cx="27" cy="63" rx="6" ry="4" fill="url(#tiger-blush)" />
-            <ellipse cx="73" cy="63" rx="6" ry="4" fill="url(#tiger-blush)" />
+            <ellipse cx="27" cy="63" rx="6" ry="4" fill={`url(#${uid}-tiger-blush)`} />
+            <ellipse cx="73" cy="63" rx="6" ry="4" fill={`url(#${uid}-tiger-blush)`} />
 
             {/* Energetic Anime Eyes */}
             <g id="tiger-left-eye">
@@ -306,7 +307,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="koala-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-koala-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#F472B6" stopOpacity="0.55" />
                 <stop offset="100%" stopColor="#F472B6" stopOpacity="0" />
               </radialGradient>
@@ -338,8 +339,8 @@ export default function AnimalAvatar({
             <circle cx="47" cy="49" r="1.5" fill="#FFFFFF" opacity="0.8" />
 
             {/* Soft Rosy Blushes */}
-            <ellipse cx="25" cy="64" rx="6" ry="4" fill="url(#koala-blush)" />
-            <ellipse cx="75" cy="64" rx="6" ry="4" fill="url(#koala-blush)" />
+            <ellipse cx="25" cy="64" rx="6" ry="4" fill={`url(#${uid}-koala-blush)`} />
+            <ellipse cx="75" cy="64" rx="6" ry="4" fill={`url(#${uid}-koala-blush)`} />
 
             {/* Peaceful Baby Smile */}
             <path d="M 46,72 Q 50,75 54,72" stroke="#1E293B" strokeWidth="2" strokeLinecap="round" fill="none" />
@@ -355,7 +356,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="penguin-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-penguin-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#FB7185" stopOpacity="0.7" />
                 <stop offset="100%" stopColor="#FB7185" stopOpacity="0" />
               </radialGradient>
@@ -375,8 +376,8 @@ export default function AnimalAvatar({
             />
 
             {/* Rosy Peach Cheeks */}
-            <ellipse cx="29" cy="62" rx="6" ry="4" fill="url(#penguin-blush)" />
-            <ellipse cx="71" cy="62" rx="6" ry="4" fill="url(#penguin-blush)" />
+            <ellipse cx="29" cy="62" rx="6" ry="4" fill={`url(#${uid}-penguin-blush)`} />
+            <ellipse cx="71" cy="62" rx="6" ry="4" fill={`url(#${uid}-penguin-blush)`} />
 
             {/* Big Expressive Anime Eyes */}
             <g id="penguin-left-eye">
@@ -400,7 +401,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="rabbit-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-rabbit-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#F472B6" stopOpacity="0.7" />
                 <stop offset="100%" stopColor="#F472B6" stopOpacity="0" />
               </radialGradient>
@@ -421,8 +422,8 @@ export default function AnimalAvatar({
             <ellipse cx="50" cy="58" rx="35" ry="30" fill="#FDF2F8" />
 
             {/* Big Strawberry Blushes */}
-            <ellipse cx="26" cy="65" rx="7" ry="4.5" fill="url(#rabbit-blush)" />
-            <ellipse cx="74" cy="65" rx="7" ry="4.5" fill="url(#rabbit-blush)" />
+            <ellipse cx="26" cy="65" rx="7" ry="4.5" fill={`url(#${uid}-rabbit-blush)`} />
+            <ellipse cx="74" cy="65" rx="7" ry="4.5" fill={`url(#${uid}-rabbit-blush)`} />
 
             {/* Sparkling Ruby Eyes with Dual Highlights */}
             <g id="rabbit-left-eye">
@@ -447,7 +448,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="cat-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-cat-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#EC4899" stopOpacity="0.65" />
                 <stop offset="100%" stopColor="#EC4899" stopOpacity="0" />
               </radialGradient>
@@ -468,8 +469,8 @@ export default function AnimalAvatar({
             />
 
             {/* Rosy Cheeks */}
-            <ellipse cx="27" cy="63" rx="6.5" ry="4" fill="url(#cat-blush)" />
-            <ellipse cx="73" cy="63" rx="6.5" ry="4" fill="url(#cat-blush)" />
+            <ellipse cx="27" cy="63" rx="6.5" ry="4" fill={`url(#${uid}-cat-blush)`} />
+            <ellipse cx="73" cy="63" rx="6.5" ry="4" fill={`url(#${uid}-cat-blush)`} />
 
             {/* Sparkling Golden Galaxy Cat Eyes */}
             <g id="cat-left-eye">
@@ -502,7 +503,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="owl-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-owl-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#FB7185" stopOpacity="0.6" />
                 <stop offset="100%" stopColor="#FB7185" stopOpacity="0" />
               </radialGradient>
@@ -529,8 +530,8 @@ export default function AnimalAvatar({
             <circle cx="66" cy="52" r="1.2" fill="#FFFFFF" opacity="0.8" />
 
             {/* Pink Blushes Outside Spectacles */}
-            <ellipse cx="18" cy="62" rx="5" ry="3.5" fill="url(#owl-blush)" />
-            <ellipse cx="82" cy="62" rx="5" ry="3.5" fill="url(#owl-blush)" />
+            <ellipse cx="18" cy="62" rx="5" ry="3.5" fill={`url(#${uid}-owl-blush)`} />
+            <ellipse cx="82" cy="62" rx="5" ry="3.5" fill={`url(#${uid}-owl-blush)`} />
 
             {/* Cute Amber Drop Beak */}
             <path d="M 46,55 Q 50,53 54,55 Q 50,66 46,55 Z" fill="#F59E0B" />
@@ -545,7 +546,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="deer-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-deer-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#FDA4AF" stopOpacity="0.75" />
                 <stop offset="100%" stopColor="#FDA4AF" stopOpacity="0" />
               </radialGradient>
@@ -586,8 +587,8 @@ export default function AnimalAvatar({
             </g>
 
             {/* Strawberry Rose Blushes */}
-            <ellipse cx="27" cy="64" rx="6" ry="4" fill="url(#deer-blush)" />
-            <ellipse cx="73" cy="64" rx="6" ry="4" fill="url(#deer-blush)" />
+            <ellipse cx="27" cy="64" rx="6" ry="4" fill={`url(#${uid}-deer-blush)`} />
+            <ellipse cx="73" cy="64" rx="6" ry="4" fill={`url(#${uid}-deer-blush)`} />
 
             {/* Tiny Berry Nose */}
             <ellipse cx="50" cy="65" rx="3.5" ry="2.2" fill="#881337" />
@@ -599,7 +600,7 @@ export default function AnimalAvatar({
         return (
           <g>
             <defs>
-              <radialGradient id="monkey-blush" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-monkey-blush`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#FB7185" stopOpacity="0.65" />
                 <stop offset="100%" stopColor="#FB7185" stopOpacity="0" />
               </radialGradient>
@@ -622,8 +623,8 @@ export default function AnimalAvatar({
             />
 
             {/* Warm Peach Blushes */}
-            <ellipse cx="28" cy="64" rx="5.5" ry="3.5" fill="url(#monkey-blush)" />
-            <ellipse cx="72" cy="64" rx="5.5" ry="3.5" fill="url(#monkey-blush)" />
+            <ellipse cx="28" cy="64" rx="5.5" ry="3.5" fill={`url(#${uid}-monkey-blush)`} />
+            <ellipse cx="72" cy="64" rx="5.5" ry="3.5" fill={`url(#${uid}-monkey-blush)`} />
 
             {/* Playful Winking Eyes: Left open sparkling, Right winking cute arc! */}
             <g id="monkey-left-eye">

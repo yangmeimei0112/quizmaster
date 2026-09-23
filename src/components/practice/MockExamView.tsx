@@ -23,6 +23,7 @@ import { Question } from "@/types/question";
 import { useAuth } from "@/lib/AuthContext";
 import ExamWrongReportModal from "./ExamWrongReportModal";
 import ImageLightboxModal from "../ImageLightboxModal";
+import { compareAnswers, normalizeAnswers, formatAnswerDisplay } from "@/lib/answerUtils";
 
 interface MockExamViewProps {
   questions: Question[]; // 50 questions
@@ -88,12 +89,11 @@ export default function MockExamView({
     const wrongItems: Array<{ questionId: string; userAnswer?: string }> = [];
 
     questions.forEach((q) => {
-      const userAns = (currentAnswers[q.id] || []).sort().join(",");
-      const correctAns = q.correctAnswers.split(",").sort().join(",");
-      if (userAns !== correctAns) {
+      const isCorrect = compareAnswers(currentAnswers[q.id], q.correctAnswers);
+      if (!isCorrect) {
         wrongItems.push({
           questionId: q.id,
-          userAnswer: userAns || "未填答",
+          userAnswer: formatAnswerDisplay(currentAnswers[q.id]) || "未填答",
         });
       }
     });
@@ -263,12 +263,10 @@ export default function MockExamView({
     let unanswered = 0;
 
     questions.forEach((q) => {
-      const userAns = (userAnswers[q.id] || []).sort().join(",");
-      const correctAns = q.correctAnswers.split(",").sort().join(",");
-
-      if (!userAns) {
+      const ansList = userAnswers[q.id] || [];
+      if (ansList.length === 0) {
         unanswered++;
-      } else if (userAns === correctAns) {
+      } else if (compareAnswers(ansList, q.correctAnswers)) {
         correctCount++;
       } else {
         wrongCount++;
@@ -291,9 +289,7 @@ export default function MockExamView({
   const filteredReviewQuestions = useMemo(() => {
     if (!isSubmitted) return [];
     return questions.filter((q) => {
-      const userAns = (userAnswers[q.id] || []).sort().join(",");
-      const correctAns = q.correctAnswers.split(",").sort().join(",");
-      const isCorrect = userAns === correctAns;
+      const isCorrect = compareAnswers(userAnswers[q.id], q.correctAnswers);
 
       if (reviewFilter === "WRONG") return !isCorrect;
       if (reviewFilter === "CORRECT") return isCorrect;
@@ -836,11 +832,11 @@ export default function MockExamView({
         <div className="space-y-4">
           {filteredReviewQuestions.map((q) => {
             const originalIndex = questions.findIndex((item) => item.id === q.id);
-            const userAnsList = (userAnswers[q.id] || []).sort();
-            const userAnsStr = userAnsList.join(",");
-            const correctAnsStr = q.correctAnswers.split(",").sort().join(",");
-            const isCorrect = userAnsStr === correctAnsStr;
+            const userAnsList = normalizeAnswers(userAnswers[q.id]);
+            const isCorrect = compareAnswers(userAnsList, q.correctAnswers);
             const isUnanswered = userAnsList.length === 0;
+            const correctAnsStr = formatAnswerDisplay(q.correctAnswers);
+            const userAnsStr = formatAnswerDisplay(userAnsList);
 
             const opts = [
               { key: "A", text: q.optionA },
@@ -939,7 +935,7 @@ export default function MockExamView({
                 {/* 四個選項展示 */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {opts.map((opt) => {
-                    const isStandardCorrect = q.correctAnswers.split(",").includes(opt.key);
+                    const isStandardCorrect = normalizeAnswers(q.correctAnswers).includes(opt.key);
                     const isUserChosen = userAnsList.includes(opt.key);
 
                     let optStyle = "bg-white/[0.02] border-white/[0.05] text-foreground-muted";

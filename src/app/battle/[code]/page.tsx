@@ -27,7 +27,9 @@ export default function BattleRoomPage() {
   const [directName, setDirectName] = useState("");
   const [directAvatar, setDirectAvatar] = useState("shiba");
   const [joiningDirect, setJoiningDirect] = useState(false);
-  const [samplePool, setSamplePool] = useState<any[]>([]);
+  const [samplePool, setSamplePool] = useState<
+    Array<{ id: string; stem: string; category?: string | null; type: string }>
+  >([]);
 
   // Fetch latest room state
   const fetchRoom = useCallback(async (): Promise<BattleRoom | null> => {
@@ -74,16 +76,50 @@ export default function BattleRoomPage() {
     });
   }, [roomCode, fetchRoom]);
 
-  // Polling during LOBBY and FINISHED stage to sync joined players, game start, and room replay/standings
+  // Smart Adaptive Polling during LOBBY and FINISHED stage
+  const isFetchingRoomRef = useRef(false);
   useEffect(() => {
     if (!room) return;
-    if (room.stage === "LOBBY" || room.stage === "FINISHED") {
-      const interval = setInterval(async () => {
-        await fetchRoom();
-      }, 1500);
+    if (room.stage !== "LOBBY" && room.stage !== "FINISHED") return;
 
-      return () => clearInterval(interval);
-    }
+    let timer: NodeJS.Timeout | null = null;
+    let isActive = true;
+
+    const poll = async () => {
+      if (!isActive || isFetchingRoomRef.current) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        timer = setTimeout(poll, 4000);
+        return;
+      }
+
+      isFetchingRoomRef.current = true;
+      try {
+        await fetchRoom();
+      } catch (err) {
+        // Silently tolerate network hiccups
+      } finally {
+        isFetchingRoomRef.current = false;
+        if (isActive) {
+          timer = setTimeout(poll, 1500);
+        }
+      }
+    };
+
+    timer = setTimeout(poll, 1500);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && isActive) {
+        poll();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isActive = false;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [room?.stage, fetchRoom]);
 
   // Handle direct join modal submit

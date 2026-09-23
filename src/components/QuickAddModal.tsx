@@ -23,6 +23,7 @@ import { QuestionType, QuestionDuplicateStatus, SimilarMatch } from "@/types/que
 import { parseMultipleQuestions, ParsedQuestionResult } from "@/lib/questionParser";
 import { normalizeText, calculateSimilarity } from "@/lib/similarity";
 import ImageAttachmentField from "@/components/ImageAttachmentField";
+import { invalidateQuestionsCache } from "@/lib/questionsCache";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -613,6 +614,8 @@ export default function QuickAddModal({
         throw new Error(data.error || "批次新增題目失敗");
       }
 
+      invalidateQuestionsCache();
+
       let notice = `🎉 成功新增 ${data.createdCount} 道題目！`;
       if (data.skippedCount > 0) {
         notice += `（已自動略過 ${data.skippedCount} 題重複題目）`;
@@ -701,6 +704,8 @@ export default function QuickAddModal({
       if (!res.ok) {
         throw new Error(data.error || "批次新增題目失敗");
       }
+
+      invalidateQuestionsCache();
 
       const totalExcluded = exactDuplicateCount + (data.skippedCount || 0);
       let notice = `🎉 成功新增 ${data.createdCount} 道題目！`;

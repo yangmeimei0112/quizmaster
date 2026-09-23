@@ -8,7 +8,7 @@
     "build": "node scripts/sync-db-provider.js && prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node scripts/test_image_attachment.js && node scripts/test_image_edge_cases.js && node scripts/test_parser_patterns.js && node --experimental-strip-types scripts/test_battle_system.js && node scripts/test_three_new_features.js"
+    "test": "node scripts/test_image_attachment.js && node scripts/test_image_edge_cases.js && node scripts/test_parser_patterns.js && node --experimental-strip-types scripts/test_answer_utils.js && node --experimental-strip-types scripts/test_question_draw_system.js && node --experimental-strip-types scripts/test_battle_system.js && node scripts/test_three_new_features.js"
   },
   "dependencies": {
     "@prisma/client": "^5.21.1",
