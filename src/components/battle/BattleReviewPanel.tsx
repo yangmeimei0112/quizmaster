@@ -104,7 +104,7 @@ export default function BattleReviewPanel({
               </span>
             </h3>
             <p className="text-xs text-foreground-muted">
-              深入檢視本局作答對錯明細，強化核心考點記憶
+              深入檢視本局作答對錯明細，答錯考題已自動納入個人錯題本與全站錯題統計
             </p>
           </div>
         </div>
@@ -282,7 +282,7 @@ export default function BattleReviewPanel({
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-game bg-rose-500/15 text-rose-300 border border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.15)]">
                             <XCircle className="w-3.5 h-3.5 text-rose-400" />
-                            <span>答錯</span>
+                            <span>答錯 · 已同步至錯題本</span>
                           </span>
                         )}
                       </div>

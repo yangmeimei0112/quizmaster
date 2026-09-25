@@ -489,8 +489,92 @@ async function runTestSuite() {
     );
   });
 
+  // =========================================================================
+  // Part 6: 對戰模式錯題自動同步至錯題系統 (Wrong Questions Integration)
+  // =========================================================================
+  console.log("\n--- Part 6: 對戰模式錯題自動同步至錯題系統 (Wrong Questions Integration) ---");
+
+  test("審計 BattlePlayView.tsx 具備錯題自動同步 API 呼叫與防重複集合", () => {
+    assert.ok(
+      playViewContent.includes('fetch("/api/wrong-questions"'),
+      "BattlePlayView 必須在答錯時呼叫 /api/wrong-questions"
+    );
+    assert.ok(
+      playViewContent.includes("syncedWrongQuestionIdsRef"),
+      "BattlePlayView 必須使用 syncedWrongQuestionIdsRef 防止同一題重複同步"
+    );
+    assert.ok(
+      playViewContent.includes("formatAnswerDisplay"),
+      "BattlePlayView 必須使用 formatAnswerDisplay 格式化作答文字"
+    );
+    assert.ok(
+      playViewContent.includes("drawingStartTime"),
+      "BattlePlayView 必須在新局開始時清理已同步錯題集合"
+    );
+  });
+
+  test("審計 BattleReviewPanel.tsx 呈現錯題已記錄至錯題本之文案與標籤", () => {
+    const reviewPanelContent = fs.readFileSync(panelSourcePath, "utf-8");
+    assert.ok(
+      reviewPanelContent.includes("個人錯題本與全站錯題統計"),
+      "BattleReviewPanel 標題說明必須提示答錯考題已納入個人錯題本與全站統計"
+    );
+    assert.ok(
+      reviewPanelContent.includes("已同步至錯題本"),
+      "BattleReviewPanel 錯題標籤必須清楚標記已同步至錯題本"
+    );
+  });
+
+  test("行為邏輯模擬：答錯題即時觸發 /api/wrong-questions 且答對題不觸發", async () => {
+    const loggedRequests = [];
+    const fakeFetch = async (url, options) => {
+      loggedRequests.push({ url, body: JSON.parse(options.body) });
+      return { ok: true, json: async () => ({ success: true }) };
+    };
+
+    const syncedSet = new Set();
+    const handleSimulatedAnswer = async (qId, ans, correctAns) => {
+      const { compareAnswers, formatAnswerDisplay } = await import(
+        "file://" + path.resolve(__dirname, "../src/lib/answerUtils.ts").replace(/\\/g, "/")
+      );
+      const isCorrect = compareAnswers(ans, correctAns);
+      if (!isCorrect) {
+        if (!syncedSet.has(qId)) {
+          syncedSet.add(qId);
+          const userAnsStr = formatAnswerDisplay(ans) || "未作答";
+          await fakeFetch("/api/wrong-questions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ questionId: qId, userAnswer: userAnsStr }),
+          });
+        }
+      }
+    };
+
+    // 1. 答錯 Q1
+    await handleSimulatedAnswer("q101", ["B"], "A");
+    assert.equal(loggedRequests.length, 1, "答錯 Q1 應觸發 1 次請求");
+    assert.equal(loggedRequests[0].url, "/api/wrong-questions");
+    assert.equal(loggedRequests[0].body.questionId, "q101");
+    assert.equal(loggedRequests[0].body.userAnswer, "B");
+
+    // 2. 答對 Q2
+    await handleSimulatedAnswer("q102", ["C"], "C");
+    assert.equal(loggedRequests.length, 1, "答對 Q2 不應觸發請求");
+
+    // 3. 重複作答 Q1 (防重複機制)
+    await handleSimulatedAnswer("q101", ["B"], "A");
+    assert.equal(loggedRequests.length, 1, "同一場次重複作答不應發送第二次錯題記錄");
+
+    // 4. 新局開始清空集合
+    syncedSet.clear();
+    await handleSimulatedAnswer("q101", ["D"], "A");
+    assert.equal(loggedRequests.length, 2, "新局重抽相同題目若答錯應允許再次同步");
+    assert.equal(loggedRequests[1].body.userAnswer, "D");
+  });
+
   console.log(`\n==================================================`);
-  console.log(`🎉 對戰覆盤面板與防重放屏障測試全數通過！(通過 ${passed} / ${total} 項，0 錯誤)`);
+  console.log(`🎉 對戰覆盤面板、防重放屏障與錯題同步測試全數通過！(通過 ${passed} / ${total} 項，0 錯誤)`);
   console.log(`==================================================\n`);
 }
 

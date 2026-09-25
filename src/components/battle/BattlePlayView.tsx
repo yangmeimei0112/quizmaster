@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { BattleRoom, BattleQuestion, BattlePlayer } from "@/lib/battleStore";
 import { battleAudio } from "@/lib/battleAudio";
-import { compareAnswers } from "@/lib/answerUtils";
+import { compareAnswers, formatAnswerDisplay } from "@/lib/answerUtils";
 import ExplanationCard from "@/components/ExplanationCard";
 import CompetitorLiveBoard from "./CompetitorLiveBoard";
 import AnimalAvatar from "./AnimalAvatar";
@@ -80,6 +80,12 @@ export default function BattlePlayView({
 
   const currentQ = orderedQuestions[currentIndex] || orderedQuestions[0];
   const autoNextTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const syncedWrongQuestionIdsRef = useRef<Set<string>>(new Set());
+
+  // Reset synced wrong question tracking on new game session
+  useEffect(() => {
+    syncedWrongQuestionIdsRef.current.clear();
+  }, [room.drawingStartTime]);
 
   // Poll room updates for live scoreboard with Smart Adaptive Polling
   const isFetchingRef = useRef(false);
@@ -196,6 +202,17 @@ export default function BattlePlayView({
     } else {
       newWrong += 1;
       battleAudio.playWrong();
+
+      // 自動記錄錯題至錯題系統 (個人專屬錯題本與全站高頻錯題統計)
+      if (!syncedWrongQuestionIdsRef.current.has(currentQ.id)) {
+        syncedWrongQuestionIdsRef.current.add(currentQ.id);
+        const userAnsStr = formatAnswerDisplay(answers) || "未作答";
+        fetch("/api/wrong-questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ questionId: currentQ.id, userAnswer: userAnsStr }),
+        }).catch((err) => console.error("同步對戰錯題至錯題系統失敗:", err));
+      }
     }
 
     setStats({ correct: newCorrect, wrong: newWrong, score: newScore });
