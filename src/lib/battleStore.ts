@@ -40,6 +40,13 @@ export interface BattleQuestion {
   imageUrl?: string | null;
 }
 
+export interface BattleReviewItem {
+  questionIndex: number;
+  question: BattleQuestion;
+  userAnswer: string[];
+  isCorrect: boolean;
+}
+
 export interface BattleRoom {
   code: string; // 4-char uppercase alphanumeric, e.g. "R7X2"
   hostId: string;
@@ -175,9 +182,9 @@ export function getRoom(code: string): BattleRoom | null {
     return null;
   }
 
-  // Auto transition from DRAWING to PLAYING if drawing animation time (7.5s) has passed
+  // Auto transition from DRAWING to PLAYING if drawing animation time (5.0s) has passed
   if (room.stage === "DRAWING" && room.drawingStartTime) {
-    if (Date.now() - room.drawingStartTime >= 7500) {
+    if (Date.now() - room.drawingStartTime >= 5000) {
       room.stage = "PLAYING";
       room.playingStartTime = room.playingStartTime || Date.now();
       room.updatedAt = Date.now();
@@ -331,7 +338,7 @@ export function startBattle(
       : drawnQuestions.map((q) => ({ id: q.id, stem: q.stem, category: q.category, type: q.type }));
   room.stage = "DRAWING";
   room.drawingStartTime = Date.now();
-  room.playingStartTime = Date.now() + 6000; // Expected playing start after draw animation
+  room.playingStartTime = Date.now() + 5000; // Expected playing start after draw animation
 
   // Prepare question order for each player
   room.playerQuestionOrders = {};

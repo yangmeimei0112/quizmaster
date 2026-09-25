@@ -22,6 +22,12 @@ export default function BattleRoomPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
 
+  // 🛡️ Client-side idempotency replay barrier for arcade drawing animation
+  const completedDrawingSessionsRef = useRef<Set<number>>(new Set());
+
+  // 📝 Player battle answer history: questionId -> array of selected option keys
+  const [userAnswers, setUserAnswers] = useState<Record<string, string[]>>({});
+
   // Need to Join Modal (if user accessed /battle/CODE directly without join form)
   const [showDirectJoin, setShowDirectJoin] = useState(false);
   const [directName, setDirectName] = useState("");
@@ -45,8 +51,37 @@ export default function BattleRoomPage() {
         return null;
       }
       const data = await res.json();
-      setRoom(data.room);
-      return data.room;
+      let updatedRoom: BattleRoom = data.room;
+
+      // 🛡️ Clean slate on LOBBY: When room transitions to LOBBY (e.g. host resets battle),
+      // ensure all players (including non-host guests) purge previous match answers and barrier
+      if (updatedRoom && updatedRoom.stage === "LOBBY") {
+        completedDrawingSessionsRef.current.clear();
+        setUserAnswers({});
+        if (roomCode && playerId) {
+          try {
+            localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+          } catch {}
+        }
+      }
+
+      // 🛡️ Client-side Idempotency Replay Barrier:
+      // If drawing animation for this session timestamp has already finished,
+      // never let a stale server DRAWING stage drag the client backwards.
+      if (
+        updatedRoom &&
+        updatedRoom.stage === "DRAWING" &&
+        updatedRoom.drawingStartTime &&
+        completedDrawingSessionsRef.current.has(updatedRoom.drawingStartTime)
+      ) {
+        updatedRoom = {
+          ...updatedRoom,
+          stage: "PLAYING",
+        };
+      }
+
+      setRoom(updatedRoom);
+      return updatedRoom;
     } catch (err: any) {
       setError(err.message || "網路連線異常");
       return null;
@@ -75,6 +110,47 @@ export default function BattleRoomPage() {
       }
     });
   }, [roomCode, fetchRoom]);
+
+  // Load cached answers for current battle room session
+  useEffect(() => {
+    if (!roomCode || !playerId) return;
+    if (room?.stage === "LOBBY") {
+      setUserAnswers({});
+      try {
+        localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+      } catch {}
+      return;
+    }
+    try {
+      const cached = localStorage.getItem(`battle_user_answers_${roomCode}_${playerId}`);
+      if (cached) {
+        setUserAnswers(JSON.parse(cached));
+      }
+    } catch (e) {
+      console.error("Failed to load cached battle user answers:", e);
+    }
+  }, [roomCode, playerId, room?.stage]);
+
+  // Record an answer selection in state & localStorage
+  const handleRecordAnswer = useCallback(
+    (questionId: string, answers: string[]) => {
+      setUserAnswers((prev) => {
+        const next = { ...prev, [questionId]: answers };
+        try {
+          if (roomCode && playerId) {
+            localStorage.setItem(
+              `battle_user_answers_${roomCode}_${playerId}`,
+              JSON.stringify(next)
+            );
+          }
+        } catch (e) {
+          console.error("Failed to cache battle user answers:", e);
+        }
+        return next;
+      });
+    },
+    [roomCode, playerId]
+  );
 
   // Smart Adaptive Polling during LOBBY and FINISHED stage
   const isFetchingRoomRef = useRef(false);
@@ -173,6 +249,13 @@ export default function BattleRoomPage() {
     if (data.samplePool) {
       setSamplePool(data.samplePool);
     }
+    completedDrawingSessionsRef.current.clear();
+    setUserAnswers({});
+    if (roomCode && playerId) {
+      try {
+        localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+      } catch {}
+    }
     setRoom(data.room);
   };
 
@@ -237,6 +320,11 @@ export default function BattleRoomPage() {
       } catch (err) {}
     }
     localStorage.removeItem(`battle_player_${roomCode}`);
+    if (roomCode && playerId) {
+      try {
+        localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+      } catch {}
+    }
     router.push("/battle");
   };
 
@@ -253,13 +341,23 @@ export default function BattleRoomPage() {
 
     const data = await res.json();
     if (res.ok) {
+      completedDrawingSessionsRef.current.clear();
       setRoom(data.room);
+      setUserAnswers({});
+      try {
+        if (roomCode && playerId) {
+          localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+        }
+      } catch {}
     }
   };
 
   // When QuestionDrawAnimation countdown finishes
   const handleDrawAnimationComplete = () => {
     if (!room) return;
+    if (room.drawingStartTime) {
+      completedDrawingSessionsRef.current.add(room.drawingStartTime);
+    }
     setRoom({
       ...room,
       stage: "PLAYING",
@@ -310,6 +408,13 @@ export default function BattleRoomPage() {
       </div>
     );
   }
+
+  // 🛡️ Replay Barrier Check for View Router
+  const isDrawingCompleted = room?.drawingStartTime
+    ? completedDrawingSessionsRef.current.has(room.drawingStartTime)
+    : false;
+  const effectiveStage =
+    room.stage === "DRAWING" && isDrawingCompleted ? "PLAYING" : room.stage;
 
   return (
     <div>
@@ -369,8 +474,8 @@ export default function BattleRoomPage() {
         </div>
       )}
 
-      {/* Main View Router based on room.stage */}
-      {room.stage === "LOBBY" && (
+      {/* Main View Router based on effectiveStage (with Replay Barrier) */}
+      {effectiveStage === "LOBBY" && (
         <RoomLobbyView
           room={room}
           currentPlayerId={playerId}
@@ -382,7 +487,7 @@ export default function BattleRoomPage() {
         />
       )}
 
-      {room.stage === "DRAWING" && (
+      {effectiveStage === "DRAWING" && (
         <QuestionDrawAnimation
           questions={room.questions}
           samplePool={room.samplePool || samplePool}
@@ -392,19 +497,22 @@ export default function BattleRoomPage() {
         />
       )}
 
-      {room.stage === "PLAYING" && (
+      {effectiveStage === "PLAYING" && (
         <BattlePlayView
           room={room}
           currentPlayerId={playerId}
+          userAnswers={userAnswers}
+          onRecordAnswer={handleRecordAnswer}
           onRefreshRoom={fetchRoom}
           onFinishBattle={handleFinishBattle}
         />
       )}
 
-      {room.stage === "FINISHED" && (
+      {effectiveStage === "FINISHED" && (
         <BattlePodiumView
           room={room}
           currentPlayerId={playerId}
+          userAnswers={userAnswers}
           onResetBattle={handleResetBattle}
           onLeaveBattle={handleLeaveRoom}
         />

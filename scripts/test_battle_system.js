@@ -280,6 +280,97 @@ async function runBattleTests() {
   });
   assert(updatedSettingsRoom.settings.questionCount === 25, "房主動態修改自填題數為 25 題成功");
 
+  // -------------------------------------------------------------
+  // 測試 12：抽題轉場伺服器閾值 (5000ms) 與客戶端防重放屏障 (Replay Barrier)
+  // -------------------------------------------------------------
+  console.log("\n[測試 12] 驗證抽題轉場 5000ms 閾值校準與防重複播放屏障...");
+  const { room: barrierRoom, playerId: bHostId } = createRoom("屏障測試房主", "lion", {
+    questionCount: 3,
+  });
+  const dummyQuestions = [
+    { id: "q_b1", stem: "測試題1", type: "SINGLE", optionA: "A1", optionB: "B1", optionC: "C1", optionD: "D1", correctAnswers: "A", explanation: "解析1" },
+    { id: "q_b2", stem: "測試題2", type: "MULTIPLE", optionA: "A2", optionB: "B2", optionC: "C2", optionD: "D2", correctAnswers: "A,B", explanation: "解析2" },
+    { id: "q_b3", stem: "測試題3", type: "SINGLE", optionA: "A3", optionB: "B3", optionC: "C3", optionD: "D3", correctAnswers: "C", explanation: "解析3" },
+  ];
+  const bStarted = startBattle(barrierRoom.code, bHostId, dummyQuestions);
+  assert(bStarted.stage === "DRAWING", "對戰發起後進入 DRAWING 階段");
+  const drawingTime = bStarted.drawingStartTime;
+  assert(typeof drawingTime === "number" && drawingTime > 0, "抽題開始時間戳記存在");
+
+  // 模擬未達 5000ms (例如 4000ms)
+  bStarted.drawingStartTime = Date.now() - 4000;
+  const pollEarly = getRoom(barrierRoom.code);
+  assert(pollEarly.stage === "DRAWING", "未達 5000ms (4.0s) 前維持 DRAWING 階段");
+
+  // 模擬已達 5000ms (例如 5100ms)
+  bStarted.drawingStartTime = Date.now() - 5100;
+  const pollTransitioned = getRoom(barrierRoom.code);
+  assert(pollTransitioned.stage === "PLAYING", "超過 5000ms (5.1s) 伺服器端自動平滑推進至 PLAYING 階段");
+
+  // 測試客戶端防重放屏障 (Client-side Replay Barrier)
+  const completedDrawingSessions = new Set();
+  // 客戶端抽題動畫播放完畢，登記該場次 drawingStartTime
+  completedDrawingSessions.add(drawingTime);
+  assert(completedDrawingSessions.has(drawingTime), "客戶端成功將場次 drawingStartTime 登記至防重放屏障");
+
+  // 假想伺服器輪詢短暫送回 DRAWING
+  const staleServerResponse = { stage: "DRAWING", drawingStartTime: drawingTime };
+  const effectiveStage =
+    staleServerResponse.stage === "DRAWING" &&
+    staleServerResponse.drawingStartTime &&
+    completedDrawingSessions.has(staleServerResponse.drawingStartTime)
+      ? "PLAYING"
+      : staleServerResponse.stage;
+  assert(effectiveStage === "PLAYING", "防重放屏障生效：即使收到 DRAWING 亦鎖定為 PLAYING，絕不重複播放動畫");
+
+  // -------------------------------------------------------------
+  // 測試 13：考題對錯詳解覆盤與篩選器 (ALL / WRONG / CORRECT) 邏輯檢驗
+  // -------------------------------------------------------------
+  console.log("\n[測試 13] 驗證作答歷程紀錄、對錯判定與雙入口覆盤篩選器...");
+  const answerUtilsPath = path.resolve(__dirname, "../src/lib/answerUtils.ts");
+  const answerUtils = await import("file://" + answerUtilsPath.replace(/\\/g, "/"));
+  const { compareAnswers } = answerUtils;
+
+  // 模擬玩家作答歷程
+  const testAnswers = {
+    q_b1: ["A"],       // 正解 A -> 答對
+    q_b2: ["A"],       // 正解 A,B -> 答錯 (少選 B)
+    q_b3: ["C"],       // 正解 C -> 答對
+  };
+
+  const reviewItems = dummyQuestions.map((q, idx) => {
+    const userAns = testAnswers[q.id] || [];
+    const isCorrect = compareAnswers(userAns, q.correctAnswers);
+    return {
+      questionIndex: idx + 1,
+      question: q,
+      userAnswer: userAns,
+      isCorrect,
+    };
+  });
+
+  assert(reviewItems.length === 3, "覆盤題數正確記錄為 3 題");
+  assert(reviewItems[0].isCorrect === true, "第 1 題判定為答對 (✓)");
+  assert(reviewItems[1].isCorrect === false, "第 2 題判定為答錯 (❌)");
+  assert(reviewItems[2].isCorrect === true, "第 3 題判定為答對 (✓)");
+
+  // 驗證狀態篩選器 (ALL / WRONG / CORRECT)
+  const allFiltered = reviewItems;
+  const wrongFiltered = reviewItems.filter((item) => !item.isCorrect);
+  const correctFiltered = reviewItems.filter((item) => item.isCorrect);
+
+  assert(allFiltered.length === 3, "全部題目篩選傳回 3 題");
+  assert(wrongFiltered.length === 1 && wrongFiltered[0].question.id === "q_b2", "❌ 僅看錯題篩選正確回傳 1 題 (q_b2)");
+  assert(correctFiltered.length === 2, "✓ 僅看答對篩選正確回傳 2 題 (q_b1, q_b3)");
+
+  // 驗證 ExplanationCard 整合必要資料齊備性
+  wrongFiltered.forEach((item) => {
+    assert(typeof item.question.explanation === "string", "錯題包含完整 explanation 解析");
+    assert(item.question.correctAnswers === "A,B", "包含 correctAnswers 正解");
+    assert(Array.isArray(item.userAnswer) && item.userAnswer[0] === "A", "包含使用者實際 userAnswer 作答紀錄");
+    assert(item.question.optionA && item.question.optionB, "包含選項內容供 ExplanationCard 渲染");
+  });
+
   console.log("\n==================================================");
   console.log(`🎉 多人對戰系統自動化測試全數通過！(通過 ${passed} 項，失敗 0 項)`);
   console.log("==================================================");

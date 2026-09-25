@@ -19,11 +19,15 @@ import {
   Zap,
   Trophy,
   X,
+  BookOpen,
 } from "lucide-react";
+import BattleReviewPanel from "./BattleReviewPanel";
 
 interface BattlePlayViewProps {
   room: BattleRoom;
   currentPlayerId: string;
+  userAnswers?: Record<string, string[]>;
+  onRecordAnswer?: (questionId: string, answers: string[]) => void;
   onRefreshRoom: () => Promise<BattleRoom | null>;
   onFinishBattle: () => void;
 }
@@ -31,6 +35,8 @@ interface BattlePlayViewProps {
 export default function BattlePlayView({
   room,
   currentPlayerId,
+  userAnswers = {},
+  onRecordAnswer,
   onRefreshRoom,
   onFinishBattle,
 }: BattlePlayViewProps) {
@@ -60,6 +66,17 @@ export default function BattlePlayView({
     wrong: myPlayer?.wrongCount || 0,
     score: myPlayer?.score || 0,
   });
+
+  // Track player answers locally for instant review availability
+  const [localAnswers, setLocalAnswers] = useState<Record<string, string[]>>(() => ({
+    ...userAnswers,
+  }));
+
+  useEffect(() => {
+    if (userAnswers && Object.keys(userAnswers).length > 0) {
+      setLocalAnswers((prev) => ({ ...prev, ...userAnswers }));
+    }
+  }, [userAnswers]);
 
   const currentQ = orderedQuestions[currentIndex] || orderedQuestions[0];
   const autoNextTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -160,6 +177,11 @@ export default function BattlePlayView({
   const evaluateAnswer = async (answers: string[]) => {
     if (hasSubmitted || !currentQ) return;
     setHasSubmitted(true);
+
+    setLocalAnswers((prev) => ({ ...prev, [currentQ.id]: answers }));
+    if (onRecordAnswer) {
+      onRecordAnswer(currentQ.id, answers);
+    }
 
     const isCorrect = compareAnswers(answers, currentQ.correctAnswers);
 
@@ -442,29 +464,40 @@ export default function BattlePlayView({
               )}
             </div>
           ) : (
-            /* Finished Answering Waiting Card */
-            <div className="p-8 sm:p-12 rounded-3xl bg-white/[0.04] border border-white/[0.12] text-center space-y-4 backdrop-blur-xl">
-              <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center animate-bounce-subtle">
-                <Sparkles className="w-8 h-8" />
+            /* Finished Answering Waiting Card & Battle Review Panel */
+            <div className="space-y-6">
+              <div className="p-8 sm:p-12 rounded-3xl bg-white/[0.04] border border-white/[0.12] text-center space-y-4 backdrop-blur-xl">
+                <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center animate-bounce-subtle">
+                  <Sparkles className="w-8 h-8" />
+                </div>
+                <h3 className="text-2xl font-black font-game text-foreground">
+                  🎉 你已完成所有題目！
+                </h3>
+                <p className="text-sm text-foreground-muted max-w-md mx-auto leading-relaxed">
+                  最終得分：<strong className="text-amber-400 font-game text-lg">{stats.score} 分</strong>
+                  （答對 {stats.correct} 題，答錯 {stats.wrong} 題）
+                  <br />
+                  請稍候，正在等待其他參賽者完成對戰，即將揭曉頒獎台...
+                </p>
+                <div className="pt-4">
+                  <button
+                    type="button"
+                    onClick={onFinishBattle}
+                    className="min-h-[46px] px-6 py-2.5 rounded-xl font-game font-bold text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-lg hover:brightness-110 transition-all touch-tactile"
+                  >
+                    提前前往結算頒獎台 🏆
+                  </button>
+                </div>
               </div>
-              <h3 className="text-2xl font-black font-game text-foreground">
-                🎉 你已完成所有題目！
-              </h3>
-              <p className="text-sm text-foreground-muted max-w-md mx-auto leading-relaxed">
-                最終得分：<strong className="text-amber-400 font-game text-lg">{stats.score} 分</strong>
-                （答對 {stats.correct} 題，答錯 {stats.wrong} 題）
-                <br />
-                請稍候，正在等待其他參賽者完成對戰，即將揭曉頒獎台...
-              </p>
-              <div className="pt-4">
-                <button
-                  type="button"
-                  onClick={onFinishBattle}
-                  className="min-h-[46px] px-6 py-2.5 rounded-xl font-game font-bold text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-lg hover:brightness-110 transition-all touch-tactile"
-                >
-                  提前前往結算頒獎台 🏆
-                </button>
-              </div>
+
+              {/* Early Finisher Waiting Screen Review Panel (Entrance A) */}
+              <BattleReviewPanel
+                questions={orderedQuestions}
+                userAnswers={Object.keys(localAnswers).length > 0 ? localAnswers : userAnswers}
+                collapsible={true}
+                defaultExpanded={true}
+                title="📝 本局考題覆盤與解析"
+              />
             </div>
           )}
         </div>

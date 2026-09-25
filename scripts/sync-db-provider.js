@@ -40,4 +40,39 @@ function syncProvider() {
   console.log(`[sync-db-provider] Prisma datasource provider set to '${targetProvider}' (DATABASE_URL: ${dbUrl || "default"})`);
 }
 
+function patchNextBuildForWindows() {
+  const nextBuildPath = path.join(__dirname, "..", "node_modules", "next", "dist", "build", "index.js");
+  if (!fs.existsSync(nextBuildPath)) return;
+  try {
+    let content = fs.readFileSync(nextBuildPath, "utf8");
+    let changed = false;
+
+    // 1. Ensure directory exists before writeFileUtf8
+    if (content.includes('async function writeFileUtf8(filePath, content) {\n    await _fs.promises.writeFile(filePath, content, "utf-8");\n}')) {
+      content = content.replace(
+        'async function writeFileUtf8(filePath, content) {\n    await _fs.promises.writeFile(filePath, content, "utf-8");\n}',
+        'async function writeFileUtf8(filePath, content) {\n    await _fs.promises.mkdir(_path.default.dirname(filePath), { recursive: true });\n    await _fs.promises.writeFile(filePath, content, "utf-8");\n}'
+      );
+      changed = true;
+    }
+
+    // 2. Handle ENOENT when renaming static pages on Windows App Router
+    if (content.includes('await _fs.promises.rename(orig, dest);') && !content.includes("err.code !== 'ENOENT'")) {
+      content = content.replace(
+        'await _fs.promises.rename(orig, dest);',
+        "try {\n                                    await _fs.promises.rename(orig, dest);\n                                } catch (err) {\n                                    if (err.code !== 'ENOENT') throw err;\n                                }"
+      );
+      changed = true;
+    }
+
+    if (changed) {
+      fs.writeFileSync(nextBuildPath, content, "utf8");
+      console.log("[sync-db-provider] Patched Next.js build for Windows file system safety.");
+    }
+  } catch (err) {
+    // Gracefully ignore if read/write error
+  }
+}
+
 syncProvider();
+patchNextBuildForWindows();

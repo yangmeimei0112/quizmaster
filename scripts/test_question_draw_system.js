@@ -123,11 +123,15 @@ async function runTest() {
   assert(fetchedByOtherClient.stage === "DRAWING", "非房主獲取之階段同步為 DRAWING");
   assert(fetchedByOtherClient.samplePool.length === 5, "非房主可取得相同的 samplePool 以播放卡片輪播動畫");
 
-  // 6. 逾時自動過渡保護 (Drawing Timeout Safety Guard)
+  // 6. 逾時自動過渡保護 (Drawing Timeout Safety Guard - 5.0s Threshold)
   console.log("\n[檢查 6] 抽題逾時保護機制 (防止任何客戶端卡在 DRAWING)...");
-  startedRoom3.drawingStartTime = Date.now() - 8000; // 模擬經過 8 秒
+  startedRoom3.drawingStartTime = Date.now() - 4000; // 模擬經過 4.0 秒
+  const roomBeforeTimeout = getRoom(room3.code);
+  assert(roomBeforeTimeout.stage === "DRAWING", "未滿 5.0 秒時 getRoom 維持 DRAWING");
+
+  startedRoom3.drawingStartTime = Date.now() - 5200; // 模擬經過 5.2 秒
   const roomAfterTimeout = getRoom(room3.code);
-  assert(roomAfterTimeout.stage === "PLAYING", "超過 7.5 秒後 getRoom 自動推進至 PLAYING，防止玩家被卡住");
+  assert(roomAfterTimeout.stage === "PLAYING", "超過 5.0 秒後 getRoom 自動推進至 PLAYING，防止玩家被卡住");
 
   console.log(`\n==================================================`);
   console.log(`🎉 抽題系統審查全數通過！(通過 ${passed} / ${total} 項，0 錯誤)`);

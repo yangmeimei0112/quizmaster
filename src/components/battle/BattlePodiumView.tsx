@@ -14,13 +14,17 @@ import {
   XCircle,
   Sparkles,
   Share2,
+  BookOpen,
 } from "lucide-react";
+import BattleReviewPanel from "./BattleReviewPanel";
+import { BattleQuestion } from "@/lib/battleStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 interface BattlePodiumViewProps {
   room: BattleRoom;
   currentPlayerId: string;
+  userAnswers?: Record<string, string[]>;
   onResetBattle?: () => Promise<void>;
   onLeaveBattle: () => void;
 }
@@ -28,6 +32,7 @@ interface BattlePodiumViewProps {
 export default function BattlePodiumView({
   room,
   currentPlayerId,
+  userAnswers = {},
   onResetBattle,
   onLeaveBattle,
 }: BattlePodiumViewProps) {
@@ -53,6 +58,32 @@ export default function BattlePodiumView({
 
   const myPlayer = room.players.find((p) => p.id === currentPlayerId);
   const isHost = myPlayer?.isHost || false;
+
+  // Preserve player-specific question ordering in review
+  const orderedQuestions: BattleQuestion[] = React.useMemo(() => {
+    if (!room.playerQuestionOrders || !room.playerQuestionOrders[currentPlayerId]) {
+      return room.questions;
+    }
+    const orderIds = room.playerQuestionOrders[currentPlayerId];
+    const qMap = new Map(room.questions.map((q) => [q.id, q]));
+    return orderIds.map((id) => qMap.get(id)).filter(Boolean) as BattleQuestion[];
+  }, [room.questions, room.playerQuestionOrders, currentPlayerId]);
+
+  // Fallback to localStorage if userAnswers is temporarily empty during hydration/reload
+  const effectiveUserAnswers = React.useMemo(() => {
+    if (userAnswers && Object.keys(userAnswers).length > 0) {
+      return userAnswers;
+    }
+    if (typeof window !== "undefined" && room.code && currentPlayerId) {
+      try {
+        const cached = localStorage.getItem(`battle_user_answers_${room.code}_${currentPlayerId}`);
+        if (cached) {
+          return JSON.parse(cached);
+        }
+      } catch {}
+    }
+    return userAnswers || {};
+  }, [userAnswers, room.code, currentPlayerId]);
 
   const handleReset = async () => {
     if (!onResetBattle) return;
@@ -233,6 +264,15 @@ export default function BattlePodiumView({
           </table>
         </div>
       </div>
+
+      {/* Entrance B: Battle Review & Explanation Panel */}
+      <BattleReviewPanel
+        questions={orderedQuestions}
+        userAnswers={effectiveUserAnswers}
+        collapsible={true}
+        defaultExpanded={true}
+        title="📝 本局考題覆盤與解析"
+      />
 
       {/* Action Buttons: Play Again & Return */}
       <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
