@@ -38,10 +38,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     } else if (
       msg.includes("非等待") ||
       msg.includes("非 LOBBY") ||
-      msg.includes("進行中")
+      msg.includes("進行中") ||
+      msg.includes("尚未開始")
     ) {
       status = 409;
-    } else if (msg.includes("缺少") || msg.includes("房主")) {
+    } else if (msg.includes("缺少")) {
       status = 400;
     }
     return NextResponse.json({ error: msg }, { status });

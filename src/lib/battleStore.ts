@@ -251,6 +251,10 @@ export function toggleReady(
   const room = getRoom(code);
   if (!room) throw new Error("房間不存在");
 
+  if (room.stage !== "LOBBY") {
+    throw new Error("房間非等待階段，無法變更準備狀態");
+  }
+
   const player = room.players.find((p) => p.id === playerId);
   if (!player) throw new Error("玩家不存在於此房間");
 
@@ -267,6 +271,10 @@ export function updateAvatar(
 ): BattleRoom {
   const room = getRoom(code);
   if (!room) throw new Error("房間不存在");
+
+  if (room.stage !== "LOBBY") {
+    throw new Error("房間非等待階段，無法更換頭像");
+  }
 
   const player = room.players.find((p) => p.id === playerId);
   if (!player) throw new Error("玩家不存在於此房間");
@@ -377,6 +385,10 @@ export function updatePlayerProgress(
 ): BattleRoom {
   const room = getRoom(code);
   if (!room) throw new Error("房間不存在");
+
+  if (room.stage === "LOBBY") {
+    throw new Error("對戰尚未開始，非進行中階段");
+  }
 
   const player = room.players.find((p) => p.id === playerId);
   if (!player) throw new Error("玩家不存在於此房間");

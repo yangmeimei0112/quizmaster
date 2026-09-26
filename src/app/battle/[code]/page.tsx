@@ -294,24 +294,40 @@ export default function BattleRoomPage() {
           ? "伺服器喚醒中，請稍候約 30 秒後重新整理或重試"
           : msg;
       setError(friendlyMsg);
-      throw new Error(friendlyMsg);
     }
   };
-
 
   // Toggle ready status
   const handleToggleReady = async () => {
     if (!room || !playerId) return;
 
-    const res = await fetch(`/api/battle/${roomCode}/ready`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playerId }),
-    });
+    try {
+      const res = await fetch(`/api/battle/${roomCode}/ready`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId }),
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      setRoom(data.room);
+      const data = await res.json();
+      if (res.ok) {
+        setRoom(data.room);
+        setError("");
+      } else {
+        setError(data.error || "更新準備狀態失敗");
+      }
+    } catch (err: any) {
+      const msg: string = err?.message || "";
+      if (
+        err instanceof TypeError ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch") ||
+        msg.includes("TIMED_OUT") ||
+        msg.includes("timeout")
+      ) {
+        setError("伺服器喚醒中，請稍候約 30 秒後重新整理或重試");
+      } else {
+        setError(msg || "更新準備狀態失敗");
+      }
     }
   };
 
@@ -319,15 +335,33 @@ export default function BattleRoomPage() {
   const handleUpdateAvatar = async (avatarId: string) => {
     if (!room || !playerId) return;
 
-    const res = await fetch(`/api/battle/${roomCode}/avatar`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playerId, avatarId }),
-    });
+    try {
+      const res = await fetch(`/api/battle/${roomCode}/avatar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, avatarId }),
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      setRoom(data.room);
+      const data = await res.json();
+      if (res.ok) {
+        setRoom(data.room);
+        setError("");
+      } else {
+        setError(data.error || "更新頭像失敗");
+      }
+    } catch (err: any) {
+      const msg: string = err?.message || "";
+      if (
+        err instanceof TypeError ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch") ||
+        msg.includes("TIMED_OUT") ||
+        msg.includes("timeout")
+      ) {
+        setError("伺服器喚醒中，請稍候約 30 秒後重新整理或重試");
+      } else {
+        setError(msg || "更新頭像失敗");
+      }
     }
   };
 
@@ -335,15 +369,33 @@ export default function BattleRoomPage() {
   const handleUpdateSettings = async (settings: Partial<BattleSettings>) => {
     if (!room || !playerId) return;
 
-    const res = await fetch(`/api/battle/${roomCode}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hostId: playerId, settings }),
-    });
+    try {
+      const res = await fetch(`/api/battle/${roomCode}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hostId: playerId, settings }),
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      setRoom(data.room);
+      const data = await res.json();
+      if (res.ok) {
+        setRoom(data.room);
+        setError("");
+      } else {
+        setError(data.error || "更新房間設定失敗");
+      }
+    } catch (err: any) {
+      const msg: string = err?.message || "";
+      if (
+        err instanceof TypeError ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch") ||
+        msg.includes("TIMED_OUT") ||
+        msg.includes("timeout")
+      ) {
+        setError("伺服器喚醒中，請稍候約 30 秒後重新整理或重試");
+      } else {
+        setError(msg || "更新房間設定失敗");
+      }
     }
   };
 
@@ -373,22 +425,40 @@ export default function BattleRoomPage() {
     if (!room || !playerId) return;
     battleAudio.playClick();
 
-    const res = await fetch(`/api/battle/${roomCode}/reset`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hostId: playerId }),
-    });
+    try {
+      const res = await fetch(`/api/battle/${roomCode}/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hostId: playerId }),
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      completedDrawingSessionsRef.current.clear();
-      setRoom(data.room);
-      setUserAnswers({});
-      try {
-        if (roomCode && playerId) {
-          localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
-        }
-      } catch {}
+      const data = await res.json();
+      if (res.ok) {
+        completedDrawingSessionsRef.current.clear();
+        setRoom(data.room);
+        setUserAnswers({});
+        setError("");
+        try {
+          if (roomCode && playerId) {
+            localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+          }
+        } catch {}
+      } else {
+        setError(data.error || "重新開局失敗");
+      }
+    } catch (err: any) {
+      const msg: string = err?.message || "";
+      if (
+        err instanceof TypeError ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch") ||
+        msg.includes("TIMED_OUT") ||
+        msg.includes("timeout")
+      ) {
+        setError("伺服器喚醒中，請稍候約 30 秒後重新整理或重試");
+      } else {
+        setError(msg || "重新開局失敗");
+      }
     }
   };
 

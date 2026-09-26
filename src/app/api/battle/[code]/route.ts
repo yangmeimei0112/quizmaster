@@ -58,7 +58,9 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       msg.includes("已開始")
     ) {
       status = 409;
-    } else if (msg.includes("房主") || msg.includes("缺少")) {
+    } else if (msg.includes("只有房主") || (msg.includes("房主") && !msg.includes("缺少"))) {
+      status = 403;
+    } else if (msg.includes("缺少")) {
       status = 400;
     }
     return NextResponse.json({ error: msg }, { status });

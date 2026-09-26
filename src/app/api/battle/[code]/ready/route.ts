@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       msg.includes("進行中")
     ) {
       status = 409;
-    } else if (msg.includes("缺少") || msg.includes("房主")) {
+    } else if (msg.includes("缺少")) {
       status = 400;
     }
     return NextResponse.json({ error: msg }, { status });
