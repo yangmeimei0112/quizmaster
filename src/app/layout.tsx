@@ -3,6 +3,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/lib/AuthContext";
 import AuthModal from "@/components/AuthModal";
+import { version } from "../../package.json";
 
 export const metadata: Metadata = {
   title: "QuizMaster - 專案管理概論 個人複習題庫",
@@ -57,6 +58,8 @@ export default function RootLayout({
             </main>
             <footer className="border-t border-white/[0.06] bg-[#050506]/80 backdrop-blur-md pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] text-center text-xs text-[#8A8F98]">
               QuizMaster 個人題庫系統
+              <span className="mx-2 opacity-30">·</span>
+              <span className="text-[#5B6278] font-mono tracking-wide">v{version}</span>
             </footer>
           </div>
           <AuthModal />
