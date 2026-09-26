@@ -16,8 +16,8 @@ export default function BattleRoomPage() {
   const params = useParams();
   const router = useRouter();
   const rawParam = typeof params?.code === "string" ? params.code.trim() : "";
-  const roomCode = rawParam.replace(/\D/g, "").slice(0, 4);
-  const isValidCode = Boolean(roomCode.length === 4 && /^[1-9][0-9]{3}$/.test(roomCode));
+  const isValidCode = Boolean(rawParam.length === 4 && /^[1-9][0-9]{3}$/.test(rawParam));
+  const roomCode = isValidCode ? rawParam : rawParam.replace(/\D/g, "").slice(0, 4);
 
   const [room, setRoom] = useState<BattleRoom | null>(null);
   const [playerId, setPlayerId] = useState<string>("");

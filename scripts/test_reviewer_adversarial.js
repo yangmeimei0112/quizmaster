@@ -174,7 +174,7 @@ async function runAdversarialReview() {
     "join/route.ts 必須嚴格比對 cleanCode.length !== 4"
   );
 
-  // 契約驗證：[code]/page.tsx 必須防範無效代碼進入無限 Loading
+  // 契約驗證：[code]/page.tsx 必須防範無效代碼進入無限 Loading 且不得預先 slice 截斷 5 碼代碼
   const codePageSrc = fs.readFileSync(path.resolve(__dirname, "../src/app/battle/[code]/page.tsx"), "utf-8");
   assert.ok(
     codePageSrc.includes("isValidCode"),
@@ -184,6 +184,28 @@ async function runAdversarialReview() {
     codePageSrc.includes("setLoading(false)"),
     "battle/[code]/page.tsx 必須在代碼不合法時立即呼叫 setLoading(false) 解除載入中狀態"
   );
+  assert.ok(
+    codePageSrc.includes("rawParam.length === 4"),
+    "battle/[code]/page.tsx 必須在 isValidCode 中直接嚴格比對 rawParam.length === 4，不得截斷 5 碼以上代碼"
+  );
+
+  // 契約驗證：join/route.ts 支援數字型別 code 傳參 (e.g. { code: 8520 })
+  assert.ok(
+    joinRouteSrc.includes('typeof code === "number"'),
+    "join/route.ts 必須支援數值型態 code 傳入"
+  );
+
+  // 模擬 [code]/page.tsx 的 URL 參數檢驗邏輯
+  function testPageUrlValidation(paramCode) {
+    const rawParam = typeof paramCode === "string" ? paramCode.trim() : "";
+    return Boolean(rawParam.length === 4 && /^[1-9][0-9]{3}$/.test(rawParam));
+  }
+
+  assert.equal(testPageUrlValidation("8520"), true, "標準 8520 URL 參數合法");
+  assert.equal(testPageUrlValidation("12345"), false, "5 碼代碼 URL 參數嚴格無效 (防未經授權截斷)");
+  assert.equal(testPageUrlValidation("0123"), false, "首碼 0 URL 參數嚴格無效");
+  assert.equal(testPageUrlValidation("ABCD"), false, "英文 URL 參數嚴格無效");
+  assert.equal(testPageUrlValidation("1234abc"), false, "混合代碼 URL 參數嚴格無效");
 
   // 契約驗證：battle/page.tsx 活躍對戰快取必須清理舊版非純數字代碼
   const battlePortalSrc = fs.readFileSync(path.resolve(__dirname, "../src/app/battle/page.tsx"), "utf-8");

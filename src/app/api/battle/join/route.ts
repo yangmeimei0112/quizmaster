@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { code, playerName, playerAvatar, existingPlayerId, playerId } = body;
 
-    const rawCode = typeof code === "string" ? code.trim() : "";
+    const rawCode = (typeof code === "string" || typeof code === "number") ? String(code).trim() : "";
     const cleanCode = rawCode.replace(/\D/g, "");
 
     if (!cleanCode || cleanCode.length !== 4 || !/^[1-9][0-9]{3}$/.test(cleanCode)) {
