@@ -91,7 +91,6 @@ const modalFiles = [
   { file: "src/components/AuthModal.tsx", name: "AuthModal" },
   { file: "src/components/QuickAddModal.tsx", name: "QuickAddModal" },
   { file: "src/components/practice/ExamWrongReportModal.tsx", name: "ExamWrongReportModal" },
-  { file: "src/components/practice/WrongQuestionsRanking.tsx", name: "WrongQuestionsRanking Modal" },
   { file: "src/app/questions/page.tsx", name: "Questions Inline Edit Modal" },
   { file: "src/components/practice/MockExamView.tsx", name: "MockExamView Submit Sheet" },
   { file: "src/app/add/page.tsx", name: "Add Page Duplicate Confirm Sheet" },

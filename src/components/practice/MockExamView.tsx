@@ -86,37 +86,45 @@ export default function MockExamView({
     setElapsedSeconds(finalElapsed);
 
     const currentAnswers = userAnswersRef.current;
-    // 收集所有做錯的題目
-    const wrongItems: Array<{ questionId: string; userAnswer?: string }> = [];
+    // 收集所有已作答的題目 (包含答對與答錯)
+    const answeredItems: Array<{ questionId: string; userAnswer?: string; isCorrect: boolean }> = [];
+    let wrongCount = 0;
 
     questions.forEach((q) => {
-      const isCorrect = compareAnswers(currentAnswers[q.id], q.correctAnswers);
-      if (!isCorrect) {
-        wrongItems.push({
+      const userAns = currentAnswers[q.id];
+      if (userAns && userAns.length > 0) {
+        const isCorrect = compareAnswers(userAns, q.correctAnswers);
+        if (!isCorrect) {
+          wrongCount++;
+        }
+        answeredItems.push({
           questionId: q.id,
-          userAnswer: formatAnswerDisplay(currentAnswers[q.id]) || "未填答",
+          userAnswer: formatAnswerDisplay(userAns) || "未填答",
+          isCorrect,
         });
       }
     });
 
-    // 自動同步錯題至後端 API
-    if (wrongItems.length > 0) {
+    // 自動同步作答記錄至後端 API
+    if (answeredItems.length > 0) {
       try {
         const res = await fetch("/api/wrong-questions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: wrongItems }),
+          body: JSON.stringify({ items: answeredItems }),
         });
         if (res.ok) {
           const data = await res.json();
           setSyncStatus(
             data.savedToPersonal
-              ? `已將 ${wrongItems.length} 道錯題自動同步至您的個人錯題本！`
-              : `已記錄 ${wrongItems.length} 道錯題至全站統計（登入後可同步至個人錯題本）`
+              ? (wrongCount > 0
+                  ? `已將 ${wrongCount} 道錯題自動同步至您的個人錯題本！`
+                  : `恭喜全對！作答紀錄已同步至個人帳號！`)
+              : `已記錄 ${answeredItems.length} 道作答至全站統計（登入後可同步至個人錯題本）`
           );
         }
       } catch (err) {
-        console.error("同步錯題失敗:", err);
+        console.error("同步作答記錄失敗:", err);
       }
     }
   }, [questions, TOTAL_TIME_SECONDS]);

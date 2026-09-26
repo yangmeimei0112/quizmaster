@@ -1,105 +1,132 @@
-# Project: QuizMaster Linear/Modern Dark & Nintendo Switch Style Overhaul
+# Project: Mistake Statistics Full Upgrade & Inline Expansion
 
 ## Architecture
-- **Tech Stack**: Next.js 14.2.15 (App Router), React 18, Tailwind CSS 3.4.14, Prisma 5.21.1 (SQLite), docx 9.7.1, Lucide React 0.453.0.
-- **Design System**: Linear/Modern dark aesthetic (#050506 base, #020203 deep, #0a0a0c elevated, surface rgba(255,255,255,0.05), surface-hover rgba(255,255,255,0.08), accent #5E6AD2, accent-bright #6872D9, accent-glow rgba(94,106,210,0.3), border-white/[0.06], border-white/[0.10] hover, multi-layered shadows and 1px top highlight).
-- **Typography Cascade**: Nintendo Switch Game Font style (Zen Maru Gothic for Japanese/CJK round gothic character aesthetics + Plus Jakarta Sans for modern geometric Latin numbers/letters).
-- **Global Atmospheric Background**: 4-tier fixed non-blocking background system in layout.tsx (Deep dark base, top radial glow, subtle grid matrix, floating animated blurred glowing blobs).
-- **Micro-interactions**: 200-300ms cubic-bezier(0.16, 1, 0.3, 1) (expo-out) across all interactive elements (buttons, inputs, cards, accordions, modals).
-- **Accessibility**: WCAG AAA contrast standard (>=15:1 primary text #EDEDEF vs #050506, >=6:1 secondary text #8A8F98 vs #050506).
-- **Explanation System (Option C Flagship)**:
-  - Canonical Component: `src/components/ExplanationCard.tsx`
-  - Deterministic Parser: `src/lib/explanationParser.ts`
-  - High-contrast deep dark theme (`bg-[#0c101d]`, `border-indigo-500/20`), line-heights 1.7, 1.85, 2.0.
-  - Adaptive layout: Option Card Extraction (emerald `✓ 正解選項` vs rose/slate `✗ 錯誤剖析`) vs Concept Mode (`💡 核心考點`).
-  - Scoped A- / A / A+ reader controls with SSR-safe `localStorage` persistence, view toggle (Full vs Concise), and 1-click copy with feedback.
-  - Zero database mutation invariant: 100% preservation of raw database strings.
+- **Data Layer**: Prisma ORM with dual-database support (local SQLite `dev.db` and cloud PostgreSQL on Render synced via `scripts/sync-db-provider.js`).
+  - `Question` model extended with `totalAttempts`, `correctCount`, `countA`, `countB`, `countC`, `countD`.
+  - `WrongQuestionRecord` model extended with `totalAttempts`, `correctCount`.
+- **Backend API Layer**: Next.js App Router route `src/app/api/wrong-questions/route.ts`:
+  - `POST` handles single and batch submissions of question attempts across all game modes, calculating correctness, incrementing atomic counters, and updating personal mistake records.
+  - `GET` returns enriched question items with statistics, percentage distributions, and graceful fallback for questions with 0 attempts or legacy records.
+- **Client Gameplay Integration Layer**:
+  - `src/app/practice/page.tsx`: Submits every question answered in real-time.
+  - `src/components/practice/MockExamView.tsx`: Submits all answered questions in batch upon exam completion.
+  - `src/components/battle/BattlePlayView.tsx`: Submits every question evaluated in real-time, preserving existing battle telemetry and audit tokens.
+- **Client UI & Visualization Layer**:
+  - `src/components/practice/WrongQuestionsRanking.tsx`:
+    - Replaces popup modal with in-place downward smooth expansion below question #10.
+    - Integrated real-time keyword search and question type tabs (全部 / 單選題 / 複選題).
+    - Bottom collapse button with smooth scroll back to question #10 anchor.
+    - Question cards display attempt count & accuracy rate (`作答總數 N 次 · 答對率 XX.X%` or `尚未有作答數據`).
+    - Four options displayed with full un-truncated text, right-aligned % badges (correct: green with `✓ 正解`, wrong: red, highest %: bolded).
+    - Retains >= 3 `<ExplanationCard` callsites to satisfy `audit_explanation_integration.js`.
+
+---
 
 ## Feature Inventory
-| # | Feature | Description | Milestone | Source | Status |
-|---|---------|-------------|-----------|--------|--------|
-| 1 | Global Tokens & Switch Fonts | Tailwind tokens, globals.css variables, Zen Maru Gothic + Plus Jakarta Sans fonts cascade, 4-tier animated background | M1 | Survey 1 | VERIFIED_DONE |
-| 2 | Navbar, Layout & Footer Overhaul | Dark frosted glass navbar, Switch-style glowing badge, mobile responsive drawer, dark footer | M2 | Survey 2 | VERIFIED_DONE |
-| 3 | Dashboard Bento Grid Overhaul | Modern Linear hero section, gradient text, Asymmetric Bento Grid statistics, deep frosted glass cards | M2 | Survey 2 | VERIFIED_DONE |
-| 4 | Single Question Entry Overhaul | Dark inputs, glowing Switch capsule switcher, ruby/amber duplicate warning cards (100% exact block, >=70% warning) | M2 | Survey 2 & 3 | VERIFIED_DONE |
-| 5 | Question Bank Search & Manage Overhaul | Deep card stream, smooth accordion explanation expansion, dark inline edit modal, search & filter | M2 | Survey 2 & 3 | VERIFIED_DONE |
-| 6 | Practice Mode Game Overhaul | Nintendo Switch gamified quiz cards, tactile option cards with neon glow, instant emerald/rose feedback, award card | M2 | Survey 2 & 3 | VERIFIED_DONE |
-| 7 | Google Docs Export Modal Overhaul | Dark frosted glass modal, glowing mode selectors, preservation of docx download, rich text copy, Google Docs open | M2 | Survey 2 & 3 | VERIFIED_DONE |
-| 8 | Micro-interactions & WCAG AAA Hardening | Polish expo-out transitions across all components, verify AAA contrast ratios | M3 | Survey 1 & 2 | VERIFIED_DONE |
-| 9 | Dual-Track E2E & Integrity Verification | Pass automated test suite (scripts/test_suite.js, scripts/test_export.js), npm run build check, zero regression | M4 | Survey 3 | VERIFIED_DONE |
-| 10 | Option C Canonical ExplanationCard Component | High-contrast deep dark card (`#0c101d`, `border-indigo-500/20`), line-heights 1.7/1.85/2.0, zero-loss markdown | M5 | Survey OptC | VERIFIED_DONE |
-| 11 | Adaptive Parsing Engine | Dual mode: Option cards (emerald `✓ 正解選項` vs rose `✗ 錯誤剖析`) vs Monolithic concept (`💡 核心考點`) | M5 | Survey OptC | VERIFIED_DONE |
-| 12 | Personalized Reader Controls | Scoped A-/A/A+ scaling, SSR-safe localStorage persistence, view toggle (full/concise), 1-click copy with toast feedback | M5 | Survey OptC | VERIFIED_DONE |
-| 13 | 4-Scenario Site Integration | Adapt `/questions`, `/practice`, `BattlePlayView`, `WrongQuestionsRanking` (+ `MockExamView`) | M6 | Survey OptC | VERIFIED_DONE |
-| 14 | Database Immutability & Content Fidelity | Zero schema/database mutation, 100% faithful representation of raw strings | M6 | Survey OptC | VERIFIED_DONE |
-| 15 | Test Suite & 21-Route Build Verification | Unit tests for parser/component, integration AST audit, npm test & npm run build zero errors | M7 | Survey OptC | VERIFIED_DONE |
+| # | Feature | Description | Milestone | Source |
+|---|---------|-------------|-----------|--------|
+| F1 | Schema Counters on Question | Add `totalAttempts`, `correctCount`, `countA`, `countB`, `countC`, `countD` to `Question` model | M1 | ORIGINAL_REQUEST R3 |
+| F2 | Schema Counters on WrongRecord | Add `totalAttempts`, `correctCount` to `WrongQuestionRecord` model | M1 | ORIGINAL_REQUEST R3 |
+| F3 | Dual Migration Setup | SQLite dev sync + PostgreSQL migration SQL for Render deployment | M1 | ORIGINAL_REQUEST R3 |
+| F4 | TypeScript Interfaces | Update `Question` and `WrongQuestionRecordItem` types with new counters | M1 | ORIGINAL_REQUEST R3 |
+| F5 | Unified Answering API Route | `POST /api/wrong-questions` accepts single & batch attempts, updates atomic counters and mistakes | M1 | ORIGINAL_REQUEST R2 & R3 |
+| F6 | Practice Mode Real-time Tracking | Submit every practice answer attempt to API in real-time | M1 | ORIGINAL_REQUEST R2 |
+| F7 | Mock Exam Batch Tracking | Submit all 50-exam answered questions on completion to API | M1 | ORIGINAL_REQUEST R2 |
+| F8 | Battle Mode Real-time Tracking | Submit every battle answer attempt to API, preserving audit tokens | M1 | ORIGINAL_REQUEST R2 |
+| F9 | Card Header Accuracy & Attempt Stats | Render `作答總數 N 次 · 答對率 XX.X%` with `尚未有作答數據` fallback | M2 | ORIGINAL_REQUEST R2 |
+| F10 | Full Option Text Preservation | Render options with zero truncation (`break-words whitespace-pre-wrap`) | M2 | ORIGINAL_REQUEST R2 |
+| F11 | Fixed Right-side % Badges | Position badges right-aligned (`shrink-0 ml-auto`) | M2 | ORIGINAL_REQUEST R2 |
+| F12 | Correct/Wrong Badge Coloring | Green background with `✓ 正解` for correct; Red background for wrong | M2 | ORIGINAL_REQUEST R2 |
+| F13 | Highest % Number Bolding | Strictly bold (`font-black font-bold`) the percentage number on the most-selected option | M2 | ORIGINAL_REQUEST R2 |
+| F14 | Dual Mode Data Coverage | Seamless toggle between Personal Mistakes and Global Ranking with stats | M2 | ORIGINAL_REQUEST R2 |
+| F15 | Modal Removal | Completely remove old popup modal, modal state, and escape listeners | M2 | ORIGINAL_REQUEST R1 |
+| F16 | In-Place Downward Expansion | Smoothly expand questions #11+ below question #10 | M2 | ORIGINAL_REQUEST R1 |
+| F17 | Search & Type Filter in Expansion | Instant keyword search and question type tabs (全部 / 單選 / 複選) | M2 | ORIGINAL_REQUEST R1 |
+| F18 | Bottom Collapse with Scroll | Collapse button at list bottom smoothly scrolling to question #10 anchor | M2 | ORIGINAL_REQUEST R1 |
+| F19 | E2E Test Suite & Adversarial Hardening | Comprehensive test coverage across all 4 tiers + Tier 5 adversarial verification | M3 | Acceptance Criteria |
+
+---
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| 1 | M1: Tokens, Background & Fonts | tailwind.config.ts, globals.css, layout.tsx font loading & 4-layer background | none | DONE |
-| 2 | M2: Full-Site Component & Page Overhaul | Navbar.tsx, layout.tsx, Footer, page.tsx, add/page.tsx, questions/page.tsx, practice/page.tsx, ExportModal.tsx | M1 | DONE |
-| 3 | M3: Micro-interactions & WCAG AAA Hardening | Polish expo-out transitions across all components, verify AAA contrast ratios | M2 | DONE |
-| 4 | M4: Build & Functional Verification | npm run build, npx tsc, test_suite.js, test_export.js, forensic integrity audit | M3 | DONE |
-| 5 | M5: Core ExplanationCard & Parser Engine | `src/lib/explanationParser.ts` & `src/components/ExplanationCard.tsx` (Option C flagship) | M1-M4 | DONE |
-| 6 | M6: 4-Scenario Site-Wide Integration | `questions/page.tsx`, `practice/page.tsx`, `BattlePlayView.tsx`, `WrongQuestionsRanking.tsx`, `MockExamView.tsx` | M5 | DONE |
-| 7 | M7: Test Suite & 21-Route Build Verification | `test_explanation_parser.js`, `test_explanation_card.js`, `audit_explanation_integration.js`, `npm test`, `npm run build` | M6 | DONE |
+| M1 | Data Model, Backend API & Game Modes Real-time Tracking | Schema counters, PostgreSQL migration, sync-db-provider, TypeScript types, POST/GET /api/wrong-questions, Practice/MockExam/BattlePlay answer submission | none | DONE |
+| M2 | Mistake Leaderboard UI, Question Cards Analytics & Inline Expansion | Card stats header, un-truncated options, green/red right % badges, highest % bold, in-place expansion below #10, search & type filter, bottom collapse, modal removal | M1 | IN_PROGRESS |
+| M3 | Final E2E Test Suite Verification & Adversarial Hardening | Pass 100% E2E test suite (Tiers 1-4) and Tier 5 adversarial coverage audit | M1, M2 | PLANNED |
+
+---
 
 ## Interface Contracts
-### `src/lib/explanationParser.ts` Contract
-```typescript
-export interface ParsedOptionCard {
-  key: string; // e.g. "A", "B", "C", "D"
-  text: string;
-  isCorrect: boolean;
-  explanation: string;
-}
 
-export interface ParsedExplanationResult {
-  mode: "options" | "concept";
-  intro?: string;
-  options?: ParsedOptionCard[];
-  takeaway?: string;
-  conceptText?: string;
-  rawText: string;
-}
-
-export function parseExplanation(
-  explanation: string | null | undefined,
-  correctAnswers?: string | string[] | null,
-  options?: Record<string, string> | Array<{ key: string; text: string }> | null
-): ParsedExplanationResult;
-
-export function renderMarkdownTokens(text: string): React.ReactNode[];
+### 1. Database Model Additions (`Question`)
+```prisma
+totalAttempts  Int @default(0)
+correctCount   Int @default(0)
+countA         Int @default(0)
+countB         Int @default(0)
+countC         Int @default(0)
+countD         Int @default(0)
 ```
 
-### `src/components/ExplanationCard.tsx` Contract
-```typescript
-export interface ExplanationCardProps {
-  explanation?: string | null;
-  correctAnswers?: string | string[] | null;
-  userAnswer?: string | string[] | null;
-  options?: Record<string, string> | Array<{ key: string; text: string }>;
-  questionType?: "SINGLE" | "MULTIPLE" | string;
-  compact?: boolean;
-  defaultFontSize?: "small" | "medium" | "large";
-  defaultViewMode?: "full" | "concise";
-  showControls?: boolean;
-  showCopyButton?: boolean;
-  className?: string;
-  title?: string;
-}
+### 2. Database Model Additions (`WrongQuestionRecord`)
+```prisma
+totalAttempts  Int @default(1)
+correctCount   Int @default(0)
 ```
+
+### 3. API Contract: `POST /api/wrong-questions`
+- **Request Body**:
+  ```ts
+  // Single:
+  { questionId: string, userAnswer: string, isCorrect?: boolean }
+  // Or Batch:
+  { items: Array<{ questionId: string, userAnswer: string, isCorrect?: boolean }> }
+  ```
+- **Response**:
+  ```ts
+  { success: true, count: number }
+  ```
+
+### 4. API Contract: `GET /api/wrong-questions`
+- **Query Params**: `mode="personal" | "global"`, `limit="10" | "all" | "-1"`
+- **Response**:
+  ```ts
+  {
+    questions: Array<{
+      id: string;
+      stem: string;
+      type: "SINGLE" | "MULTIPLE";
+      optionA: string;
+      optionB: string;
+      optionC: string;
+      optionD: string;
+      correctAnswers: string;
+      explanation?: string;
+      category?: string;
+      wrongCount: number;
+      totalAttempts: number;
+      correctCount: number;
+      countA: number;
+      countB: number;
+      countC: number;
+      countD: number;
+      userWrongCount?: number;
+      lastUserAnswer?: string;
+    }>;
+    total: number;
+  }
+  ```
+
+---
 
 ## Code Layout
-- `src/lib/explanationParser.ts`: Pure parser engine & markdown tokenizer (Verified).
-- `src/components/ExplanationCard.tsx`: Canonical Option C component (Verified).
-- `src/app/questions/page.tsx`: Question bank list integration (Verified).
-- `src/app/practice/page.tsx`: Practice mode instant reveal integration (Verified).
-- `src/components/battle/BattlePlayView.tsx`: Multiplayer battle compact reveal integration (Verified).
-- `src/components/practice/WrongQuestionsRanking.tsx`: Wrong questions review integration (Verified).
-- `src/components/practice/MockExamView.tsx`: Mock exam review integration (Verified).
-- `scripts/test_explanation_parser.js`: Unit tests for explanation parser (43/43 passed).
-- `scripts/test_explanation_card.js`: Component contract tests (20/20 passed).
-- `scripts/audit_explanation_integration.js`: AST/callsite audit (31/31 passed).
-- `package.json`: Updated test script wiring (Verified).
+- `prisma/schema.prisma`: Data models for Question, User, WrongQuestionRecord.
+- `prisma/migrations/20260926000000_add_question_stats/migration.sql`: PostgreSQL DDL for Render deployment.
+- `src/types/question.ts`: TypeScript interfaces for Question and wrong question records.
+- `src/app/api/wrong-questions/route.ts`: API endpoints for answering and fetching mistake rankings.
+- `src/app/practice/page.tsx`: Practice mode interface & answer submission.
+- `src/components/practice/MockExamView.tsx`: 50-question mock exam view & batch answer submission.
+- `src/components/battle/BattlePlayView.tsx`: Multiplayer battle view & answer evaluation tracking.
+- `src/components/practice/WrongQuestionsRanking.tsx`: Mistake leaderboard with in-place expansion and question card analytics.
+- `scripts/test_mobile_and_performance.js`: Mobile performance audit test script.
+- `tests/`: Automated test suite directory for unit, integration, and E2E tests.

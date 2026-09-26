@@ -202,17 +202,17 @@ export default function BattlePlayView({
     } else {
       newWrong += 1;
       battleAudio.playWrong();
+    }
 
-      // 自動記錄錯題至錯題系統 (個人專屬錯題本與全站高頻錯題統計)
-      if (!syncedWrongQuestionIdsRef.current.has(currentQ.id)) {
-        syncedWrongQuestionIdsRef.current.add(currentQ.id);
-        const userAnsStr = formatAnswerDisplay(answers) || "未作答";
-        fetch("/api/wrong-questions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ questionId: currentQ.id, userAnswer: userAnsStr }),
-        }).catch((err) => console.error("同步對戰錯題至錯題系統失敗:", err));
-      }
+    // 自動記錄作答至錯題與統計系統 (個人專屬錯題本與全站高頻錯題統計)
+    if (!syncedWrongQuestionIdsRef.current.has(currentQ.id)) {
+      syncedWrongQuestionIdsRef.current.add(currentQ.id);
+      const userAnsStr = formatAnswerDisplay(answers) || "未作答";
+      fetch("/api/wrong-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId: currentQ.id, userAnswer: userAnsStr, isCorrect }),
+      }).catch((err) => console.error("同步對戰錯題至錯題系統失敗:", err));
     }
 
     setStats({ correct: newCorrect, wrong: newWrong, score: newScore });

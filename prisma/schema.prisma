@@ -23,6 +23,12 @@ model Question {
   tags           String?
   imageUrl       String?
   wrongCount     Int                   @default(0)
+  totalAttempts  Int                   @default(0)
+  correctCount   Int                   @default(0)
+  countA         Int                   @default(0)
+  countB         Int                   @default(0)
+  countC         Int                   @default(0)
+  countD         Int                   @default(0)
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
 
@@ -50,6 +56,8 @@ model WrongQuestionRecord {
   userId         String
   questionId     String
   wrongCount     Int      @default(1)
+  totalAttempts  Int      @default(1)
+  correctCount   Int      @default(0)
   lastUserAnswer String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

@@ -186,14 +186,14 @@ export default function PracticePage() {
 
     if (isCorrect) {
       setScore((s) => s + 1);
-    } else {
-      // 答錯自動非同步記錄到錯題 API
-      fetch("/api/wrong-questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId: currentQ.id, userAnswer: userAnsStr }),
-      }).catch(console.error);
     }
+
+    // 無論答對或答錯，均即時非同步記錄至後端統計與錯題系統
+    fetch("/api/wrong-questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId: currentQ.id, userAnswer: userAnsStr, isCorrect }),
+    }).catch(console.error);
 
     setIsAnswerSubmitted(true);
   }, [selectedAnswers, currentQ]);

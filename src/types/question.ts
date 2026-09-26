@@ -17,6 +17,12 @@ export interface Question {
   tags?: string | null;
   imageUrl?: string | null;
   wrongCount?: number;
+  totalAttempts?: number;
+  correctCount?: number;
+  countA?: number;
+  countB?: number;
+  countC?: number;
+  countD?: number;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -33,6 +39,8 @@ export interface WrongQuestionRecordItem {
   userId: string;
   questionId: string;
   wrongCount: number;
+  totalAttempts?: number;
+  correctCount?: number;
   lastUserAnswer?: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { normalizeAnswers, compareAnswers } from "@/lib/answerUtils";
 
 // GET: 取得錯題列表（個人專屬錯題本 或 全站高頻錯題排行，依要求均需登入方可查看）
 export async function GET(req: NextRequest) {
@@ -44,9 +45,28 @@ export async function GET(req: NextRequest) {
         }),
       ]);
 
+      const formattedRecords = records.map((record) => {
+        const q = record.question;
+        const totalAttempts = Math.max(q.totalAttempts ?? 0, q.wrongCount ?? 0);
+        return {
+          ...record,
+          totalAttempts: Math.max(record.totalAttempts ?? 1, record.wrongCount ?? 1),
+          correctCount: record.correctCount ?? 0,
+          question: {
+            ...q,
+            totalAttempts,
+            correctCount: q.correctCount ?? 0,
+            countA: q.countA ?? 0,
+            countB: q.countB ?? 0,
+            countC: q.countC ?? 0,
+            countD: q.countD ?? 0,
+          },
+        };
+      });
+
       return NextResponse.json({
         mode: "personal",
-        records,
+        records: formattedRecords,
         totalCount,
       });
     }
@@ -63,9 +83,19 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
+    const formattedQuestions = questions.map((q) => ({
+      ...q,
+      totalAttempts: Math.max(q.totalAttempts ?? 0, q.wrongCount ?? 0),
+      correctCount: q.correctCount ?? 0,
+      countA: q.countA ?? 0,
+      countB: q.countB ?? 0,
+      countC: q.countC ?? 0,
+      countD: q.countD ?? 0,
+    }));
+
     return NextResponse.json({
       mode: "global",
-      questions,
+      questions: formattedQuestions,
       totalCount,
     });
   } catch (error: any) {
@@ -77,34 +107,63 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: 記錄做錯的題目（支援單題或批次交卷時並行高效寫入）
+// POST: 記錄作答題目（支援單題或批次交卷時並行高效寫入，無論對錯皆完整統計）
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
     const body = await req.json();
 
-    // 支援單題 { questionId, userAnswer } 或批次 { items: [...] }
-    let items: Array<{ questionId: string; userAnswer?: string }> = [];
+    // 支援單題 { questionId, userAnswer, isCorrect } 或批次 { items: [...] }
+    let items: Array<{ questionId: string; userAnswer?: string; isCorrect?: boolean }> = [];
     if (Array.isArray(body.items)) {
       items = body.items;
     } else if (body.questionId) {
-      items = [{ questionId: body.questionId, userAnswer: body.userAnswer }];
+      items = [{ questionId: body.questionId, userAnswer: body.userAnswer, isCorrect: body.isCorrect }];
     }
 
     if (items.length === 0) {
       return NextResponse.json({ error: "無題目需要記錄" }, { status: 400 });
     }
 
-    // 1. 全域累計：並行更新 Question 表上的 wrongCount
+    // 先取得相關題目的標準答案等資訊以做準確比對
+    const validQuestionIds = items.map((i) => i.questionId).filter(Boolean);
+    const questions = await prisma.question.findMany({
+      where: { id: { in: validQuestionIds } },
+    });
+    const questionMap = new Map(questions.map((q) => [q.id, q]));
+
+    // 1. 全域累計：並行更新 Question 表上的統計資料
     await Promise.all(
       items.map(async (item) => {
         if (!item.questionId) return;
+        const q = questionMap.get(item.questionId);
+
+        const isCorrect =
+          typeof item.isCorrect === "boolean"
+            ? item.isCorrect
+            : q
+            ? compareAnswers(item.userAnswer, q.correctAnswers)
+            : false;
+
+        const selected = normalizeAnswers(item.userAnswer);
+
+        const updateData: any = {
+          totalAttempts: { increment: 1 },
+        };
+        if (isCorrect) {
+          updateData.correctCount = { increment: 1 };
+        } else {
+          updateData.wrongCount = { increment: 1 };
+        }
+        if (selected.includes("A")) updateData.countA = { increment: 1 };
+        if (selected.includes("B")) updateData.countB = { increment: 1 };
+        if (selected.includes("C")) updateData.countC = { increment: 1 };
+        if (selected.includes("D")) updateData.countD = { increment: 1 };
+
         try {
           await prisma.question.update({
             where: { id: item.questionId },
-            data: {
-              wrongCount: { increment: 1 },
-            },
+            data: updateData,
           });
         } catch {
           // 題目若已被刪除則忽略
@@ -112,34 +171,70 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // 2. 若使用者已登入，將錯題並行寫入或累計至其個人專屬錯題本
+    // 2. 若使用者已登入，更新或記錄至其個人專屬錯題本
     let savedToPersonal = false;
     if (user) {
       await Promise.all(
         items.map(async (item) => {
           if (!item.questionId) return;
+          const q = questionMap.get(item.questionId);
+
+          const isCorrect =
+            typeof item.isCorrect === "boolean"
+              ? item.isCorrect
+              : q
+              ? compareAnswers(item.userAnswer, q.correctAnswers)
+              : false;
+
           try {
-            await prisma.wrongQuestionRecord.upsert({
-              where: {
-                userId_questionId: {
+            if (!isCorrect) {
+              // 答錯：upsert 錯題紀錄
+              await prisma.wrongQuestionRecord.upsert({
+                where: {
+                  userId_questionId: {
+                    userId: user.id,
+                    questionId: item.questionId,
+                  },
+                },
+                update: {
+                  wrongCount: { increment: 1 },
+                  totalAttempts: { increment: 1 },
+                  lastUserAnswer: item.userAnswer || null,
+                  updatedAt: new Date(),
+                },
+                create: {
                   userId: user.id,
                   questionId: item.questionId,
+                  wrongCount: 1,
+                  totalAttempts: 1,
+                  correctCount: 0,
+                  lastUserAnswer: item.userAnswer || null,
                 },
-              },
-              update: {
-                wrongCount: { increment: 1 },
-                lastUserAnswer: item.userAnswer || null,
-                updatedAt: new Date(),
-              },
-              create: {
-                userId: user.id,
-                questionId: item.questionId,
-                wrongCount: 1,
-                lastUserAnswer: item.userAnswer || null,
-              },
-            });
+              });
+            } else {
+              // 答對：若原本已有錯題記錄，更新總次數與答對次數
+              const existing = await prisma.wrongQuestionRecord.findUnique({
+                where: {
+                  userId_questionId: {
+                    userId: user.id,
+                    questionId: item.questionId,
+                  },
+                },
+              });
+              if (existing) {
+                await prisma.wrongQuestionRecord.update({
+                  where: { id: existing.id },
+                  data: {
+                    totalAttempts: { increment: 1 },
+                    correctCount: { increment: 1 },
+                    lastUserAnswer: item.userAnswer || null,
+                    updatedAt: new Date(),
+                  },
+                });
+              }
+            }
           } catch (err) {
-            console.error("Upsert wrong record error:", err);
+            console.error("Update wrong record error:", err);
           }
         })
       );
