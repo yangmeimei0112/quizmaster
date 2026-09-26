@@ -6,11 +6,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { code, playerName, playerAvatar, existingPlayerId, playerId } = body;
 
-    if (!code || typeof code !== "string" || !code.trim()) {
-      return NextResponse.json({ error: "請輸入4碼房間代碼" }, { status: 400 });
-    }
+    const rawCode = typeof code === "string" ? code.trim() : "";
+    const cleanCode = rawCode.replace(/\D/g, "").slice(0, 4);
 
-    const cleanCode = code.trim().toUpperCase();
+    if (!cleanCode || cleanCode.length < 4) {
+      return NextResponse.json({ error: "請輸入4碼純數字房間代碼" }, { status: 400 });
+    }
     const cleanName = (playerName || "冒險者").trim();
     const targetPlayerId = (existingPlayerId || playerId || "").trim() || undefined;
     const result = joinRoom(cleanCode, cleanName, playerAvatar || "panda", targetPlayerId);

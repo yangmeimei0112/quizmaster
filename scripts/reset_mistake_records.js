@@ -29,21 +29,21 @@ async function resetMistakeRecordsAndStats(customPrisma) {
     const initialQuestionCount = await prisma.question.count();
     const initialWrongRecordCount = await prisma.wrongQuestionRecord.count();
 
-    // 2. 清空個人錯題本 (WrongQuestionRecord)
-    const deleteResult = await prisma.wrongQuestionRecord.deleteMany({});
-
-    // 3. 全站題庫作答統計數值全數歸零
-    const updateResult = await prisma.question.updateMany({
-      data: {
-        wrongCount: 0,
-        totalAttempts: 0,
-        correctCount: 0,
-        countA: 0,
-        countB: 0,
-        countC: 0,
-        countD: 0,
-      },
-    });
+    // 2. 清空個人錯題本並將全站題庫作答統計數值全數歸零 (以 $transaction 保證原子性)
+    const [deleteResult, updateResult] = await prisma.$transaction([
+      prisma.wrongQuestionRecord.deleteMany({}),
+      prisma.question.updateMany({
+        data: {
+          wrongCount: 0,
+          totalAttempts: 0,
+          correctCount: 0,
+          countA: 0,
+          countB: 0,
+          countC: 0,
+          countD: 0,
+        },
+      }),
+    ]);
 
     // 4. 驗證重置後不變性 (Invariants Verification)
     const finalWrongRecordCount = await prisma.wrongQuestionRecord.count();
