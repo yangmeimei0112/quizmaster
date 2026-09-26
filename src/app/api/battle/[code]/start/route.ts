@@ -11,8 +11,15 @@ interface RouteParams {
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const { code } = params;
+    if (!code) {
+      return NextResponse.json({ error: "缺少房間代碼" }, { status: 400 });
+    }
+
     const body = await req.json();
     const { hostId } = body;
+    if (!hostId) {
+      return NextResponse.json({ error: "缺少房主身份識別" }, { status: 400 });
+    }
 
     const currentRoom = getRoom(code);
     if (!currentRoom) {
@@ -101,9 +108,22 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     });
   } catch (error: any) {
     console.error("Battle start error:", error);
-    return NextResponse.json(
-      { error: error.message || "發起對戰失敗" },
-      { status: 400 }
-    );
+    const msg: string = error?.message || "發起對戰失敗";
+    let status = 500;
+    if (msg.includes("不存在") || msg.includes("查無")) {
+      status = 404;
+    } else if (
+      msg.includes("非等待") ||
+      msg.includes("非 LOBBY") ||
+      msg.includes("進行中") ||
+      msg.includes("已開始")
+    ) {
+      status = 409;
+    } else if (msg.includes("房主")) {
+      status = 403;
+    } else if (msg.includes("準備") || msg.includes("題庫") || msg.includes("缺少")) {
+      status = 400;
+    }
+    return NextResponse.json({ error: msg }, { status });
   }
 }

@@ -81,9 +81,21 @@ export default function BattleRoomPage() {
       }
 
       setRoom(updatedRoom);
+      setError("");
       return updatedRoom;
     } catch (err: any) {
-      setError(err.message || "網路連線異常");
+      const msg: string = err?.message || "網路連線異常";
+      if (
+        err instanceof TypeError ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch") ||
+        msg.includes("TIMED_OUT") ||
+        msg.includes("timeout")
+      ) {
+        setError("伺服器喚醒中，請稍候約 30 秒後重新整理或重試");
+      } else {
+        setError(msg);
+      }
       return null;
     }
   }, [roomCode]);
@@ -223,9 +235,21 @@ export default function BattleRoomPage() {
       setPlayerId(data.playerId);
       localStorage.setItem(`battle_player_${roomCode}`, data.playerId);
       setRoom(data.room);
+      setError("");
       setShowDirectJoin(false);
     } catch (err: any) {
-      alert(err.message);
+      const msg: string = err?.message || "";
+      if (
+        err instanceof TypeError ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch") ||
+        msg.includes("TIMED_OUT") ||
+        msg.includes("timeout")
+      ) {
+        alert("伺服器喚醒中，請稍候約 30 秒後重新整理或重試");
+      } else {
+        alert(msg || "加入房間失敗");
+      }
     } finally {
       setJoiningDirect(false);
     }
@@ -235,29 +259,45 @@ export default function BattleRoomPage() {
   const handleStartGame = async () => {
     if (!room || !playerId) return;
 
-    const res = await fetch(`/api/battle/${roomCode}/start`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hostId: playerId }),
-    });
+    try {
+      const res = await fetch(`/api/battle/${roomCode}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hostId: playerId }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || "發起對戰失敗");
-    }
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "發起對戰失敗");
+      }
 
-    if (data.samplePool) {
-      setSamplePool(data.samplePool);
+      if (data.samplePool) {
+        setSamplePool(data.samplePool);
+      }
+      completedDrawingSessionsRef.current.clear();
+      setUserAnswers({});
+      if (roomCode && playerId) {
+        try {
+          localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+        } catch {}
+      }
+      setRoom(data.room);
+      setError("");
+    } catch (err: any) {
+      const msg: string = err?.message || "發起對戰失敗，請稍後重試";
+      const friendlyMsg =
+        err instanceof TypeError ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch") ||
+        msg.includes("TIMED_OUT") ||
+        msg.includes("timeout")
+          ? "伺服器喚醒中，請稍候約 30 秒後重新整理或重試"
+          : msg;
+      setError(friendlyMsg);
+      throw new Error(friendlyMsg);
     }
-    completedDrawingSessionsRef.current.clear();
-    setUserAnswers({});
-    if (roomCode && playerId) {
-      try {
-        localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
-      } catch {}
-    }
-    setRoom(data.room);
   };
+
 
   // Toggle ready status
   const handleToggleReady = async () => {
@@ -387,8 +427,8 @@ export default function BattleRoomPage() {
     );
   }
 
-  // 2. Error state
-  if (error || !room) {
+  // 2. Error state (if room could not be loaded)
+  if (!room) {
     return (
       <div className="min-h-[450px] flex flex-col items-center justify-center text-center p-6 space-y-4 max-w-md mx-auto">
         <div className="w-16 h-16 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center">
@@ -417,7 +457,23 @@ export default function BattleRoomPage() {
     room.stage === "DRAWING" && isDrawingCompleted ? "PLAYING" : room.stage;
 
   return (
-    <div>
+    <div className="relative">
+      {/* On-screen Action & Notification Banner */}
+      {error && (
+        <div className="mb-4 max-w-5xl mx-auto p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-between gap-3 animate-fade-in font-game font-bold text-sm shadow-lg">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-400" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            className="text-xs text-rose-300 hover:text-white px-2.5 py-1 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 transition-colors"
+          >
+            關閉
+          </button>
+        </div>
+      )}
       {/* Direct Join Modal if user arrived without session */}
       {showDirectJoin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fade-in">

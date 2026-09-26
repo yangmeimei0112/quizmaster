@@ -32,6 +32,29 @@ interface BattlePlayViewProps {
   onFinishBattle: () => void;
 }
 
+// Helper function to retry network requests once on transient network or server failure (approx 2s interval)
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 1,
+  delayMs = 2000
+): Promise<Response> {
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok && res.status >= 500 && retries > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      return fetchWithRetry(url, options, retries - 1, delayMs);
+    }
+    return res;
+  } catch (err) {
+    if (retries > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      return fetchWithRetry(url, options, retries - 1, delayMs);
+    }
+    throw err;
+  }
+}
+
 export default function BattlePlayView({
   room,
   currentPlayerId,
@@ -204,24 +227,24 @@ export default function BattlePlayView({
       battleAudio.playWrong();
     }
 
-    // 自動記錄作答至錯題與統計系統 (個人專屬錯題本與全站高頻錯題統計)
+    // 自動記錄作答至錯題與統計系統 (個人專屬錯題本與全站高頻錯題統計，遭遇網路失敗自動重試 1 次)
     if (!syncedWrongQuestionIdsRef.current.has(currentQ.id)) {
       syncedWrongQuestionIdsRef.current.add(currentQ.id);
       const userAnsStr = formatAnswerDisplay(answers) || "未作答";
-      fetch("/api/wrong-questions", {
+      fetchWithRetry("/api/wrong-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionId: currentQ.id, userAnswer: userAnsStr, isCorrect }),
-      }).catch((err) => console.error("同步對戰錯題至錯題系統失敗:", err));
+      }).catch((err) => console.error("同步對戰錯題至錯題系統失敗 (重試後仍失敗):", err));
     }
 
     setStats({ correct: newCorrect, wrong: newWrong, score: newScore });
 
     const isLastQuestion = currentIndex + 1 >= totalQuestions;
 
-    // Send progress to server
+    // Send progress to server with retry mechanism (1 retry after 2s interval)
     try {
-      await fetch(`/api/battle/${room.code}/progress`, {
+      await fetchWithRetry(`/api/battle/${room.code}/progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -234,7 +257,7 @@ export default function BattlePlayView({
         }),
       });
     } catch (err) {
-      console.error("Failed to sync progress:", err);
+      console.error("Failed to sync progress (重試後仍失敗):", err);
     }
 
     if (isLastQuestion) {

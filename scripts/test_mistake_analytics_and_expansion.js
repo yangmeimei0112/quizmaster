@@ -383,7 +383,7 @@ async function runAllTests() {
   const battlePlayContent = fs.readFileSync(battlePlayPath, "utf8");
 
   runTest("tier1", "F8.1: BattlePlayView tracks answers via /api/wrong-questions in evaluateAnswer", () => {
-    assert.match(battlePlayContent, /fetch\(\s*["']\/api\/wrong-questions["']/);
+    assert.match(battlePlayContent, /fetch(?:WithRetry)?\(\s*["']\/api\/wrong-questions["']/);
   });
   runTest("tier1", "F8.2: BattlePlayView submits questionId, userAnswer, and isCorrect payload", () => {
     assert.match(battlePlayContent, /body:\s*JSON\.stringify\(\{\s*questionId:\s*currentQ\.id,\s*userAnswer:\s*userAnsStr,\s*isCorrect\s*\}\)/);

@@ -70,7 +70,18 @@ export default function BattlePortalPage() {
       localStorage.setItem(`battle_player_${data.room.code}`, data.playerId);
       router.push(`/battle/${data.room.code}`);
     } catch (err: any) {
-      setCreateError(err.message);
+      const msg: string = err?.message || "";
+      if (
+        err instanceof TypeError ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch") ||
+        msg.includes("TIMED_OUT") ||
+        msg.includes("timeout")
+      ) {
+        setCreateError("伺服器喚醒中，請稍候約 30 秒後重新整理或重試");
+      } else {
+        setCreateError(msg || "創建房間失敗");
+      }
       setIsCreating(false);
     }
   };
@@ -108,7 +119,18 @@ export default function BattlePortalPage() {
       localStorage.setItem(`battle_player_${cleanCode}`, data.playerId);
       router.push(`/battle/${cleanCode}`);
     } catch (err: any) {
-      setJoinError(err.message);
+      const msg: string = err?.message || "";
+      if (
+        err instanceof TypeError ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch") ||
+        msg.includes("TIMED_OUT") ||
+        msg.includes("timeout")
+      ) {
+        setJoinError("伺服器喚醒中，請稍候約 30 秒後重新整理或重試");
+      } else {
+        setJoinError(msg || "加入房間失敗");
+      }
       setIsJoining(false);
     }
   };

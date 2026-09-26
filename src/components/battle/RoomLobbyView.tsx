@@ -79,6 +79,7 @@ export default function RoomLobbyView({
       await onStartGame();
     } catch (err: any) {
       alert(err.message || "發起對戰失敗");
+    } finally {
       setIsStarting(false);
     }
   };

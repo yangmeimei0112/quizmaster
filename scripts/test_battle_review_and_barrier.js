@@ -496,7 +496,8 @@ async function runTestSuite() {
 
   test("審計 BattlePlayView.tsx 具備錯題自動同步 API 呼叫與防重複集合", () => {
     assert.ok(
-      playViewContent.includes('fetch("/api/wrong-questions"'),
+      playViewContent.includes('fetch("/api/wrong-questions"') ||
+        playViewContent.includes('fetchWithRetry("/api/wrong-questions"'),
       "BattlePlayView 必須在答錯時呼叫 /api/wrong-questions"
     );
     assert.ok(

@@ -200,7 +200,7 @@ export function joinRoom(
   playerAvatar: string
 ): { room: BattleRoom; playerId: string } {
   const upperCode = code.trim().toUpperCase();
-  const room = roomsStore.get(upperCode);
+  const room = getRoom(upperCode);
 
   if (!room) {
     throw new Error("查無此房間代碼，請確認代碼是否正確");
