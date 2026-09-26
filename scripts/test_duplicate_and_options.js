@@ -43,6 +43,7 @@ const batchRoutePath = path.resolve(__dirname, "../src/app/api/questions/batch/r
 const questionsRoutePath = path.resolve(__dirname, "../src/app/api/questions/route.ts");
 const similarityPath = path.resolve(__dirname, "../src/lib/similarity.ts");
 const questionTypesPath = path.resolve(__dirname, "../src/types/question.ts");
+const addPagePath = path.resolve(__dirname, "../src/app/add/page.tsx");
 
 const quickAddContent = fs.readFileSync(quickAddPath, "utf8");
 const checkDuplicateRouteContent = fs.readFileSync(checkDuplicateRoutePath, "utf8");
@@ -50,6 +51,7 @@ const batchRouteContent = fs.readFileSync(batchRoutePath, "utf8");
 const questionsRouteContent = fs.readFileSync(questionsRoutePath, "utf8");
 const similarityContent = fs.readFileSync(similarityPath, "utf8");
 const questionTypesContent = fs.readFileSync(questionTypesPath, "utf8");
+const addPageContent = fs.readFileSync(addPagePath, "utf8");
 
 // 文字相似度輔助函式 (同 src/lib/similarity.ts)
 function normalizeText(text) {
@@ -358,6 +360,61 @@ async function runTests() {
     assert.ok(
       quickAddContent.includes("forceCreate: isVerifiedNotDup"),
       "handleConfirmAndDirectSave 傳送 forceCreate: isVerifiedNotDup"
+    );
+  });
+
+  it("QuickAddModal: questionsKey 完整監聽選項與答案變更重啟重複比對", () => {
+    assert.ok(
+      quickAddContent.includes("questionsKey = useMemo"),
+      "QuickAddModal 需宣告 questionsKey 監聽完整題目選項"
+    );
+    assert.ok(
+      quickAddContent.includes("a: q.optionA.trim()"),
+      "questionsKey 需涵蓋 optionA"
+    );
+  });
+
+  it("QuickAddModal: Ctrl+Enter 與 handleConfirmAndApply 在經查證非重複時解除阻擋", () => {
+    assert.ok(
+      quickAddContent.includes("duplicateStatuses[0]?.isExactMatch && verifiedStatuses[0] !== 'NOT_DUPLICATE'"),
+      "Ctrl+Enter 快捷鍵需在 verifiedStatuses[0] === 'NOT_DUPLICATE' 時允許送出"
+    );
+    assert.ok(
+      quickAddContent.includes("currentDup?.isExactMatch && verifiedStatuses[activeIndex] !== 'NOT_DUPLICATE'"),
+      "handleConfirmAndApply 需在 verifiedStatuses === 'NOT_DUPLICATE' 時解除阻擋"
+    );
+  });
+
+  it("QuickAddModal: 膠囊與預覽卡片提供放行狀態 (✓已放行) 與開啟對照按鈕", () => {
+    assert.ok(
+      quickAddContent.includes("(✓已放行)"),
+      "膠囊列表需在 NOT_DUPLICATE 時顯示 (✓已放行)"
+    );
+    assert.ok(
+      quickAddContent.includes("✓ 已查證放行：此題確認未與題庫重複"),
+      "預覽卡片需在 NOT_DUPLICATE 時展示綠色放行提示"
+    );
+  });
+
+  it("questions API 支援 verifiedNotDuplicate 放行防重複檢查", () => {
+    assert.ok(
+      questionsRouteContent.includes("shouldForceCreate"),
+      "questions API 應整合 shouldForceCreate"
+    );
+    assert.ok(
+      questionsRouteContent.includes("verifiedNotDuplicate === true"),
+      "questions API 應在 verifiedNotDuplicate 為 true 時豁免重複檢查"
+    );
+  });
+
+  it("add/page.tsx 落實選項一致性比對與 80% 門檻", () => {
+    assert.ok(
+      addPageContent.includes("maxSimilarity >= 80"),
+      "add/page.tsx 需採用 80% 門檻"
+    );
+    assert.ok(
+      addPageContent.includes("optionA,") && addPageContent.includes("optionB,"),
+      "add/page.tsx check-duplicate 呼叫需包含選項"
     );
   });
 

@@ -103,7 +103,10 @@ export async function POST(req: NextRequest) {
       tags,
       imageUrl,
       forceCreate = false,
+      verifiedNotDuplicate = false,
     } = body;
+
+    const shouldForceCreate = forceCreate === true || verifiedNotDuplicate === true;
 
     if (!stem || !stem.trim()) {
       return NextResponse.json({ error: "題幹不可為空" }, { status: 400 });
@@ -130,8 +133,8 @@ export async function POST(req: NextRequest) {
 
     const normStem = normalizeText(stem);
 
-    // 後端防重複檢查 (如果沒有強制新增)
-    if (!forceCreate) {
+    // 後端防重複檢查 (如果沒有強制新增且未經確認非重複)
+    if (!shouldForceCreate) {
       // 1. 完全相同題幹偵測 (需同時比對選項是否一致)
       const exactMatches = await prisma.question.findMany({
         where: { normalizedStem: normStem },

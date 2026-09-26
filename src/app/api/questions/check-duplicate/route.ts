@@ -128,8 +128,11 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // 按相似度由高到低排序，最多取前 5 筆
-      matches.sort((a, b) => b.similarity - a.similarity);
+      // 按是否完全重複與相似度由高到低排序，最多取前 5 筆
+      matches.sort((a, b) => {
+        if (a.isExact !== b.isExact) return a.isExact ? -1 : 1;
+        return b.similarity - a.similarity;
+      });
       const topMatches = matches.slice(0, 5);
 
       return {

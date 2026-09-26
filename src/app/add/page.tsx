@@ -67,7 +67,14 @@ export default function AddQuestionPage() {
         const res = await fetch("/api/questions/check-duplicate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stem }),
+          body: JSON.stringify({
+            stem,
+            optionA,
+            optionB,
+            optionC,
+            optionD,
+            correctAnswers,
+          }),
           signal: controller.signal,
         });
 
@@ -94,7 +101,7 @@ export default function AddQuestionPage() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [stem]);
+  }, [stem, optionA, optionB, optionC, optionD, correctAnswers]);
 
   // 切換題型時的答案處理
   const handleTypeChange = useCallback((newType: QuestionType) => {
@@ -253,8 +260,8 @@ export default function AddQuestionPage() {
       return;
     }
 
-    // 若相似度很高 (>= 75%) 且尚未確認過，彈窗要求確認
-    if (maxSimilarity >= 75 && !force) {
+    // 若相似度很高 (>= 80%) 且尚未確認過，彈窗要求確認
+    if (maxSimilarity >= 80 && !force) {
       setShowConfirmModal(true);
       return;
     }
@@ -519,7 +526,7 @@ export default function AddQuestionPage() {
             </div>
           )}
 
-          {!hasExactMatch && duplicateMatches.length > 0 && maxSimilarity >= 70 && (
+          {!hasExactMatch && duplicateMatches.length > 0 && maxSimilarity >= 80 && (
             <div className="p-4 sm:p-5 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs space-y-3 shadow-[0_0_24px_rgba(245,158,11,0.15)] animate-fade-in-down">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 font-bold text-sm text-amber-300 font-game">

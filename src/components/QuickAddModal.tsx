@@ -183,6 +183,20 @@ export default function QuickAddModal({
     return JSON.stringify(parsedList.map((q) => q.stem.trim()));
   }, [parsedList]);
 
+  // 題目完整比對鍵值 (包含題幹、選項與正解，確保選項變更時即時重啟比對)
+  const questionsKey = useMemo(() => {
+    return JSON.stringify(
+      parsedList.map((q) => ({
+        s: q.stem.trim(),
+        a: q.optionA.trim(),
+        b: q.optionB.trim(),
+        c: q.optionC.trim(),
+        d: q.optionD.trim(),
+        ans: q.correctAnswers,
+      }))
+    );
+  }, [parsedList]);
+
   // 當解析出的題目或題幹變更時，進行 Debounced (200ms) 題庫與同批次防重複比對
   useEffect(() => {
     if (parsedList.length === 0) {
@@ -352,8 +366,8 @@ export default function QuickAddModal({
 
         // 偵測完畢主動彈出「高相似對照視窗」：只要有任何超過 80% 相似度的題目，立即彈出
         const hasHighSimItems = computedStatuses.some((s) => s.isHighSimilarity);
-        if (hasHighSimItems && lastCheckedKeyRef.current !== stemsKey) {
-          lastCheckedKeyRef.current = stemsKey;
+        if (hasHighSimItems && lastCheckedKeyRef.current !== questionsKey) {
+          lastCheckedKeyRef.current = questionsKey;
           setShowComparisonModal(true);
         }
       } catch (err: any) {
@@ -372,7 +386,7 @@ export default function QuickAddModal({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [stemsKey, parsedList.length]);
+  }, [questionsKey, stemsKey, parsedList.length]);
 
   // 當前編輯中的題目
   const currentItem = parsedList[activeIndex] || null;
@@ -550,8 +564,8 @@ export default function QuickAddModal({
       return;
     }
 
-    // 單題或多題當前題目若完全重複，阻擋帶入
-    if (currentDup?.isExactMatch) {
+    // 單題或多題當前題目若完全重複且未查證放行，阻擋帶入
+    if (currentDup?.isExactMatch && verifiedStatuses[activeIndex] !== 'NOT_DUPLICATE') {
       setFormError("⚠️ 題庫中已有完全相同 (100%) 的題目，禁止帶入表單！請先修改題幹內容。");
       return;
     }
@@ -589,7 +603,7 @@ export default function QuickAddModal({
     setParsedList([]);
     setDuplicateStatuses([]);
     onClose();
-  }, [currentItem, isCurrentFormValid, currentDup, isCheckingDuplicates, onApply, onClose]);
+  }, [currentItem, isCurrentFormValid, currentDup, isCheckingDuplicates, onApply, onClose, verifiedStatuses, activeIndex]);
 
   // 依 4 區塊標準格式重構解析
   const handleFormatExplanation = useCallback(() => {
@@ -936,7 +950,7 @@ export default function QuickAddModal({
             handleBatchSaveAll();
           }
         } else if (parsedList.length === 1) {
-          if (duplicateStatuses[0]?.isExactMatch) {
+          if (duplicateStatuses[0]?.isExactMatch && verifiedStatuses[0] !== 'NOT_DUPLICATE') {
             setFormError("⚠️ 題庫中已有完全相同 (100%) 的題目，已嚴格阻擋新增！請在編輯框修改題幹至不重複方能解鎖。");
             return;
           }
@@ -1152,11 +1166,16 @@ export default function QuickAddModal({
                               {exactDuplicateCount} 題重複
                             </span>
                           )}
-                          {highSimilarityCount > 0 && (
-                            <span className="text-[10px] text-amber-300 bg-amber-950/60 border border-amber-500/50 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 animate-fade-in">
+                          {highSimilarityItems.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setShowComparisonModal(true)}
+                              className="text-[10px] text-amber-300 bg-amber-950/60 hover:bg-amber-900/60 border border-amber-500/50 hover:border-amber-400 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 animate-fade-in transition-colors cursor-pointer touch-tactile"
+                              title="點擊開啟高相似對照視窗"
+                            >
                               <AlertTriangle className="w-3 h-3 text-amber-400" />
-                              {highSimilarityCount} 題相似
-                            </span>
+                              <span>{highSimilarityItems.length} 題相似 (開啟對照)</span>
+                            </button>
                           )}
                         </>
                       )}
@@ -1195,12 +1214,22 @@ export default function QuickAddModal({
 
                       const dup = duplicateStatuses[idx];
                       const isItemChecking = isCheckingDuplicates || !dup || dup.isChecking;
+                      const isItemVerifiedNotDup = verifiedStatuses[idx] === 'NOT_DUPLICATE';
+                      const isItemVerifiedDup = verifiedStatuses[idx] === 'IS_DUPLICATE';
 
                       let buttonClasses = "";
                       if (isItemChecking) {
                         buttonClasses = isActive
                           ? "bg-accent text-white shadow-glow border border-accent-bright font-bold"
                           : "bg-white/[0.04] text-foreground-muted hover:text-foreground border border-white/[0.08]";
+                      } else if (isItemVerifiedNotDup) {
+                        buttonClasses = isActive
+                          ? "bg-emerald-600 text-white shadow-[0_0_18px_rgba(16,185,129,0.6)] border-2 border-emerald-300 ring-2 ring-emerald-500/50 font-bold"
+                          : "bg-emerald-950/40 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-900/40 hover:border-emerald-400";
+                      } else if (isItemVerifiedDup) {
+                        buttonClasses = isActive
+                          ? "bg-rose-600 text-white shadow-[0_0_18px_rgba(244,63,94,0.6)] border-2 border-rose-300 ring-2 ring-rose-500/50 font-bold"
+                          : "bg-rose-950/40 text-rose-300 border border-rose-500/50 hover:bg-rose-900/40 hover:border-rose-400";
                       } else if (dup?.isExactMatch) {
                         buttonClasses = isActive
                           ? "bg-rose-600 text-white shadow-[0_0_18px_rgba(244,63,94,0.6)] border-2 border-rose-300 ring-2 ring-rose-500/50 font-bold"
@@ -1234,6 +1263,26 @@ export default function QuickAddModal({
                               }`}
                             >
                               比對中...
+                            </span>
+                          ) : isItemVerifiedNotDup ? (
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-0.5 ${
+                                isActive
+                                  ? "bg-white/20 text-white"
+                                  : "bg-emerald-500/30 text-emerald-200 border border-emerald-500/50"
+                              }`}
+                            >
+                              (✓已放行)
+                            </span>
+                          ) : isItemVerifiedDup ? (
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-0.5 ${
+                                isActive
+                                  ? "bg-white/20 text-white"
+                                  : "bg-rose-500/30 text-rose-200 border border-rose-500/50"
+                              }`}
+                            >
+                              (⚠️已確認重複)
                             </span>
                           ) : dup?.isExactMatch ? (
                             <span
@@ -1363,14 +1412,29 @@ export default function QuickAddModal({
                   </div>
                 ) : currentDup?.isExactMatch ? (
                   <div className="p-3.5 sm:p-4 rounded-xl bg-rose-950/60 border-2 border-rose-500 text-rose-100 text-xs space-y-2 animate-fade-in shadow-[0_0_20px_rgba(244,63,94,0.25)]">
-                    <div className="flex items-center gap-2 font-bold text-rose-300 text-sm">
-                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                      <span>
-                        {currentDup.duplicateSource === "BATCH"
-                          ? `⚠️ 與同批次第 ${currentDup.matchedBatchIndex} 題完全相同 (100%)`
-                          : "⚠️ 題庫中已有完全相同 (100%) 的題目"}
-                      </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 font-bold text-rose-300 text-sm">
+                        <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                        <span>
+                          {currentDup.duplicateSource === "BATCH"
+                            ? `⚠️ 與同批次第 ${currentDup.matchedBatchIndex} 題完全相同 (100%)`
+                            : "⚠️ 題庫中已有完全相同 (100%) 的題目"}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowComparisonModal(true)}
+                        className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[11px] font-bold border border-rose-500/40 transition-colors flex items-center gap-1 touch-tactile"
+                      >
+                        <span>🔍 開啟高相似對照視窗</span>
+                      </button>
                     </div>
+                    {verifiedStatuses[activeIndex] === 'NOT_DUPLICATE' && (
+                      <div className="p-2.5 rounded-lg bg-emerald-950/60 border border-emerald-500/60 text-emerald-200 text-xs flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>✓ 已查證放行：此題確認未與題庫重複，送出時將 100% 完整保留並寫入題庫</span>
+                      </div>
+                    )}
                     <div className="p-2.5 rounded-lg bg-black/40 border border-rose-500/30 text-rose-200 font-mono text-[11px] break-words">
                       <span className="text-rose-400 font-bold mr-1">
                         {currentDup.duplicateSource === "BATCH" ? "同批次相同題幹：" : "題庫已存在題幹："}
@@ -1379,8 +1443,8 @@ export default function QuickAddModal({
                     </div>
                     <p className="text-[11px] text-rose-200/85 leading-relaxed">
                       {isMultiMode
-                        ? "多題批次新增時，點擊下方「自動排除重複題」將自動為您略過此題；若欲保留本題，請直接在下方修改題幹至不重複。"
-                        : "單題模式下已嚴格鎖定「直接新增」與「帶入表單」按鈕，必須在下方編輯框修改題幹至不重複方能解鎖。"}
+                        ? "多題批次新增時，點擊下方「自動排除重複題」將自動為您略過此題；若欲保留本題，請點選上方「開啟高相似對照視窗」進行查證放行，或直接修改題幹。"
+                        : "單題模式下可點選上方「開啟高相似對照視窗」查證放行，或在下方編輯框修改題幹至不重複方能新增。"}
                     </p>
                   </div>
                 ) : currentDup?.isHighSimilarity ? (
@@ -1416,6 +1480,13 @@ export default function QuickAddModal({
                         <span>🔍 開啟高相似對照視窗</span>
                       </button>
                     </div>
+
+                    {verifiedStatuses[activeIndex] === 'NOT_DUPLICATE' && (
+                      <div className="p-2.5 rounded-lg bg-emerald-950/60 border border-emerald-500/60 text-emerald-200 text-xs flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>✓ 已查證放行：此題確認未與題庫重複，送出時將 100% 完整保留並寫入題庫</span>
+                      </div>
+                    )}
 
                     {/* 左右對比面板 */}
                     <div className="grid grid-cols-2 gap-2">
