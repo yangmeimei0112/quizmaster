@@ -24,6 +24,7 @@ import { parseMultipleQuestions, ParsedQuestionResult } from "@/lib/questionPars
 import { normalizeText, calculateSimilarity } from "@/lib/similarity";
 import ImageAttachmentField from "@/components/ImageAttachmentField";
 import { invalidateQuestionsCache } from "@/lib/questionsCache";
+import { normalizeExplanationToFourSections } from "@/lib/explanationParser";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -518,6 +519,22 @@ export default function QuickAddModal({
     setDuplicateStatuses([]);
     onClose();
   }, [currentItem, isCurrentFormValid, currentDup, isCheckingDuplicates, onApply, onClose]);
+
+  // 依 4 區塊標準格式重構解析
+  const handleFormatExplanation = useCallback(() => {
+    if (!currentItem || !currentItem.explanation) return;
+    const formatted = normalizeExplanationToFourSections(
+      currentItem.explanation,
+      {
+        A: currentItem.optionA,
+        B: currentItem.optionB,
+        C: currentItem.optionC,
+        D: currentItem.optionD,
+      },
+      currentItem.correctAnswers
+    );
+    updateCurrentItem((q) => ({ ...q, explanation: formatted }));
+  }, [currentItem, updateCurrentItem]);
 
   // 單題直接新增
   const handleConfirmAndDirectSave = useCallback(async () => {
@@ -1465,23 +1482,34 @@ export default function QuickAddModal({
 
                 {/* 3. 題目解析預覽 */}
                 <div className="space-y-1.5 pt-2 border-t border-white/[0.04]">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <label className="font-bold font-game text-foreground flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                      <span>題目解析 / 詳解說明</span>
+                      <span>題目解析 / 詳解說明 (標準 4 區塊)</span>
                       <span className="text-[10px] text-foreground-muted px-2 py-0.2 rounded-full bg-white/[0.04]">
                         選填
                       </span>
                     </label>
+                    {currentItem.explanation && (
+                      <button
+                        type="button"
+                        onClick={handleFormatExplanation}
+                        className="text-[11px] font-game text-indigo-400 hover:text-indigo-300 px-2.5 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors flex items-center gap-1 touch-tactile"
+                        title="依【考點導讀】【各選項詳細解析】【觀念說明】【考試記憶重點】自動排版"
+                      >
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        <span>一鍵整理成 4 區塊格式</span>
+                      </button>
+                    )}
                   </div>
                   <textarea
                     value={currentItem.explanation}
                     onChange={(e) =>
                       updateCurrentItem((q) => ({ ...q, explanation: e.target.value }))
                     }
-                    rows={2}
-                    placeholder="解題思路或相關觀念說明（若無解析可留空）..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-sm text-foreground placeholder:text-white/20 transition-all leading-relaxed"
+                    rows={4}
+                    placeholder="【考點導讀】&#10;核心考點導讀引言...&#10;&#10;【各選項詳細解析】&#10;A. A選項深度剖析...&#10;B. B選項深度剖析...&#10;&#10;【觀念說明】&#10;深度觀念背景說明...&#10;&#10;【考試記憶重點】&#10;速記口訣與提分重點..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-sm text-foreground placeholder:text-white/20 transition-all leading-relaxed font-mono"
                   />
                 </div>
               </div>

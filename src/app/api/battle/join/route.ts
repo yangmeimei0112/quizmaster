@@ -4,7 +4,7 @@ import { joinRoom } from "@/lib/battleStore";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { code, playerName, playerAvatar } = body;
+    const { code, playerName, playerAvatar, existingPlayerId, playerId } = body;
 
     if (!code || typeof code !== "string" || !code.trim()) {
       return NextResponse.json({ error: "請輸入4碼房間代碼" }, { status: 400 });
@@ -12,7 +12,8 @@ export async function POST(req: NextRequest) {
 
     const cleanCode = code.trim().toUpperCase();
     const cleanName = (playerName || "冒險者").trim();
-    const result = joinRoom(cleanCode, cleanName, playerAvatar || "panda");
+    const targetPlayerId = (existingPlayerId || playerId || "").trim() || undefined;
+    const result = joinRoom(cleanCode, cleanName, playerAvatar || "panda", targetPlayerId);
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {

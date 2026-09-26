@@ -197,13 +197,24 @@ export function getRoom(code: string): BattleRoom | null {
 export function joinRoom(
   code: string,
   playerName: string,
-  playerAvatar: string
+  playerAvatar: string,
+  existingPlayerId?: string
 ): { room: BattleRoom; playerId: string } {
   const upperCode = code.trim().toUpperCase();
   const room = getRoom(upperCode);
 
   if (!room) {
     throw new Error("查無此房間代碼，請確認代碼是否正確");
+  }
+
+  // If reconnecting with an existing player ID already present in the room
+  if (existingPlayerId) {
+    const existingPlayer = room.players.find((p) => p.id === existingPlayerId);
+    if (existingPlayer) {
+      existingPlayer.lastActiveAt = Date.now();
+      room.updatedAt = Date.now();
+      return { room, playerId: existingPlayer.id };
+    }
   }
 
   if (room.stage !== "LOBBY") {
@@ -241,6 +252,51 @@ export function joinRoom(
   room.players.push(newPlayer);
   room.updatedAt = Date.now();
   return { room, playerId };
+}
+
+export function getPlayerProgress(
+  code: string,
+  playerId: string
+): { player: BattlePlayer; room: BattleRoom } | null {
+  const room = getRoom(code);
+  if (!room) return null;
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player) return null;
+  player.lastActiveAt = Date.now();
+  return { player, room };
+}
+
+export function reconnectPlayer(
+  code: string,
+  playerId: string,
+  progress?: Partial<BattlePlayer>
+): { room: BattleRoom; player: BattlePlayer } {
+  const room = getRoom(code);
+  if (!room) throw new Error("房間不存在");
+
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player) throw new Error("玩家不在該房間內，無法重新連線");
+
+  player.lastActiveAt = Date.now();
+  if (progress) {
+    if (typeof progress.currentIndex === "number" && progress.currentIndex > player.currentIndex) {
+      player.currentIndex = progress.currentIndex;
+    }
+    if (typeof progress.score === "number" && progress.score > player.score) {
+      player.score = progress.score;
+    }
+    if (typeof progress.correctCount === "number" && progress.correctCount > player.correctCount) {
+      player.correctCount = progress.correctCount;
+    }
+    if (typeof progress.wrongCount === "number" && progress.wrongCount > player.wrongCount) {
+      player.wrongCount = progress.wrongCount;
+    }
+    if (typeof progress.isFinished === "boolean") {
+      player.isFinished = progress.isFinished;
+    }
+  }
+  room.updatedAt = Date.now();
+  return { room, player };
 }
 
 export function toggleReady(

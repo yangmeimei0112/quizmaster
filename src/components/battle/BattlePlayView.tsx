@@ -168,15 +168,32 @@ export default function BattlePlayView({
   // Keyboard navigation shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (hasSubmitted || isFinishedLocal || !currentQ) return;
-      const key = e.key.toUpperCase();
-      const keyMap: Record<string, string> = { "1": "A", "2": "B", "3": "C", "4": "D", A: "A", B: "B", C: "C", D: "D" };
-      if (keyMap[key]) {
-        e.preventDefault();
-        handleOptionClick(keyMap[key]);
-      } else if (e.key === "Enter" && currentQ.type === "MULTIPLE" && selectedAnswers.length > 0) {
-        e.preventDefault();
-        submitAnswer();
+      if (isFinishedLocal || !currentQ) return;
+
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+      if (isTyping) return;
+
+      if (!hasSubmitted) {
+        const key = e.key.toUpperCase();
+        const keyMap: Record<string, string> = { "1": "A", "2": "B", "3": "C", "4": "D", A: "A", B: "B", C: "C", D: "D" };
+        if (keyMap[key]) {
+          e.preventDefault();
+          handleOptionClick(keyMap[key]);
+        } else if (e.key === "Enter" && selectedAnswers.length > 0) {
+          e.preventDefault();
+          submitAnswer();
+        }
+      } else {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          advanceNextQuestion();
+        }
       }
     };
 
@@ -184,18 +201,42 @@ export default function BattlePlayView({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [hasSubmitted, isFinishedLocal, currentQ, selectedAnswers]);
 
-  // Handle option click
+  // Restore active battle session state from localStorage if reconnecting
+  useEffect(() => {
+    try {
+      const activeRaw = localStorage.getItem("quizmaster_active_battle");
+      if (activeRaw) {
+        const active = JSON.parse(activeRaw);
+        if (active && active.code === room.code && active.playerId === currentPlayerId) {
+          if (typeof active.currentIndex === "number" && active.currentIndex > currentIndex) {
+            setCurrentIndex(active.currentIndex);
+          }
+          if (active.score !== undefined || active.correctCount !== undefined) {
+            setStats((prev) => ({
+              correct: Math.max(prev.correct, active.correctCount || 0),
+              wrong: Math.max(prev.wrong, active.wrongCount || 0),
+              score: Math.max(prev.score, active.score || 0),
+            }));
+          }
+          if (active.userAnswers && Object.keys(active.userAnswers).length > 0) {
+            setLocalAnswers((prev) => ({ ...prev, ...active.userAnswers }));
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to restore active battle session:", err);
+    }
+  }, [room.code, currentPlayerId]);
+
+  // Handle option click (single choice only selects, does NOT auto-submit)
   const handleOptionClick = (opt: string) => {
     if (hasSubmitted || isFinishedLocal) return;
 
+    battleAudio.playClick();
     if (currentQ.type === "SINGLE") {
-      battleAudio.playClick();
       setSelectedAnswers([opt]);
-      // For single choice, evaluate immediately
-      evaluateAnswer([opt]);
     } else {
       // Multiple choice toggling
-      battleAudio.playClick();
       setSelectedAnswers((prev) =>
         prev.includes(opt) ? prev.filter((x) => x !== opt) : [...prev, opt].sort()
       );
@@ -207,7 +248,8 @@ export default function BattlePlayView({
     if (hasSubmitted || !currentQ) return;
     setHasSubmitted(true);
 
-    setLocalAnswers((prev) => ({ ...prev, [currentQ.id]: answers }));
+    const updatedAnswers = { ...localAnswers, [currentQ.id]: answers };
+    setLocalAnswers(updatedAnswers);
     if (onRecordAnswer) {
       onRecordAnswer(currentQ.id, answers);
     }
@@ -242,6 +284,26 @@ export default function BattlePlayView({
 
     const isLastQuestion = currentIndex + 1 >= totalQuestions;
 
+    // Persist active battle progress to localStorage for reconnect resilience
+    try {
+      const activeSession = {
+        code: room.code,
+        playerId: currentPlayerId,
+        nickname: myPlayer?.name || "玩家",
+        avatar: myPlayer?.avatarId || "shiba",
+        currentIndex: isLastQuestion ? currentIndex : currentIndex + 1,
+        correctCount: newCorrect,
+        wrongCount: newWrong,
+        score: newScore,
+        userAnswers: updatedAnswers,
+        stage: isLastQuestion ? "FINISHED" : "PLAYING",
+        updatedAt: Date.now(),
+      };
+      localStorage.setItem("quizmaster_active_battle", JSON.stringify(activeSession));
+    } catch (err) {
+      console.error("Failed to cache active battle progress to localStorage:", err);
+    }
+
     // Send progress to server with retry mechanism (1 retry after 2s interval)
     try {
       await fetchWithRetry(`/api/battle/${room.code}/progress`, {
@@ -260,22 +322,7 @@ export default function BattlePlayView({
       console.error("Failed to sync progress (重試後仍失敗):", err);
     }
 
-    if (isLastQuestion) {
-      setIsFinishedLocal(true);
-      const othersFinished = room.players
-        .filter((p) => p.id !== currentPlayerId)
-        .every((p) => p.isFinished);
-      if (othersFinished) {
-        autoNextTimerRef.current = setTimeout(() => {
-          onFinishBattle();
-        }, 1500);
-      }
-    } else {
-      // Auto advance to next question after 1.2s delay
-      autoNextTimerRef.current = setTimeout(() => {
-        advanceNextQuestion();
-      }, 1200);
-    }
+    // Note: Do NOT auto-advance! Await user manual click or Enter on "下一題" button.
   };
 
   const submitAnswer = () => {
@@ -451,8 +498,8 @@ export default function BattlePlayView({
                 })}
               </div>
 
-              {/* Multiple Choice Submit Button */}
-              {currentQ.type === "MULTIPLE" && !hasSubmitted && (
+              {/* Confirm Submit Answer Button (Both Single and Multiple Choice) */}
+              {!hasSubmitted && (
                 <div className="mt-6 flex justify-end">
                   <button
                     type="button"
@@ -461,6 +508,7 @@ export default function BattlePlayView({
                     className="min-h-[46px] px-6 py-2.5 rounded-xl font-game font-bold text-sm bg-accent hover:bg-accent-bright disabled:opacity-40 disabled:pointer-events-none text-white shadow-glow transition-all duration-200 flex items-center gap-2 touch-tactile"
                   >
                     <span>確認送出答案</span>
+                    <span className="text-xs opacity-75 font-normal hidden sm:inline">(Enter)</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -468,9 +516,22 @@ export default function BattlePlayView({
 
               {/* Instant Explanation / Next Button after submit */}
               {hasSubmitted && (
-                <div className="mt-6 pt-4 border-t border-white/[0.08] flex flex-col gap-3 animate-fade-in">
-                  <div className="w-full text-xs text-foreground-muted">
-                    {currentQ.explanation ? (
+                <div className="mt-6 pt-4 border-t border-white/[0.08] flex flex-col gap-4 animate-fade-in">
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={advanceNextQuestion}
+                      className="min-h-[46px] px-6 py-2.5 rounded-xl font-game font-bold text-sm bg-gradient-to-r from-accent to-indigo-600 hover:brightness-110 text-white shadow-glow transition-all duration-200 flex items-center gap-2 touch-tactile"
+                    >
+                      <span>{currentIndex + 1 < totalQuestions ? "下一題" : "完成對戰"}</span>
+                      <span className="text-xs opacity-75 font-normal hidden sm:inline">(Enter)</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Detailed Explanation BELOW the options & next button */}
+                  {currentQ.explanation ? (
+                    <div className="w-full text-xs text-foreground-muted pt-2 border-t border-white/[0.06]">
                       <ExplanationCard
                         explanation={currentQ.explanation}
                         correctAnswers={currentQ.correctAnswers}
@@ -485,21 +546,8 @@ export default function BattlePlayView({
                         compact={true}
                         className="w-full"
                       />
-                    ) : (
-                      <span>答題完畢，正在前往下一題...</span>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={advanceNextQuestion}
-                      className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold font-game bg-white/[0.08] hover:bg-white/[0.15] text-foreground border border-white/10 transition-colors shrink-0 flex items-center gap-1.5 touch-tactile"
-                    >
-                      <span>下一題</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>

@@ -58,9 +58,35 @@ export default function BattleRoomPage() {
       if (updatedRoom && updatedRoom.stage === "LOBBY") {
         completedDrawingSessionsRef.current.clear();
         setUserAnswers({});
+        try {
+          localStorage.removeItem("quizmaster_active_battle");
+        } catch {}
         if (roomCode && playerId) {
           try {
             localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+          } catch {}
+        }
+      }
+
+      // Sync active battle session during ongoing game for reconnect preservation
+      if (updatedRoom && (updatedRoom.stage === "DRAWING" || updatedRoom.stage === "PLAYING")) {
+        const me = updatedRoom.players.find((p) => p.id === playerId);
+        if (me) {
+          try {
+            const activeSession = {
+              code: roomCode,
+              playerId,
+              nickname: me.name,
+              avatar: me.avatarId,
+              currentIndex: me.currentIndex,
+              correctCount: me.correctCount,
+              wrongCount: me.wrongCount,
+              score: me.score,
+              userAnswers,
+              stage: updatedRoom.stage,
+              updatedAt: Date.now(),
+            };
+            localStorage.setItem("quizmaster_active_battle", JSON.stringify(activeSession));
           } catch {}
         }
       }
@@ -100,18 +126,66 @@ export default function BattleRoomPage() {
     }
   }, [roomCode]);
 
-  // Initial load
+  // Initial load with reconnect & resume support
   useEffect(() => {
     if (!roomCode) return;
 
-    const storedPlayerId = localStorage.getItem(`battle_player_${roomCode}`) || "";
+    let storedPlayerId = localStorage.getItem(`battle_player_${roomCode}`) || "";
+    let activeBattleData: any = null;
+    try {
+      const raw = localStorage.getItem("quizmaster_active_battle");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.code === roomCode && parsed.playerId) {
+          activeBattleData = parsed;
+          if (!storedPlayerId) {
+            storedPlayerId = parsed.playerId;
+            localStorage.setItem(`battle_player_${roomCode}`, parsed.playerId);
+          }
+          if (parsed.userAnswers && Object.keys(parsed.userAnswers).length > 0) {
+            setUserAnswers(parsed.userAnswers);
+          }
+        }
+      }
+    } catch {}
+
     setPlayerId(storedPlayerId);
 
-    fetchRoom().then((loadedRoom) => {
+    fetchRoom().then(async (loadedRoom) => {
       setLoading(false);
       if (loadedRoom) {
-        // If player is not recorded in room's players list, prompt them to join
-        const inRoom = loadedRoom.players.some((p) => p.id === storedPlayerId);
+        let inRoom = loadedRoom.players.some((p) => p.id === storedPlayerId);
+
+        // If player is not currently listed in room, but has an active battle session in progress, attempt auto-reconnect
+        if (!inRoom && activeBattleData && (loadedRoom.stage === "PLAYING" || loadedRoom.stage === "DRAWING")) {
+          try {
+            const reconRes = await fetch(`/api/battle/${roomCode}/reconnect`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                playerId: activeBattleData.playerId,
+                progress: {
+                  currentIndex: activeBattleData.currentIndex,
+                  score: activeBattleData.score,
+                  correctCount: activeBattleData.correctCount,
+                  wrongCount: activeBattleData.wrongCount,
+                },
+              }),
+            });
+            if (reconRes.ok) {
+              const reconData = await reconRes.json();
+              if (reconData.room) {
+                setRoom(reconData.room);
+                setPlayerId(activeBattleData.playerId);
+                inRoom = true;
+                setError("");
+              }
+            }
+          } catch (err) {
+            console.warn("自動重連對戰嘗試失敗:", err);
+          }
+        }
+
         if (!storedPlayerId || !inRoom) {
           if (loadedRoom.stage === "LOBBY") {
             setShowDirectJoin(true);
@@ -412,6 +486,9 @@ export default function BattleRoomPage() {
       } catch (err) {}
     }
     localStorage.removeItem(`battle_player_${roomCode}`);
+    try {
+      localStorage.removeItem("quizmaster_active_battle");
+    } catch {}
     if (roomCode && playerId) {
       try {
         localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
@@ -439,6 +516,7 @@ export default function BattleRoomPage() {
         setUserAnswers({});
         setError("");
         try {
+          localStorage.removeItem("quizmaster_active_battle");
           if (roomCode && playerId) {
             localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
           }

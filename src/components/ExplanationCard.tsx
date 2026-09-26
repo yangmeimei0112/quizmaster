@@ -359,22 +359,26 @@ export function ExplanationCard({
         }}
       >
         {parsed.mode === "options" ? (
-          <div className="space-y-3">
-            {/* Optional Intro Section */}
+          <div className="space-y-3.5">
+            {/* 1. 第一區【考點導讀】 */}
             {parsed.intro && (
-              <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-slate-300">
+              <div className="p-3.5 sm:p-4 rounded-xl bg-indigo-950/25 border border-indigo-500/30 text-slate-200 shadow-[0_0_15px_rgba(99,102,241,0.08)]">
                 <div className="flex items-center gap-1.5 text-xs font-game font-bold text-amber-300/90 mb-1.5">
                   <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
-                  <span>考點導讀</span>
+                  <span>【考點導讀】</span>
                 </div>
-                <div className="whitespace-pre-wrap break-words">
+                <div className="whitespace-pre-wrap break-words leading-relaxed text-slate-200">
                   {renderMarkdownTokens(parsed.intro)}
                 </div>
               </div>
             )}
 
-            {/* Structured Option Cards */}
+            {/* 2. 第二區【各選項詳細解析】 */}
             <div className="space-y-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-game font-bold text-indigo-300 px-1 pt-1">
+                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                <span>【各選項詳細解析】</span>
+              </div>
               {displayedOptions.map((opt: ParsedOptionCard) => {
                 const isUserChoice = userSelectedSet.has(opt.key);
 
@@ -453,15 +457,28 @@ export function ExplanationCard({
               })}
             </div>
 
-            {/* Optional Concluding Takeaway */}
-            {parsed.takeaway && (
-              <div className="p-3.5 sm:p-4 rounded-xl border border-amber-500/30 bg-amber-950/15 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.05)] mt-3">
-                <div className="flex items-center gap-1.5 text-xs font-game font-bold text-amber-400 mb-1.5">
-                  <Lightbulb className="w-4 h-4" />
-                  <span>核心考點總結</span>
+            {/* 3. 第三區【觀念說明】 */}
+            {parsed.conceptNote && (
+              <div className="p-3.5 sm:p-4 rounded-xl border border-sky-500/30 bg-sky-950/20 text-sky-100 shadow-[0_0_15px_rgba(14,165,233,0.08)] mt-3">
+                <div className="flex items-center gap-1.5 text-xs font-game font-bold text-sky-300 mb-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                  <span>【觀念說明】</span>
                 </div>
-                <div className="text-slate-100 whitespace-pre-wrap break-words">
-                  {renderMarkdownTokens(parsed.takeaway)}
+                <div className="text-slate-100 whitespace-pre-wrap break-words leading-relaxed">
+                  {renderMarkdownTokens(parsed.conceptNote)}
+                </div>
+              </div>
+            )}
+
+            {/* 4. 第四區【考試記憶重點】 */}
+            {(parsed.examTakeaway || (parsed.takeaway && !parsed.conceptNote)) && (
+              <div className="p-3.5 sm:p-4 rounded-xl border border-amber-500/35 bg-amber-950/25 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.1)] mt-3">
+                <div className="flex items-center gap-1.5 text-xs font-game font-bold text-amber-400 mb-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>【考試記憶重點】</span>
+                </div>
+                <div className="text-slate-100 whitespace-pre-wrap break-words leading-relaxed">
+                  {renderMarkdownTokens(parsed.examTakeaway || parsed.takeaway || "")}
                 </div>
               </div>
             )}
@@ -469,6 +486,19 @@ export function ExplanationCard({
         ) : (
           /* Concept Monolithic Mode */
           <div className="space-y-3.5">
+            {/* Optional Section 1: 【考點導讀】 */}
+            {parsed.intro && (
+              <div className="p-3.5 sm:p-4 rounded-xl bg-indigo-950/25 border border-indigo-500/30 text-slate-200 shadow-[0_0_15px_rgba(99,102,241,0.08)]">
+                <div className="flex items-center gap-1.5 text-xs font-game font-bold text-amber-300/90 mb-1.5">
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                  <span>【考點導讀】</span>
+                </div>
+                <div className="whitespace-pre-wrap break-words leading-relaxed text-slate-200">
+                  {renderMarkdownTokens(parsed.intro)}
+                </div>
+              </div>
+            )}
+
             <div className="inline-flex items-center gap-1.5 text-xs font-game font-bold px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
               <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
               <span>核心考點剖析</span>
@@ -489,15 +519,28 @@ export function ExplanationCard({
                 })}
             </div>
 
-            {/* Optional Trailing Takeaway in Concept Mode */}
-            {parsed.takeaway && (
-              <div className="p-3.5 sm:p-4 rounded-xl border border-amber-500/30 bg-amber-950/15 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.05)] mt-3">
-                <div className="flex items-center gap-1.5 text-xs font-game font-bold text-amber-400 mb-1.5">
-                  <Lightbulb className="w-4 h-4" />
-                  <span>解題關鍵</span>
+            {/* Optional Section 3: 【觀念說明】 */}
+            {parsed.conceptNote && (
+              <div className="p-3.5 sm:p-4 rounded-xl border border-sky-500/30 bg-sky-950/20 text-sky-100 shadow-[0_0_15px_rgba(14,165,233,0.08)] mt-3">
+                <div className="flex items-center gap-1.5 text-xs font-game font-bold text-sky-300 mb-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                  <span>【觀念說明】</span>
                 </div>
-                <div className="text-slate-100 whitespace-pre-wrap break-words">
-                  {renderMarkdownTokens(parsed.takeaway)}
+                <div className="text-slate-100 whitespace-pre-wrap break-words leading-relaxed">
+                  {renderMarkdownTokens(parsed.conceptNote)}
+                </div>
+              </div>
+            )}
+
+            {/* Optional Section 4: 【考試記憶重點】 in Concept Mode */}
+            {(parsed.examTakeaway || (parsed.takeaway && !parsed.conceptNote)) && (
+              <div className="p-3.5 sm:p-4 rounded-xl border border-amber-500/35 bg-amber-950/25 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.1)] mt-3">
+                <div className="flex items-center gap-1.5 text-xs font-game font-bold text-amber-400 mb-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>【考試記憶重點】</span>
+                </div>
+                <div className="text-slate-100 whitespace-pre-wrap break-words leading-relaxed">
+                  {renderMarkdownTokens(parsed.examTakeaway || parsed.takeaway || "")}
                 </div>
               </div>
             )}

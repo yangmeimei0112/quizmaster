@@ -1,4 +1,4 @@
-import { QuestionType } from "@/types/question";
+export type QuestionType = "SINGLE" | "MULTIPLE";
 
 export interface ParsedQuestionResult {
   stem: string;
@@ -129,35 +129,85 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
     workingText = workingText.substring(typeTagMatch[0].length).trim();
   }
 
-  // 3. 提取解析 (Explanation)
-  // 支援格式 A：【各選項詳細解析】、【觀念說明】、【考試記憶重點】等結構化區塊（完整保留標籤）
-  // 支援格式 B：傳統前綴（解析：...、詳解：... 等）
+  // 3. 檢測結構化答案與解析區塊（【正確解答】後接【考點導讀】、【各選項詳細解析】等）
   let capturedExplanation = "";
-  const explanationRegex =
-    /(?:(?:^|\n)\s*(?=(?:【\s*(?:各選項詳細解析|各選項解析|選項詳細解析|選項解析|詳細解析|觀念說明|考試記憶重點|重點整理|破題速記)\s*】))|(?:^|\n)\s*(?:【?\s*(?:題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明|備註|Explanation|Note)\s*】?)\s*(?:[:：]|為|是)?\s*|(?:^|\n)\s*【\s*(?:題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】)([\s\S]*)$/i;
 
-  const explanationMatch = workingText.match(explanationRegex);
-  if (explanationMatch && explanationMatch.index !== undefined) {
-    let rawExp = explanationMatch[1].trim();
+  const postAnswerRegex =
+    /(?:^|\n)\s*(?:(?:【?\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解|Ans(?:wer)?|Key)\s*】?)\s*(?:[:：]|為|是|選|\.|\s)?\s*|【\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解)\s*】\s*)([^\r\n]*)/i;
 
-    // 檢查解析內是否又夾帶了答案（例如「解析：... \n 答案：A」）
-    const innerAnswerRegex =
-      /(?:^|\n)\s*(?:(?:【?\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解|Ans(?:wer)?|Key)\s*】?)\s*(?:[:：]|為|是|選|\.|\s)?\s*|【\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解)\s*】\s*)([^\r\n]+)/i;
-    const innerAnsMatch = rawExp.match(innerAnswerRegex);
-    if (innerAnsMatch && !result.detectedAnswer) {
-      const keys = extractAnswerKeys(innerAnsMatch[1]);
+  const postAnsMatch = workingText.match(postAnswerRegex);
+  if (postAnsMatch && postAnsMatch.index !== undefined) {
+    const afterAnsText = workingText.substring(postAnsMatch.index + postAnsMatch[0].length);
+    const hasStructuredSections = /【\s*(?:各選項詳細解析|各選項解析|選項詳細解析|選項解析|詳細解析|觀念說明|考試記憶重點|考點導讀)\s*】/i.test(afterAnsText);
+
+    if (hasStructuredSections) {
+      const keys = extractAnswerKeys(postAnsMatch[1]);
       if (keys.length > 0) {
         result.correctAnswers = keys;
         result.detectedAnswer = true;
         if (keys.length > 1) result.type = "MULTIPLE";
       }
-      rawExp = rawExp.replace(innerAnsMatch[0], "").trim();
-    }
 
-    capturedExplanation = rawExp;
-    result.explanation = rawExp;
-    result.detectedExplanation = true;
-    workingText = workingText.substring(0, explanationMatch.index).trim();
+      // 切分考點導讀與後續各選項解析、觀念說明、考試記憶重點
+      const sectionMatch = afterAnsText.match(/(?:^|\n)\s*(?=【\s*(?:各選項詳細解析|各選項解析|選項詳細解析|選項解析|詳細解析|觀念說明|考試記憶重點)\s*】)/i);
+      let introContent = "";
+      let remainingSections = "";
+
+      if (sectionMatch && sectionMatch.index !== undefined) {
+        introContent = afterAnsText.substring(0, sectionMatch.index).trim();
+        remainingSections = afterAnsText.substring(sectionMatch.index).trim();
+      } else {
+        remainingSections = afterAnsText.trim();
+      }
+
+      introContent = introContent.replace(/^\s*【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?\s*/i, "").trim();
+
+      let combinedExplanation = "";
+      if (introContent) {
+        combinedExplanation += `【考點導讀】\n${introContent}\n\n`;
+      }
+      combinedExplanation += remainingSections;
+      combinedExplanation = combinedExplanation.trim();
+
+      capturedExplanation = combinedExplanation;
+      result.explanation = combinedExplanation;
+      result.detectedExplanation = true;
+
+      // 將答案標籤及後續所有解析從 workingText 中移除，確保題幹與選項純淨
+      workingText = workingText.substring(0, postAnsMatch.index).trim();
+    }
+  }
+
+  // 4. 傳統解析提取 (Explanation Fallback)
+  // 支援格式 A：【各選項詳細解析】、【觀念說明】、【考試記憶重點】等結構化區塊
+  // 支援格式 B：傳統前綴（解析：...、詳解：... 等）
+  if (!result.detectedExplanation) {
+    const explanationRegex =
+      /(?:(?:^|\n)\s*(?=(?:【\s*(?:考點導讀|各選項詳細解析|各選項解析|選項詳細解析|選項解析|詳細解析|觀念說明|考試記憶重點|重點整理|破題速記)\s*】))|(?:^|\n)\s*(?:【?\s*(?:題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明|備註|Explanation|Note)\s*】?)\s*(?:[:：]|為|是)?\s*|(?:^|\n)\s*【\s*(?:題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】)([\s\S]*)$/i;
+
+    const explanationMatch = workingText.match(explanationRegex);
+    if (explanationMatch && explanationMatch.index !== undefined) {
+      let rawExp = explanationMatch[1].trim();
+
+      // 檢查解析內是否又夾帶了答案（例如「解析：... \n 答案：A」）
+      const innerAnswerRegex =
+        /(?:^|\n)\s*(?:(?:【?\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解|Ans(?:wer)?|Key)\s*】?)\s*(?:[:：]|為|是|選|\.|\s)?\s*|【\s*(?:標準答案|標準解答|正確答案|正確解答|本題答案|本題解答|參考答案|參考解答|答案|解答|正解)\s*】\s*)([^\r\n]+)/i;
+      const innerAnsMatch = rawExp.match(innerAnswerRegex);
+      if (innerAnsMatch && !result.detectedAnswer) {
+        const keys = extractAnswerKeys(innerAnsMatch[1]);
+        if (keys.length > 0) {
+          result.correctAnswers = keys;
+          result.detectedAnswer = true;
+          if (keys.length > 1) result.type = "MULTIPLE";
+        }
+        rawExp = rawExp.replace(innerAnsMatch[0], "").trim();
+      }
+
+      capturedExplanation = rawExp;
+      result.explanation = rawExp;
+      result.detectedExplanation = true;
+      workingText = workingText.substring(0, explanationMatch.index).trim();
+    }
   }
 
   // 4. 提取答案 (Answer)

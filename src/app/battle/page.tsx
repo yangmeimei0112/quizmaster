@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Swords,
@@ -38,6 +38,48 @@ export default function BattlePortalPage() {
   const [joinAvatar, setJoinAvatar] = useState("panda");
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState("");
+
+  // Active ongoing match detection for Reconnect & Resume
+  const [activeBattle, setActiveBattle] = useState<{
+    code: string;
+    playerId: string;
+    nickname: string;
+    avatar: string;
+    currentIndex: number;
+    score: number;
+    stage: string;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("quizmaster_active_battle");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.code && parsed.playerId) {
+          fetch(`/api/battle/${parsed.code}`)
+            .then((res) => {
+              if (res.ok) return res.json();
+              return null;
+            })
+            .then((data) => {
+              if (data && data.room && data.room.stage !== "LOBBY") {
+                setActiveBattle(parsed);
+              } else {
+                localStorage.removeItem("quizmaster_active_battle");
+              }
+            })
+            .catch(() => {
+              setActiveBattle(parsed);
+            });
+        }
+      }
+    } catch {}
+  }, []);
+
+  const handleDismissActiveBattle = () => {
+    localStorage.removeItem("quizmaster_active_battle");
+    setActiveBattle(null);
+  };
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,6 +216,48 @@ export default function BattlePortalPage() {
           </div>
         </div>
       </div>
+
+      {/* Reconnect & Resume Active Match Banner */}
+      {activeBattle && (
+        <div className="p-5 rounded-3xl bg-gradient-to-r from-accent/25 via-purple-600/25 to-amber-500/20 border border-accent/40 shadow-glow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in backdrop-blur-xl">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-accent/30 border border-accent/50 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(94,106,210,0.4)]">
+              <Swords className="w-6 h-6 text-accent-bright animate-bounce-subtle" />
+            </div>
+            <div>
+              <div className="font-game font-bold text-sm text-foreground flex items-center gap-2">
+                <span>🎮 偵測到進行中的對戰場次</span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs bg-accent/30 text-[#9AA5FF] font-mono border border-accent/40 font-bold">
+                  房號 {activeBattle.code}
+                </span>
+              </div>
+              <p className="text-xs text-foreground-muted mt-1">
+                玩家：<strong className="text-white">{activeBattle.nickname}</strong> · 進度：第{" "}
+                <strong className="text-accent-bright font-game">{activeBattle.currentIndex + 1}</strong> 題 · 當前得分：{" "}
+                <strong className="text-amber-400 font-game">{activeBattle.score} 分</strong>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => router.push(`/battle/${activeBattle.code}`)}
+              className="flex-1 sm:flex-none min-h-[44px] px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white font-game font-bold text-xs shadow-glow transition-all flex items-center justify-center gap-2 touch-tactile"
+            >
+              <span>🎮 重新回到對戰房間</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleDismissActiveBattle}
+              className="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-foreground-muted hover:text-foreground text-xs transition-colors border border-white/[0.08]"
+              title="放棄重連並清除此場紀錄"
+            >
+              放棄
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Tabs (Create Room / Join Room) */}
       <div className="space-y-6">
