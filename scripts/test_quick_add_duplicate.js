@@ -318,6 +318,202 @@ async function runAllTests() {
     assert(quickAddContent.includes("setActiveIndex(i);"), "發現未填欄位需自動跳轉");
   });
 
+  console.log("\n--- 7. 高相似度查證確認按鈕 (R1+R2) 靜態驗證 ---");
+
+  test("R1: verifiedStatuses state 宣告存在", () => {
+    assert(
+      quickAddContent.includes("verifiedStatuses") &&
+        quickAddContent.includes("IS_DUPLICATE") &&
+        quickAddContent.includes("NOT_DUPLICATE"),
+      "QuickAddModal 應宣告 verifiedStatuses state，並使用 IS_DUPLICATE / NOT_DUPLICATE 常數"
+    );
+    assert(
+      quickAddContent.includes("setVerifiedStatuses"),
+      "應有 setVerifiedStatuses 呼叫"
+    );
+  });
+
+  test("R1: 查證按鈕文字「是，本題為重複題目」與「否，本題未與題庫重複」均存在", () => {
+    assert(
+      quickAddContent.includes("是，本題為重複題目"),
+      "缺少「是，本題為重複題目」按鈕文字"
+    );
+    assert(
+      quickAddContent.includes("否，本題未與題庫重複"),
+      "缺少「否，本題未與題庫重複」按鈕文字"
+    );
+  });
+
+  test("R1: 自動重置機制 - 題幹 onChange 同時重置 verifiedStatuses[activeIndex]", () => {
+    assert(
+      quickAddContent.includes("setVerifiedStatuses((prev) => ({ ...prev, [activeIndex]: null }))"),
+      "題幹 onChange 需同時重置當前題目的 verifiedStatuses 為 null"
+    );
+  });
+
+  test("R1: 自動重置機制 - parsedList 重新解析時全部重置", () => {
+    // Should see setVerifiedStatuses({}) called in both the rawText clear path and parsing path
+    const clearCount = (quickAddContent.match(/setVerifiedStatuses\(\{\}\)/g) || []).length;
+    assert(
+      clearCount >= 2,
+      `parsedList 重新解析時應呼叫 setVerifiedStatuses({}) 至少 2 次（清空及解析），實際找到 ${clearCount} 次`
+    );
+  });
+
+  test("R2: nonDuplicateItems 過濾邏輯包含 verifiedStatuses 判斷", () => {
+    assert(
+      quickAddContent.includes("verifiedStatuses[idx] === 'IS_DUPLICATE'"),
+      "nonDuplicateItems 應排除 IS_DUPLICATE 的題目"
+    );
+    assert(
+      quickAddContent.includes("verifiedStatuses, isCheckingDuplicates"),
+      "nonDuplicateItems useMemo 依賴陣列需包含 verifiedStatuses"
+    );
+  });
+
+  test("R2: 批次提交守衛邏輯 - 高相似度未查證時阻擋並顯示錯誤訊息", () => {
+    assert(
+      quickAddContent.includes("firstUnverifiedHighSimIdx"),
+      "handleBatchSaveNonDuplicates 需有 firstUnverifiedHighSimIdx 批次守衛邏輯"
+    );
+    assert(
+      quickAddContent.includes("請查證選擇是重複或未重複後再送出"),
+      "阻擋訊息需包含「請查證選擇是重複或未重複後再送出」"
+    );
+  });
+
+  test("R2: 批次提交守衛邏輯 - handleBatchSaveAll 亦含守衛", () => {
+    assert(
+      quickAddContent.includes("firstUnverifiedHighSimIdxAll"),
+      "handleBatchSaveAll 亦應包含守衛邏輯 (firstUnverifiedHighSimIdxAll)"
+    );
+  });
+
+  test("R2: 單題模式 - isSingleHighSimilarity 派生狀態存在", () => {
+    assert(
+      quickAddContent.includes("isSingleHighSimilarity"),
+      "應有 isSingleHighSimilarity 派生狀態"
+    );
+    assert(
+      quickAddContent.includes("isHighSimilarity") && quickAddContent.includes("!isExactMatch"),
+      "isSingleHighSimilarity 需排除 100% 完全重複"
+    );
+  });
+
+  test("R2: 單題模式 - 未查證時直接新增按鈕 disabled", () => {
+    assert(
+      quickAddContent.includes("isSingleHighSimilarity && (verifiedStatuses[0] === null || verifiedStatuses[0] === undefined)"),
+      "直接新增按鈕需在高相似度且未查證時 disabled"
+    );
+  });
+
+  test("R2: 單題模式 - 確認為 IS_DUPLICATE 時直接新增按鈕 disabled", () => {
+    assert(
+      quickAddContent.includes("isSingleHighSimilarity && verifiedStatuses[0] === 'IS_DUPLICATE'"),
+      "直接新增按鈕在確認為重複時需 disabled"
+    );
+  });
+
+  test("R1: 100% 完全重複 (isExactMatch) 不顯示查證按鈕 - 條件互斥", () => {
+    // The high-similarity block is only shown when isHighSimilarity is true
+    // The exact match block is shown first (currentDup?.isExactMatch check precedes isHighSimilarity check)
+    assert(
+      quickAddContent.includes("currentDup?.isExactMatch ?") ||
+        quickAddContent.includes("currentDup?.isExactMatch ? ("),
+      "isExactMatch 條件需優先於 isHighSimilarity 分支，確保100%重複不顯示查證按鈕"
+    );
+  });
+
+  // 邏輯模擬測試：nonDuplicateItems 過濾行為
+  test("邏輯模擬: IS_DUPLICATE 確認後 nonDuplicateItems 不含該題", () => {
+    // Simulate the nonDuplicateItems filtering logic
+    const parsedList = [
+      { stem: "題目A" },
+      { stem: "題目B（高相似度）" },
+      { stem: "題目C" },
+    ];
+    const duplicateStatuses = [
+      { isExactMatch: false, isHighSimilarity: false },
+      { isExactMatch: false, isHighSimilarity: true },
+      { isExactMatch: false, isHighSimilarity: false },
+    ];
+    const verifiedStatusesSim = { 0: null, 1: "IS_DUPLICATE", 2: null };
+
+    const nonDuplicates = parsedList.filter((_, idx) => {
+      if (duplicateStatuses[idx]?.isExactMatch) return false;
+      if (verifiedStatusesSim[idx] === "IS_DUPLICATE") return false;
+      return true;
+    });
+
+    assert.strictEqual(nonDuplicates.length, 2, "IS_DUPLICATE 的題目應從 nonDuplicateItems 排除");
+    assert.strictEqual(
+      nonDuplicates.some((q) => q.stem === "題目B（高相似度）"),
+      false,
+      "IS_DUPLICATE 確認的高相似度題目不應出現在 nonDuplicateItems"
+    );
+  });
+
+  test("邏輯模擬: NOT_DUPLICATE 確認後 nonDuplicateItems 包含該題", () => {
+    const parsedList = [
+      { stem: "題目A" },
+      { stem: "題目B（高相似度）" },
+    ];
+    const duplicateStatuses = [
+      { isExactMatch: false, isHighSimilarity: false },
+      { isExactMatch: false, isHighSimilarity: true },
+    ];
+    const verifiedStatusesSim = { 0: null, 1: "NOT_DUPLICATE" };
+
+    const nonDuplicates = parsedList.filter((_, idx) => {
+      if (duplicateStatuses[idx]?.isExactMatch) return false;
+      if (verifiedStatusesSim[idx] === "IS_DUPLICATE") return false;
+      return true;
+    });
+
+    assert.strictEqual(nonDuplicates.length, 2, "NOT_DUPLICATE 的題目應保留在 nonDuplicateItems");
+    assert.strictEqual(
+      nonDuplicates.some((q) => q.stem === "題目B（高相似度）"),
+      true,
+      "NOT_DUPLICATE 確認的高相似度題目應出現在 nonDuplicateItems"
+    );
+  });
+
+  test("邏輯模擬: 批次提交守衛 - 高相似度未查證時返回第一個未查證索引", () => {
+    const parsedList = [
+      { stem: "題目A" },
+      { stem: "題目B（高相似度未查證）" },
+      { stem: "題目C（高相似度未查證）" },
+    ];
+    const duplicateStatuses = [
+      { isExactMatch: false, isHighSimilarity: false },
+      { isExactMatch: false, isHighSimilarity: true },
+      { isExactMatch: false, isHighSimilarity: true },
+    ];
+    const verifiedStatusesSim = { 0: null, 1: null, 2: null };
+
+    const firstUnverified = parsedList.findIndex(
+      (_, idx) =>
+        duplicateStatuses[idx]?.isHighSimilarity &&
+        !duplicateStatuses[idx]?.isExactMatch &&
+        (verifiedStatusesSim[idx] === null || verifiedStatusesSim[idx] === undefined)
+    );
+    assert.strictEqual(firstUnverified, 1, "守衛應返回第一個未查證的高相似度題目索引 (1)");
+  });
+
+  test("邏輯模擬: 100% 重複不被守衛攔截（isExactMatch 不需查證）", () => {
+    const parsedList = [{ stem: "題目A（100%重複）" }];
+    const duplicateStatuses = [{ isExactMatch: true, isHighSimilarity: true }];
+    const verifiedStatusesSim = {};
+
+    const firstUnverified = parsedList.findIndex(
+      (_, idx) =>
+        duplicateStatuses[idx]?.isHighSimilarity &&
+        !duplicateStatuses[idx]?.isExactMatch && // isExactMatch=true 故排除
+        (verifiedStatusesSim[idx] === null || verifiedStatusesSim[idx] === undefined)
+    );
+    assert.strictEqual(firstUnverified, -1, "100% 完全重複的題目不應被高相似度守衛攔截");
+  });
+
   console.log("\n====================================================");
   console.log(`TOTAL TESTS: ${totalTests}`);
   console.log(`PASSED: ${passedTests}`);

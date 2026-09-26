@@ -86,6 +86,7 @@ export default function QuickAddModal({
 
   const [duplicateStatuses, setDuplicateStatuses] = useState<QuestionDuplicateStatus[]>([]);
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
+  const [verifiedStatuses, setVerifiedStatuses] = useState<Record<number, 'IS_DUPLICATE' | 'NOT_DUPLICATE' | null>>({});
 
   // 題目切換膠囊橫向容器與當前選中膠囊之 ref (用於方向鍵切換時自動平滑滾動跟隨)
   const tabsContainerRef = useRef<HTMLDivElement | null>(null);
@@ -131,6 +132,7 @@ export default function QuickAddModal({
       setBatchNotice("");
       setDuplicateStatuses([]);
       setIsCheckingDuplicates(false);
+      setVerifiedStatuses({});
       return;
     }
 
@@ -154,6 +156,7 @@ export default function QuickAddModal({
         setFormError("");
         setBatchNotice("");
         setDuplicateStatuses([]);
+        setVerifiedStatuses({});
         setIsCheckingDuplicates(mapped.length > 0);
       });
     }, 120);
@@ -344,8 +347,16 @@ export default function QuickAddModal({
 
   const nonDuplicateItems = useMemo(() => {
     if (isCheckingDuplicates) return [];
-    return parsedList.filter((_, idx) => !duplicateStatuses[idx]?.isExactMatch);
-  }, [parsedList, duplicateStatuses, isCheckingDuplicates]);
+    return parsedList.filter((_, idx) => {
+      // Exclude 100% exact duplicates unconditionally
+      if (duplicateStatuses[idx]?.isExactMatch) return false;
+      // Exclude items user confirmed as duplicate
+      if (verifiedStatuses[idx] === 'IS_DUPLICATE') return false;
+      // Include items user confirmed as non-duplicate (high similarity but user-verified OK)
+      // Include normal items
+      return true;
+    });
+  }, [parsedList, duplicateStatuses, verifiedStatuses, isCheckingDuplicates]);
 
   const remainingCount = nonDuplicateItems.length;
   const allAreDuplicates = parsedList.length > 0 && !isCheckingDuplicates && remainingCount === 0;
@@ -355,6 +366,19 @@ export default function QuickAddModal({
   const isCurrentDupChecking = isCheckingDuplicates || !currentDup || currentDup.isChecking;
   const isSingleExactDuplicate =
     parsedList.length === 1 && !isCurrentDupChecking && Boolean(duplicateStatuses[0]?.isExactMatch);
+
+  // 單題高相似度（70-99%，非100%）
+  const isExactMatch = Boolean(duplicateStatuses[0]?.isExactMatch);
+  const isSingleHighSimilarity =
+    parsedList.length === 1 &&
+    !isCurrentDupChecking &&
+    Boolean(duplicateStatuses[0]?.isHighSimilarity) &&
+    !isExactMatch;
+
+  // 單題高相似度阻擋：未查證 (null) 或確認為重複 ('IS_DUPLICATE') 時鎖定按鈕
+  const isSingleHighSimBlocked =
+    isSingleHighSimilarity &&
+    verifiedStatuses[0] !== "NOT_DUPLICATE";
 
   const isCurrentFormValid = Boolean(
     currentItem &&
@@ -371,8 +395,14 @@ export default function QuickAddModal({
     (updater: (prev: EditableQuestionItem) => EditableQuestionItem) => {
       setParsedList((prevList) => {
         if (!prevList[activeIndex]) return prevList;
+        const prev = prevList[activeIndex];
+        const nextItem = updater(prev);
+        // 若題幹有改動，重置此題的查證狀態為 null
+        if (nextItem.stem !== prev.stem) {
+          setVerifiedStatuses((vs) => ({ ...vs, [activeIndex]: null }));
+        }
         const nextList = [...prevList];
-        nextList[activeIndex] = updater(nextList[activeIndex]);
+        nextList[activeIndex] = nextItem;
         return nextList;
       });
     },
@@ -504,6 +534,18 @@ export default function QuickAddModal({
       return;
     }
 
+    // 單題高相似度（70-99%）：未查證或確認為重複時阻擋
+    if (isSingleHighSimilarity) {
+      if (verifiedStatuses[0] === null || verifiedStatuses[0] === undefined) {
+        setFormError("請先查證是否為重複題目後再送出");
+        return;
+      }
+      if (verifiedStatuses[0] === 'IS_DUPLICATE') {
+        setFormError("⚠️ 您已確認此題為重複題目，禁止新增！請修改題幹或取消重複標記。");
+        return;
+      }
+    }
+
     if (!currentItem || !onDirectSave) {
       handleConfirmAndApply();
       return;
@@ -554,7 +596,7 @@ export default function QuickAddModal({
     } finally {
       setIsDirectSubmitting(false);
     }
-  }, [currentItem, onDirectSave, handleConfirmAndApply, onClose, isDirectSubmitting, isCheckingDuplicates, currentDup]);
+  }, [currentItem, onDirectSave, handleConfirmAndApply, onClose, isDirectSubmitting, isCheckingDuplicates, currentDup, isSingleHighSimilarity, verifiedStatuses]);
 
   // 批次新增全部已解析題目 (多題同時新增核心功能)
   const handleBatchSaveAll = useCallback(async () => {
@@ -563,6 +605,19 @@ export default function QuickAddModal({
 
     if (isCheckingDuplicates) {
       setFormError("正在比對題庫防重複，請稍候...");
+      return;
+    }
+
+    // 批次提交守衛：掃描所有高相似度（非100%）且未查證之題目
+    const firstUnverifiedHighSimIdxAll = parsedList.findIndex(
+      (_, idx) =>
+        duplicateStatuses[idx]?.isHighSimilarity &&
+        !duplicateStatuses[idx]?.isExactMatch &&
+        (verifiedStatuses[idx] === null || verifiedStatuses[idx] === undefined)
+    );
+    if (firstUnverifiedHighSimIdxAll !== -1) {
+      setActiveIndex(firstUnverifiedHighSimIdxAll);
+      setFormError(`第 ${firstUnverifiedHighSimIdxAll + 1} 題為相似題目，請查證選擇是重複或未重複後再送出`);
       return;
     }
 
@@ -640,7 +695,7 @@ export default function QuickAddModal({
     } finally {
       setIsBatchSubmitting(false);
     }
-  }, [parsedList, onClose, onBatchSaved, isBatchSubmitting, isCheckingDuplicates]);
+  }, [parsedList, duplicateStatuses, verifiedStatuses, onClose, onBatchSaved, isBatchSubmitting, isCheckingDuplicates]);
 
   // 批次排除重複題，新增剩餘有效題目 (多題重複自動排除功能)
   const handleBatchSaveNonDuplicates = useCallback(async () => {
@@ -656,9 +711,23 @@ export default function QuickAddModal({
       return;
     }
 
+    // 批次提交守衛：掃描所有高相似度（非100%）且未查證之題目
+    const firstUnverifiedHighSimIdx = parsedList.findIndex(
+      (_, idx) =>
+        duplicateStatuses[idx]?.isHighSimilarity &&
+        !duplicateStatuses[idx]?.isExactMatch &&
+        (verifiedStatuses[idx] === null || verifiedStatuses[idx] === undefined)
+    );
+    if (firstUnverifiedHighSimIdx !== -1) {
+      setActiveIndex(firstUnverifiedHighSimIdx);
+      setFormError(`第 ${firstUnverifiedHighSimIdx + 1} 題為相似題目，請查證選擇是重複或未重複後再送出`);
+      return;
+    }
+
     // 前置驗證各非重複題目完整性，若有缺漏自動切換至該題
     for (let i = 0; i < parsedList.length; i++) {
       if (duplicateStatuses[i]?.isExactMatch) continue;
+      if (verifiedStatuses[i] === 'IS_DUPLICATE') continue;
       const q = parsedList[i];
       if (!q.stem.trim()) {
         setActiveIndex(i);
@@ -732,7 +801,7 @@ export default function QuickAddModal({
     } finally {
       setIsBatchSubmitting(false);
     }
-  }, [nonDuplicateItems, parsedList, duplicateStatuses, isBatchSubmitting, isCheckingDuplicates, exactDuplicateCount, remainingCount, onClose, onBatchSaved]);
+  }, [nonDuplicateItems, parsedList, duplicateStatuses, verifiedStatuses, isBatchSubmitting, isCheckingDuplicates, exactDuplicateCount, remainingCount, onClose, onBatchSaved]);
 
   // 監聽快捷鍵：ESC 關閉、左右鍵切換題目 (ArrowLeft / ArrowRight)、Ctrl+Enter / Cmd+Enter 快速送出
   useEffect(() => {
@@ -1217,7 +1286,7 @@ export default function QuickAddModal({
                     </p>
                   </div>
                 ) : currentDup?.isHighSimilarity ? (
-                  <div className="p-3.5 sm:p-4 rounded-xl bg-amber-950/50 border border-amber-500/80 text-amber-100 text-xs space-y-2 animate-fade-in shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+                  <div className="p-3.5 sm:p-4 rounded-xl bg-amber-950/50 border border-amber-500/80 text-amber-100 text-xs space-y-3 animate-fade-in shadow-[0_0_15px_rgba(245,158,11,0.15)]">
                     <div className="flex items-center gap-2 font-bold text-amber-300 text-sm">
                       <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                       <span>
@@ -1225,16 +1294,73 @@ export default function QuickAddModal({
                           ? `⚠️ 與同批次第 ${currentDup.matchedBatchIndex} 題高度相似 (${currentDup.similarity}%)`
                           : `⚠️ 發現高度相似題目 (${currentDup.similarity}%)`}
                       </span>
-                    </div>
-                    <div className="p-2.5 rounded-lg bg-black/40 border border-amber-500/30 text-amber-200 font-mono text-[11px] break-words">
-                      <span className="text-amber-400 font-bold mr-1">
-                        {currentDup.duplicateSource === "BATCH" ? "同批次相似題幹：" : "題庫相似題幹："}
+                      <span className="ml-auto px-2 py-0.5 rounded-full bg-amber-600/60 text-amber-100 text-[10px] font-bold border border-amber-500/50 shrink-0">
+                        {currentDup.similarity}% 相似
                       </span>
-                      {currentDup.matchedStem}
                     </div>
+
+                    {/* 左右對比面板 */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2.5 rounded-lg bg-black/30 border border-amber-500/20 space-y-1">
+                        <div className="text-[10px] font-bold text-amber-400 mb-1">您輸入的題幹</div>
+                        <div className="text-amber-100 font-mono text-[11px] break-words leading-relaxed">
+                          {currentItem?.stem || "（空白）"}
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-black/30 border border-amber-500/20 space-y-1">
+                        <div className="text-[10px] font-bold text-amber-400 mb-1">
+                          {currentDup.duplicateSource === "BATCH" ? "同批次相似題幹" : "題庫相似題幹"}
+                        </div>
+                        <div className="text-amber-200 font-mono text-[11px] break-words leading-relaxed">
+                          {currentDup.matchedStem || "（無）"}
+                        </div>
+                      </div>
+                    </div>
+
                     <p className="text-[11px] text-amber-200/85 leading-relaxed">
                       請確認是否為不同考點或不同題型。若兩題意義相同，建議修改題幹避免重複錄入。
                     </p>
+
+                    {/* 查證確認按鈕 */}
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t border-amber-500/20">
+                      <div className="text-[11px] text-amber-200/70 self-center shrink-0">請查證此題：</div>
+                      <div className="flex gap-2 flex-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVerifiedStatuses((prev) => ({
+                              ...prev,
+                              [activeIndex]: prev[activeIndex] === "IS_DUPLICATE" ? null : "IS_DUPLICATE",
+                            }))
+                          }
+                          className={`flex-1 min-h-[36px] px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-180 flex items-center justify-center gap-1.5 border ${
+                            verifiedStatuses[activeIndex] === "IS_DUPLICATE"
+                              ? "bg-rose-600 text-white border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)]"
+                              : "bg-rose-950/30 text-rose-300 border-rose-500/40 hover:bg-rose-900/40"
+                          }`}
+                          title="確認此題為重複題目（將被排除）"
+                        >
+                          <span>⚠️ 是，本題為重複題目</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVerifiedStatuses((prev) => ({
+                              ...prev,
+                              [activeIndex]: prev[activeIndex] === "NOT_DUPLICATE" ? null : "NOT_DUPLICATE",
+                            }))
+                          }
+                          className={`flex-1 min-h-[36px] px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-180 flex items-center justify-center gap-1.5 border ${
+                            verifiedStatuses[activeIndex] === "NOT_DUPLICATE"
+                              ? "bg-emerald-600 text-white border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
+                              : "bg-emerald-950/30 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/40"
+                          }`}
+                          title="確認此題非重複，允許新增"
+                        >
+                          <span>✓ 否，本題未與題庫重複</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ) : currentItem.stem.trim().length >= 2 ? (
                   <div className="px-3 py-2 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-[11px] flex items-center gap-2">
@@ -1255,9 +1381,10 @@ export default function QuickAddModal({
                   </div>
                     <textarea
                     value={currentItem.stem}
-                    onChange={(e) =>
-                      updateCurrentItem((q) => ({ ...q, stem: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      updateCurrentItem((q) => ({ ...q, stem: e.target.value }));
+                      setVerifiedStatuses((prev) => ({ ...prev, [activeIndex]: null }));
+                    }}
                     rows={2}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] focus:border-accent focus:ring-1 focus:ring-accent outline-none text-base sm:text-sm text-foreground placeholder:text-white/20 transition-all leading-relaxed"
                   />
@@ -1556,11 +1683,21 @@ export default function QuickAddModal({
                   <button
                     type="button"
                     onClick={handleConfirmAndDirectSave}
-                    disabled={!currentItem || !isCurrentFormValid || isDirectSubmitting || isSingleExactDuplicate || isCheckingDuplicates}
+                    disabled={!currentItem || !isCurrentFormValid || isDirectSubmitting || isSingleExactDuplicate || isCheckingDuplicates || (isSingleHighSimilarity && (verifiedStatuses[0] === null || verifiedStatuses[0] === undefined)) || (isSingleHighSimilarity && verifiedStatuses[0] === 'IS_DUPLICATE')}
                     className={`w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl text-xs font-bold font-game transition-all duration-180 flex items-center justify-center gap-2 touch-tactile ${
-                      !currentItem || !isCurrentFormValid || isDirectSubmitting || isSingleExactDuplicate || isCheckingDuplicates
+                      !currentItem ||
+                      !isCurrentFormValid ||
+                      isDirectSubmitting ||
+                      isSingleExactDuplicate ||
+                      isCheckingDuplicates ||
+                      (isSingleHighSimilarity && (verifiedStatuses[0] === null || verifiedStatuses[0] === undefined)) ||
+                      (isSingleHighSimilarity && verifiedStatuses[0] === 'IS_DUPLICATE')
                         ? isSingleExactDuplicate
                           ? "bg-rose-950/30 text-rose-400/50 border border-rose-500/30 cursor-not-allowed"
+                          : isSingleHighSimilarity && verifiedStatuses[0] === 'IS_DUPLICATE'
+                          ? "bg-rose-950/30 text-rose-400/50 border border-rose-500/30 cursor-not-allowed"
+                          : isSingleHighSimilarity && (verifiedStatuses[0] === null || verifiedStatuses[0] === undefined)
+                          ? "bg-amber-950/30 text-amber-300/60 border border-amber-500/30 cursor-not-allowed"
                           : isCheckingDuplicates
                           ? "bg-blue-950/30 text-blue-300/50 border border-blue-500/30 cursor-wait"
                           : "bg-white/[0.03] text-white/25 border border-white/[0.06] cursor-not-allowed"
@@ -1571,6 +1708,10 @@ export default function QuickAddModal({
                         ? "正在比對題庫防重複與相似度..."
                         : isSingleExactDuplicate
                         ? "題庫中已存在完全相同 (100%) 的題目，嚴格阻擋直接新增。請在上方編輯框修改題幹以解鎖。"
+                        : isSingleHighSimilarity && verifiedStatuses[0] === 'IS_DUPLICATE'
+                        ? "您已確認此題為重複題目，禁止新增。"
+                        : isSingleHighSimilarity && (verifiedStatuses[0] === null || verifiedStatuses[0] === undefined)
+                        ? "請先在上方查證此題是否為重複題目後再送出。"
                         : "直接新增題目 (Ctrl+Enter)"
                     }
                   >
@@ -1582,9 +1723,13 @@ export default function QuickAddModal({
                         ? "比對中..."
                         : isSingleExactDuplicate
                         ? "已重複 (禁止新增)"
+                        : isSingleHighSimilarity && verifiedStatuses[0] === 'IS_DUPLICATE'
+                        ? "已確認重複 (禁止新增)"
+                        : isSingleHighSimilarity && (verifiedStatuses[0] === null || verifiedStatuses[0] === undefined)
+                        ? "請先查證後再送出"
                         : "檢查無誤，直接新增"}
                     </span>
-                    {!isSingleExactDuplicate && !isCheckingDuplicates && (
+                    {!isSingleExactDuplicate && !isCheckingDuplicates && !(isSingleHighSimilarity && verifiedStatuses[0] !== 'NOT_DUPLICATE') && (
                       <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 text-white rounded">
                         Ctrl+Enter
                       </kbd>
