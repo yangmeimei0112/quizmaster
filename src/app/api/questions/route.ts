@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { normalizeText, calculateSimilarity, compareQuestionOptions } from "@/lib/similarity";
 
+export const dynamic = "force-dynamic";
+
 // GET: 查詢題目列表與搜尋
 export async function GET(req: NextRequest) {
   try {
@@ -123,8 +125,20 @@ export async function GET(req: NextRequest) {
       new Set(allQuestions.map((x) => x.category).filter(Boolean))
     ) as string[];
 
+    // 若使用者已登入，附加個人掌握狀態
+    const formattedQuestions = user
+      ? questions.map((item) => {
+          const prog = progressMap[item.id];
+          return {
+            ...item,
+            isMastered: prog?.isMastered ?? false,
+            isTested: (prog?.attemptCount ?? 0) > 0,
+          };
+        })
+      : questions;
+
     return NextResponse.json({
-      questions,
+      questions: formattedQuestions,
       stats: {
         total: totalCount,
         singleCount,

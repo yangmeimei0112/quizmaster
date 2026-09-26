@@ -21,8 +21,10 @@ export async function GET(req: NextRequest) {
     const questionId = searchParams.get("questionId");
 
     const where: any = { userId: user.id };
+    const wrongWhere: any = { userId: user.id };
     if (questionId) {
       where.questionId = questionId;
+      wrongWhere.questionId = questionId;
     }
 
     const [progressList, wrongRecords] = await Promise.all([
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest) {
         where,
       }),
       prisma.wrongQuestionRecord.findMany({
-        where: { userId: user.id },
+        where: wrongWhere,
         select: { questionId: true, totalAttempts: true, correctCount: true, wrongCount: true },
       }),
     ]);
@@ -92,6 +94,15 @@ export async function POST(req: NextRequest) {
 
     if (!questionId || typeof questionId !== "string") {
       return NextResponse.json({ error: "缺少題目識別碼 (questionId)" }, { status: 400 });
+    }
+
+    // 確認題目是否存在
+    const questionExists = await prisma.question.findUnique({
+      where: { id: questionId },
+      select: { id: true },
+    });
+    if (!questionExists) {
+      return NextResponse.json({ error: "找不到指定的題目" }, { status: 404 });
     }
 
     // 查詢現有記錄

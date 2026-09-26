@@ -345,7 +345,8 @@ export default function PracticePage() {
     setSelectedAnswers([]);
     setIsAnswerSubmitted(false);
     setScore(0);
-  }, []);
+    fetchMastery();
+  }, [fetchMastery]);
 
   // 鍵盤快捷鍵：自測刷題 A/B/C/D 選擇選項、Enter 送出作答或進入下一題
   useEffect(() => {
@@ -716,8 +717,8 @@ export default function PracticePage() {
                       )}
                     </button>
                     {!user && (
-                      <p className="text-[11px] text-center text-foreground-muted/70 mt-1.5">
-                        🔒 登入後即可標記個人掌握狀態，精準複習弱項
+                      <p className="text-[11px] text-center text-amber-300/90 font-medium mt-1.5 animate-fade-in">
+                        🔒 {authNotice || "登入後即可標記個人掌握狀態，精準複習弱項"}
                       </p>
                     )}
                   </div>
@@ -814,7 +815,7 @@ export default function PracticePage() {
             </button>
             <button
               type="button"
-              onClick={() => setQuizMode("NONE")}
+              onClick={handleRestart}
               className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 sm:py-3 rounded-xl border border-white/[0.10] text-foreground text-sm font-semibold hover:bg-white/[0.05] transition-colors flex items-center justify-center text-center touch-manipulation touch-tactile active:scale-95"
             >
               返回刷題大廳

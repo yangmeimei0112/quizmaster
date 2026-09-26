@@ -276,6 +276,193 @@ async function runTests() {
     } catch {}
   }
 
+  // --- 4. 深度 API 契約、安全防護與邊界驗證 ---
+  console.log("\n[Part 4] 深度 API 契約、未登入安全阻擋與極限邊界檢驗...");
+
+  const questionsRouteContent = fs.readFileSync(
+    path.join(__dirname, "../src/app/api/questions/route.ts"),
+    "utf8"
+  );
+  const practiceQuestionsRouteContent = fs.readFileSync(
+    path.join(__dirname, "../src/app/api/practice/questions/route.ts"),
+    "utf8"
+  );
+  const practiceMasteryRouteContent = fs.readFileSync(
+    path.join(__dirname, "../src/app/api/practice/mastery/route.ts"),
+    "utf8"
+  );
+
+  test("4.1 force-dynamic 靜態優化規避宣告檢驗", () => {
+    assert.ok(
+      questionsRouteContent.includes('export const dynamic = "force-dynamic"'),
+      "questions route 必須明確宣告 force-dynamic"
+    );
+    assert.ok(
+      practiceQuestionsRouteContent.includes('export const dynamic = "force-dynamic"'),
+      "practice/questions route 必須明確宣告 force-dynamic"
+    );
+    assert.ok(
+      practiceMasteryRouteContent.includes('export const dynamic = "force-dynamic"'),
+      "practice/mastery route 必須明確宣告 force-dynamic"
+    );
+  });
+
+  test("4.2 未登入使用者存取未曾測驗/我不會的題目時嚴格回傳 401 與 requiresAuth 標記", () => {
+    assert.ok(
+      questionsRouteContent.includes('requiresAuth: true'),
+      "questions 路由未登入存取時需回傳 requiresAuth: true"
+    );
+    assert.ok(
+      practiceQuestionsRouteContent.includes('requiresAuth: true'),
+      "practice/questions 路由未登入存取時需回傳 requiresAuth: true"
+    );
+    assert.ok(
+      practiceMasteryRouteContent.includes('requiresAuth: true'),
+      "practice/mastery 路由未登入切換時需回傳 requiresAuth: true"
+    );
+  });
+
+  test("4.3 POST /api/practice/mastery 包含不存在題目之 404 防呆檢查", () => {
+    assert.ok(
+      practiceMasteryRouteContent.includes("找不到指定的題目"),
+      "practice/mastery 需包含題目不存在之 404 檢查"
+    );
+  });
+
+  // 使用獨立測試帳號 2 測試邊界狀態與多次切換
+  const testUser2 = await prisma.user.create({
+    data: {
+      username: `test_boundary_user_${Date.now()}`,
+      password: "hashed_password_456",
+      name: "Boundary Tester",
+    },
+  });
+
+  try {
+    await asyncTest("4.4 作答對錯之計數原子累計 (attemptCount & correctCount 獨立統計)", async () => {
+      // 第一次答錯
+      await prisma.userQuestionProgress.create({
+        data: {
+          userId: testUser2.id,
+          questionId: q1.id,
+          attemptCount: 1,
+          correctCount: 0,
+          isMastered: false,
+        },
+      });
+
+      // 第二次答對：attemptCount 累加, correctCount 累加
+      await prisma.userQuestionProgress.update({
+        where: {
+          userId_questionId: {
+            userId: testUser2.id,
+            questionId: q1.id,
+          },
+        },
+        data: {
+          attemptCount: { increment: 1 },
+          correctCount: { increment: 1 },
+        },
+      });
+
+      const rec = await prisma.userQuestionProgress.findUnique({
+        where: {
+          userId_questionId: {
+            userId: testUser2.id,
+            questionId: q1.id,
+          },
+        },
+      });
+
+      assert.strictEqual(rec.attemptCount, 2, "總作答次數應累計至 2");
+      assert.strictEqual(rec.correctCount, 1, "答對次數應為 1");
+      assert.strictEqual(rec.isMastered, false, "未手動標記前 isMastered 仍為 false");
+    });
+
+    await asyncTest("4.5 連續多次翻轉「這題我會了」(false -> true -> false -> true) 狀態精準一致", async () => {
+      // 翻轉至 true
+      await prisma.userQuestionProgress.update({
+        where: { userId_questionId: { userId: testUser2.id, questionId: q1.id } },
+        data: { isMastered: true },
+      });
+      let rec = await prisma.userQuestionProgress.findUnique({
+        where: { userId_questionId: { userId: testUser2.id, questionId: q1.id } },
+      });
+      assert.strictEqual(rec.isMastered, true);
+
+      // 翻轉回 false
+      await prisma.userQuestionProgress.update({
+        where: { userId_questionId: { userId: testUser2.id, questionId: q1.id } },
+        data: { isMastered: false },
+      });
+      rec = await prisma.userQuestionProgress.findUnique({
+        where: { userId_questionId: { userId: testUser2.id, questionId: q1.id } },
+      });
+      assert.strictEqual(rec.isMastered, false);
+
+      // 再次翻轉至 true
+      await prisma.userQuestionProgress.update({
+        where: { userId_questionId: { userId: testUser2.id, questionId: q1.id } },
+        data: { isMastered: true },
+      });
+      rec = await prisma.userQuestionProgress.findUnique({
+        where: { userId_questionId: { userId: testUser2.id, questionId: q1.id } },
+      });
+      assert.strictEqual(rec.isMastered, true);
+    });
+
+    await asyncTest("4.6 向下相容整合：既有 WrongQuestionRecord 正確回退映射至未掌握題目", async () => {
+      // 在無 UserQuestionProgress 下建立舊版錯題紀錄
+      await prisma.wrongQuestionRecord.create({
+        data: {
+          userId: testUser2.id,
+          questionId: q2.id,
+          wrongCount: 3,
+          totalAttempts: 5,
+          correctCount: 2,
+        },
+      });
+
+      // 模擬 GET /api/practice/mastery 之向下相容合併邏輯
+      const [progressList, wrongRecords] = await Promise.all([
+        prisma.userQuestionProgress.findMany({ where: { userId: testUser2.id } }),
+        prisma.wrongQuestionRecord.findMany({ where: { userId: testUser2.id } }),
+      ]);
+
+      const progressMap = {};
+      for (const wr of wrongRecords) {
+        progressMap[wr.questionId] = {
+          isMastered: false,
+          attemptCount: wr.totalAttempts || wr.wrongCount || 1,
+          correctCount: wr.correctCount || 0,
+        };
+      }
+      for (const p of progressList) {
+        progressMap[p.questionId] = {
+          isMastered: p.isMastered,
+          attemptCount: p.attemptCount,
+          correctCount: p.correctCount,
+        };
+      }
+
+      // q2 雖無 UserQuestionProgress，但由 WrongQuestionRecord 映射出未掌握狀態
+      assert.ok(progressMap[q2.id], "q2 應存在於 progressMap 中");
+      assert.strictEqual(progressMap[q2.id].isMastered, false, "q2 預設為未掌握");
+      assert.strictEqual(progressMap[q2.id].attemptCount, 5, "作答次數應為 5");
+
+      // q1 存在 UserQuestionProgress 且為 true，應保持掌握
+      assert.ok(progressMap[q1.id], "q1 應存在於 progressMap 中");
+      assert.strictEqual(progressMap[q1.id].isMastered, true, "q1 應為已掌握");
+    });
+
+  } finally {
+    try {
+      await prisma.userQuestionProgress.deleteMany({ where: { userId: testUser2.id } });
+      await prisma.wrongQuestionRecord.deleteMany({ where: { userId: testUser2.id } });
+      await prisma.user.deleteMany({ where: { id: testUser2.id } });
+    } catch {}
+  }
+
   console.log("\n==================================================");
   console.log(`總測試項目: ${passed + failed} | 通過: ${passed} | 失敗: ${failed}`);
   console.log("==================================================");
