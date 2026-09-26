@@ -84,6 +84,8 @@ export default function BattleRoomPage() {
               score: me.score,
               userAnswers,
               stage: updatedRoom.stage,
+              startedAt: updatedRoom.playingStartTime || Date.now(),
+              finishedAt: me.finishedAt,
               updatedAt: Date.now(),
             };
             localStorage.setItem("quizmaster_active_battle", JSON.stringify(activeSession));
@@ -164,11 +166,14 @@ export default function BattleRoomPage() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 playerId: activeBattleData.playerId,
+                playerName: activeBattleData.nickname,
+                playerAvatar: activeBattleData.avatar,
                 progress: {
                   currentIndex: activeBattleData.currentIndex,
                   score: activeBattleData.score,
                   correctCount: activeBattleData.correctCount,
                   wrongCount: activeBattleData.wrongCount,
+                  finishedAt: activeBattleData.finishedAt,
                 },
               }),
             });
@@ -485,14 +490,17 @@ export default function BattleRoomPage() {
         });
       } catch (err) {}
     }
-    localStorage.removeItem(`battle_player_${roomCode}`);
-    try {
-      localStorage.removeItem("quizmaster_active_battle");
-    } catch {}
-    if (roomCode && playerId) {
+    const isOngoingBattle = room && (room.stage === "PLAYING" || room.stage === "DRAWING");
+    if (!isOngoingBattle) {
+      localStorage.removeItem(`battle_player_${roomCode}`);
       try {
-        localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+        localStorage.removeItem("quizmaster_active_battle");
       } catch {}
+      if (roomCode && playerId) {
+        try {
+          localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+        } catch {}
+      }
     }
     router.push("/battle");
   };

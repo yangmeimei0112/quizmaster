@@ -18,6 +18,101 @@ export interface ParsedQuestionResult {
 }
 
 /**
+ * 將解析文字格式化為標準 4 區塊結構：【考點導讀】、【各選項詳細解析】、【觀念說明】、【考試記憶重點】
+ */
+export function formatExplanationIntoFourSections(rawExp: string): string {
+  if (!rawExp || !rawExp.trim()) return "";
+  let trimmed = rawExp.trim();
+
+  // 1. Detect Section 4 (考試記憶重點)
+  let section4Text = "";
+  const s4Regex =
+    /(?:[\r\n]+|\s{2,})(?:(?:【\s*(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論|記憶關鍵)\s*】)|(?:(?:總結|總結說明|結論|總之|核心考點|考點總結|解題關鍵|記憶關鍵|記憶重點|考試重點)[：:\s]))/i;
+  const s4Match = trimmed.match(s4Regex);
+  if (s4Match && s4Match.index !== undefined) {
+    section4Text = trimmed
+      .substring(s4Match.index)
+      .trim()
+      .replace(
+        /^\s*(?:【\s*(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論|記憶關鍵)\s*】|(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論|記憶關鍵))\s*[:：]?\s*/i,
+        ""
+      )
+      .trim();
+    trimmed = trimmed.substring(0, s4Match.index).trim();
+  }
+
+  // 2. Detect Section 3 (觀念說明)
+  let section3Text = "";
+  const s3Regex =
+    /(?:[\r\n]+|\s{2,})(?:(?:【\s*(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念)\s*】\s*[:：]?\s*)|(?:(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念)\s*[:：]\s*))/i;
+  const s3Match = trimmed.match(s3Regex);
+  if (s3Match && s3Match.index !== undefined) {
+    section3Text = trimmed
+      .substring(s3Match.index)
+      .trim()
+      .replace(
+        /^\s*(?:【\s*(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念)\s*】|(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念))\s*[:：]?\s*/i,
+        ""
+      )
+      .trim();
+    trimmed = trimmed.substring(0, s3Match.index).trim();
+  }
+
+  // 3. Detect Section 2 (各選項詳細解析) and Section 1 (考點導讀)
+  let introText = "";
+  let optionsText = "";
+
+  const optHeaderMatch = trimmed.match(
+    /(?:[\r\n]+|\s{2,}|^)\s*【\s*(?:各選項詳細解析|各選項解析|選項詳細解析|選項解析|詳細解析)\s*】\s*[:：]?\s*/i
+  );
+  if (optHeaderMatch && optHeaderMatch.index !== undefined) {
+    introText = trimmed.substring(0, optHeaderMatch.index).trim();
+    optionsText = trimmed.substring(optHeaderMatch.index + optHeaderMatch[0].length).trim();
+  } else {
+    const firstOptionIdx = trimmed.search(
+      /(?:^|[\r\n])\s*(?:(?:[A-Ha-h][\.．:：\、])|(?:\([A-Ha-h]\))|(?:（[A-Ha-h]）)|(?:\[[A-Ha-h]\])|(?:【[A-Ha-h]】))/
+    );
+    if (firstOptionIdx >= 0) {
+      introText = trimmed.substring(0, firstOptionIdx).trim();
+      optionsText = trimmed.substring(firstOptionIdx).trim();
+    } else {
+      introText = trimmed;
+      optionsText = "";
+    }
+  }
+
+  introText = introText
+    .replace(/^\s*【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?\s*/i, "")
+    .trim();
+
+  // Normalize options A. B. C. D. format
+  if (optionsText) {
+    const optLines = optionsText
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const match = line.match(/^\s*(?:([A-Ha-h])[\.．:：\、\s]|\(([A-Ha-h])\)|（([A-Ha-h])）|\[([A-Ha-h])\]|【([A-Ha-h])】)\s*(.*)$/);
+        if (match) {
+          const key = (match[1] || match[2] || match[3] || match[4] || match[5]).toUpperCase();
+          const rest = match[6].trim();
+          return `${key}. ${rest}`;
+        }
+        return line;
+      });
+    optionsText = optLines.join("\n");
+  }
+
+  const parts: string[] = [];
+  if (introText) parts.push(`【考點導讀】\n${introText}`);
+  if (optionsText) parts.push(`【各選項詳細解析】\n${optionsText}`);
+  if (section3Text) parts.push(`【觀念說明】\n${section3Text}`);
+  if (section4Text) parts.push(`【考試記憶重點】\n${section4Text}`);
+
+  return parts.length > 0 ? parts.join("\n\n").trim() : rawExp.trim();
+}
+
+/**
  * 智慧題目文字高容錯解析演算法
  *
  * 支援功能：
@@ -138,9 +233,14 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
   const postAnsMatch = workingText.match(postAnswerRegex);
   if (postAnsMatch && postAnsMatch.index !== undefined) {
     const afterAnsText = workingText.substring(postAnsMatch.index + postAnsMatch[0].length);
+    const isBracketedAnswer = /^\s*【/.test(postAnsMatch[0]);
     const hasStructuredSections = /【\s*(?:各選項詳細解析|各選項解析|選項詳細解析|選項解析|詳細解析|觀念說明|考試記憶重點|考點導讀)\s*】/i.test(afterAnsText);
+    const hasExplanationSignals =
+      hasStructuredSections ||
+      isBracketedAnswer ||
+      /(?:(?:^|\n)\s*(?:[A-Ha-h][\.．:：\、]|\([A-Ha-h]\)|（[A-Ha-h]）|觀念說明|概念說明|記憶重點|考試重點|考點導讀|考點說明))/i.test(afterAnsText);
 
-    if (hasStructuredSections) {
+    if (hasExplanationSignals && afterAnsText.trim()) {
       const keys = extractAnswerKeys(postAnsMatch[1]);
       if (keys.length > 0) {
         result.correctAnswers = keys;
@@ -148,26 +248,30 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
         if (keys.length > 1) result.type = "MULTIPLE";
       }
 
-      // 切分考點導讀與後續各選項解析、觀念說明、考試記憶重點
-      const sectionMatch = afterAnsText.match(/(?:^|\n)\s*(?=【\s*(?:各選項詳細解析|各選項解析|選項詳細解析|選項解析|詳細解析|觀念說明|考試記憶重點)\s*】)/i);
-      let introContent = "";
-      let remainingSections = "";
-
-      if (sectionMatch && sectionMatch.index !== undefined) {
-        introContent = afterAnsText.substring(0, sectionMatch.index).trim();
-        remainingSections = afterAnsText.substring(sectionMatch.index).trim();
-      } else {
-        remainingSections = afterAnsText.trim();
-      }
-
-      introContent = introContent.replace(/^\s*【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?\s*/i, "").trim();
-
       let combinedExplanation = "";
-      if (introContent) {
-        combinedExplanation += `【考點導讀】\n${introContent}\n\n`;
+      if (hasStructuredSections) {
+        // 切分考點導讀與後續各選項解析、觀念說明、考試記憶重點
+        const sectionMatch = afterAnsText.match(/(?:^|\n)\s*(?=【\s*(?:各選項詳細解析|各選項解析|選項詳細解析|選項解析|詳細解析|觀念說明|考試記憶重點)\s*】)/i);
+        let introContent = "";
+        let remainingSections = "";
+
+        if (sectionMatch && sectionMatch.index !== undefined) {
+          introContent = afterAnsText.substring(0, sectionMatch.index).trim();
+          remainingSections = afterAnsText.substring(sectionMatch.index).trim();
+        } else {
+          remainingSections = afterAnsText.trim();
+        }
+
+        introContent = introContent.replace(/^\s*【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?\s*/i, "").trim();
+
+        if (introContent) {
+          combinedExplanation += `【考點導讀】\n${introContent}\n\n`;
+        }
+        combinedExplanation += remainingSections;
+        combinedExplanation = combinedExplanation.trim();
+      } else {
+        combinedExplanation = formatExplanationIntoFourSections(afterAnsText.trim());
       }
-      combinedExplanation += remainingSections;
-      combinedExplanation = combinedExplanation.trim();
 
       capturedExplanation = combinedExplanation;
       result.explanation = combinedExplanation;

@@ -209,9 +209,39 @@ export function joinRoom(
 
   // If reconnecting with an existing player ID already present in the room
   if (existingPlayerId) {
-    const existingPlayer = room.players.find((p) => p.id === existingPlayerId);
+    let existingPlayer = room.players.find((p) => p.id === existingPlayerId);
     if (existingPlayer) {
       existingPlayer.lastActiveAt = Date.now();
+      room.updatedAt = Date.now();
+      return { room, playerId: existingPlayer.id };
+    } else if (
+      room.stage === "PLAYING" ||
+      room.stage === "DRAWING" ||
+      room.stage === "FINISHED"
+    ) {
+      existingPlayer = {
+        id: existingPlayerId,
+        name: playerName.trim() || "冒險者",
+        avatarId: playerAvatar || "panda",
+        isHost: room.hostId === existingPlayerId,
+        isReady: true,
+        currentIndex: 0,
+        correctCount: 0,
+        wrongCount: 0,
+        score: 0,
+        isFinished: false,
+        lastActiveAt: Date.now(),
+      };
+      if (
+        room.questions.length > 0 &&
+        (!room.playerQuestionOrders || !room.playerQuestionOrders[existingPlayerId])
+      ) {
+        if (!room.playerQuestionOrders) room.playerQuestionOrders = {};
+        const qIds = room.questions.map((q) => q.id);
+        room.playerQuestionOrders[existingPlayerId] =
+          room.settings.orderMode === "RANDOM" ? shuffleArray(qIds) : [...qIds];
+      }
+      room.players.push(existingPlayer);
       room.updatedAt = Date.now();
       return { room, playerId: existingPlayer.id };
     }
@@ -269,13 +299,47 @@ export function getPlayerProgress(
 export function reconnectPlayer(
   code: string,
   playerId: string,
-  progress?: Partial<BattlePlayer>
+  progress?: Partial<BattlePlayer> & { name?: string; avatarId?: string }
 ): { room: BattleRoom; player: BattlePlayer } {
   const room = getRoom(code);
   if (!room) throw new Error("房間不存在");
 
-  const player = room.players.find((p) => p.id === playerId);
-  if (!player) throw new Error("玩家不在該房間內，無法重新連線");
+  let player = room.players.find((p) => p.id === playerId);
+  if (!player) {
+    if (
+      room.stage === "PLAYING" ||
+      room.stage === "DRAWING" ||
+      room.stage === "FINISHED" ||
+      (room.playerQuestionOrders && playerId in room.playerQuestionOrders)
+    ) {
+      player = {
+        id: playerId,
+        name: progress?.name?.trim() || "冒險者",
+        avatarId: progress?.avatarId || "shiba",
+        isHost: room.hostId === playerId,
+        isReady: true,
+        currentIndex: progress?.currentIndex || 0,
+        correctCount: progress?.correctCount || 0,
+        wrongCount: progress?.wrongCount || 0,
+        score: progress?.score || 0,
+        isFinished: progress?.isFinished || false,
+        finishedAt: progress?.finishedAt,
+        lastActiveAt: Date.now(),
+      };
+      if (
+        room.questions.length > 0 &&
+        (!room.playerQuestionOrders || !room.playerQuestionOrders[playerId])
+      ) {
+        if (!room.playerQuestionOrders) room.playerQuestionOrders = {};
+        const qIds = room.questions.map((q) => q.id);
+        room.playerQuestionOrders[playerId] =
+          room.settings.orderMode === "RANDOM" ? shuffleArray(qIds) : [...qIds];
+      }
+      room.players.push(player);
+    } else {
+      throw new Error("玩家不在該房間內，無法重新連線");
+    }
+  }
 
   player.lastActiveAt = Date.now();
   if (progress) {
@@ -293,6 +357,9 @@ export function reconnectPlayer(
     }
     if (typeof progress.isFinished === "boolean") {
       player.isFinished = progress.isFinished;
+    }
+    if (typeof progress.finishedAt === "number") {
+      player.finishedAt = progress.finishedAt;
     }
   }
   room.updatedAt = Date.now();

@@ -104,6 +104,7 @@ export default function BattlePlayView({
   const currentQ = orderedQuestions[currentIndex] || orderedQuestions[0];
   const autoNextTimerRef = useRef<NodeJS.Timeout | null>(null);
   const syncedWrongQuestionIdsRef = useRef<Set<string>>(new Set());
+  const lastSubmittedAtRef = useRef<number>(0);
 
   // Reset synced wrong question tracking on new game session
   useEffect(() => {
@@ -169,6 +170,7 @@ export default function BattlePlayView({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isFinishedLocal || !currentQ) return;
+      if (e.repeat || e.isComposing || e.keyCode === 229) return;
 
       const target = e.target as HTMLElement | null;
       const isTyping =
@@ -191,6 +193,8 @@ export default function BattlePlayView({
         }
       } else {
         if (e.key === "Enter") {
+          // Prevent accidental instant skip if user double-pressed Enter
+          if (Date.now() - lastSubmittedAtRef.current < 250) return;
           e.preventDefault();
           advanceNextQuestion();
         }
@@ -247,6 +251,7 @@ export default function BattlePlayView({
   const evaluateAnswer = async (answers: string[]) => {
     if (hasSubmitted || !currentQ) return;
     setHasSubmitted(true);
+    lastSubmittedAtRef.current = Date.now();
 
     const updatedAnswers = { ...localAnswers, [currentQ.id]: answers };
     setLocalAnswers(updatedAnswers);
@@ -297,6 +302,8 @@ export default function BattlePlayView({
         score: newScore,
         userAnswers: updatedAnswers,
         stage: isLastQuestion ? "FINISHED" : "PLAYING",
+        startedAt: room.playingStartTime || Date.now(),
+        finishedAt: isLastQuestion ? Date.now() : undefined,
         updatedAt: Date.now(),
       };
       localStorage.setItem("quizmaster_active_battle", JSON.stringify(activeSession));

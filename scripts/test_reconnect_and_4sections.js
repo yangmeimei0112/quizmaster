@@ -275,6 +275,93 @@ it("QuickAddModal: 支援一鍵整理成 4 區塊格式按鈕", () => {
   );
 });
 
+it("parseExplanation: 純觀念題型包含【考點導讀】時不遺失 intro", () => {
+  const conceptInput = `【考點導讀】
+本題測驗民法第 184 條侵權行為要件。
+
+【觀念說明】
+民法侵權行為之構成要件包括過失、損害、因果關係。
+
+【考試記憶重點】
+三要件：過失、損害、因果。`;
+
+  const parsed = parseExplanation(conceptInput);
+  assert.equal(parsed.intro, "本題測驗民法第 184 條侵權行為要件。");
+  assert.equal(parsed.conceptNote, "民法侵權行為之構成要件包括過失、損害、因果關係。");
+  assert.ok(parsed.examTakeaway?.includes("三要件"));
+
+  const normalized = normalizeExplanationToFourSections(conceptInput);
+  assert.ok(normalized.includes("【考點導讀】\n本題測驗民法第 184 條侵權行為要件。"));
+  assert.ok(normalized.includes("【觀念說明】\n民法侵權行為之構成要件包括過失、損害、因果關係。"));
+  assert.ok(normalized.includes("【考試記憶重點】\n三要件：過失、損害、因果。"));
+});
+
+it("parseQuestionText: 正確解答後接非括號解析時不污染 Option D 且正規化 4 區塊", () => {
+  const rawInput = `【題號】 1
+【題目】 請問下列何者正確？
+(A) 選項一
+(B) 選項二
+(C) 選項三
+(D) 選項四
+【正確解答】 A
+這是考點導讀說明。
+A. 選項一正確。
+B. 選項二錯誤。
+C. 選項三錯誤。
+D. 選項四錯誤。
+觀念說明：行政法之基本原理...
+記憶重點：口訣...`;
+
+  const parsed = parseQuestionText(rawInput);
+  assert.equal(parsed.optionD, "選項四", "Option D 不得被後續解析污染");
+  assert.equal(parsed.correctAnswers[0], "A");
+  assert.ok(parsed.explanation.includes("【考點導讀】\n這是考點導讀說明。"), "解析應包含【考點導讀】");
+  assert.ok(parsed.explanation.includes("【各選項詳細解析】"), "解析應包含【各選項詳細解析】");
+  assert.ok(parsed.explanation.includes("【觀念說明】\n行政法之基本原理..."), "解析應包含【觀念說明】");
+  assert.ok(parsed.explanation.includes("【考試記憶重點】\n口訣..."), "解析應包含【考試記憶重點】");
+});
+
+it("battleStore: 被系統退出或暫時脫離 room.players 的玩家在進行中場次可成功重連與恢復進度", () => {
+  const { room, playerId: hostId } = createRoom("房主", "shiba", {
+    maxPlayers: 3,
+    questionCount: 2,
+  });
+
+  const guest = joinRoom(room.code, "掉線冒險者", "panda");
+  const guestId = guest.playerId;
+
+  room.stage = "PLAYING";
+  room.playingStartTime = Date.now() - 30000;
+  room.questions = [
+    { id: "q1", stem: "題1", optionA: "A", optionB: "B", optionC: "C", optionD: "D", correctAnswers: "A", type: "SINGLE" },
+    { id: "q2", stem: "題2", optionA: "A", optionB: "B", optionC: "C", optionD: "D", correctAnswers: "B", type: "SINGLE" },
+  ];
+  room.playerQuestionOrders = {
+    [hostId]: ["q1", "q2"],
+    [guestId]: ["q1", "q2"],
+  };
+
+  // 模擬因任何網路異常導致 guest 被自 room.players 移除
+  const pIdx = room.players.findIndex((p) => p.id === guestId);
+  if (pIdx >= 0) room.players.splice(pIdx, 1);
+  assert.equal(room.players.some((p) => p.id === guestId), false, "玩家已被系統移除");
+
+  // 重連並恢復作答記錄
+  const recon = reconnectPlayer(room.code, guestId, {
+    name: "掉線冒險者",
+    avatarId: "panda",
+    currentIndex: 1,
+    score: 100,
+    correctCount: 1,
+    wrongCount: 0,
+  });
+
+  assert.equal(recon.player.id, guestId);
+  assert.equal(recon.player.currentIndex, 1);
+  assert.equal(recon.player.score, 100);
+  assert.equal(room.players.some((p) => p.id === guestId), true, "玩家已成功恢復並重回對戰房間");
+});
+
 console.log("==================================================");
 console.log(`🎉 測試全數通過！(通過 ${passedTests} 項)`);
 console.log("==================================================");

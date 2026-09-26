@@ -48,6 +48,7 @@ export default function BattlePortalPage() {
     currentIndex: number;
     score: number;
     stage: string;
+    startedAt?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -235,6 +236,14 @@ export default function BattlePortalPage() {
                 玩家：<strong className="text-white">{activeBattle.nickname}</strong> · 進度：第{" "}
                 <strong className="text-accent-bright font-game">{activeBattle.currentIndex + 1}</strong> 題 · 當前得分：{" "}
                 <strong className="text-amber-400 font-game">{activeBattle.score} 分</strong>
+                {activeBattle.startedAt ? (
+                  <>
+                    {" "}· 用時：{" "}
+                    <strong className="text-cyan-400 font-game">
+                      {Math.max(0, Math.floor((Date.now() - activeBattle.startedAt) / 1000))} 秒
+                    </strong>
+                  </>
+                ) : null}
               </p>
             </div>
           </div>

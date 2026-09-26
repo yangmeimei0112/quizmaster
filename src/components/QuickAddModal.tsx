@@ -149,7 +149,13 @@ export default function QuickAddModal({
           optionC: res.optionC,
           optionD: res.optionD,
           correctAnswers: res.correctAnswers,
-          explanation: res.explanation,
+          explanation: res.explanation
+            ? normalizeExplanationToFourSections(
+                res.explanation,
+                { A: res.optionA, B: res.optionB, C: res.optionC, D: res.optionD },
+                res.correctAnswers
+              )
+            : "",
           warnings: res.warnings,
         }));
         setParsedList(mapped);

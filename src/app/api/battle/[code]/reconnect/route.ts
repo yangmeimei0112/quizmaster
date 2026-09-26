@@ -15,13 +15,17 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     const body = await req.json();
-    const { playerId, progress } = body;
+    const { playerId, playerName, playerAvatar, progress } = body;
 
     if (!playerId) {
       return NextResponse.json({ error: "缺少玩家身分識別" }, { status: 400 });
     }
 
-    const result = reconnectPlayer(code, playerId, progress);
+    const result = reconnectPlayer(code, playerId, {
+      ...progress,
+      name: playerName,
+      avatarId: playerAvatar,
+    });
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     const msg: string = error?.message || "重連對戰失敗";

@@ -51,7 +51,12 @@ export function formatStandardExplanation(sections: StandardExplanationSections)
 
   if (sections.intro && sections.intro.trim()) {
     let cleanIntro = sections.intro.trim();
-    cleanIntro = cleanIntro.replace(/^\s*【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?\s*/i, "").trim();
+    cleanIntro = cleanIntro
+      .replace(
+        /^\s*(?:【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?|(?:考點導讀|考點說明|題目導讀|導讀)\s*[:：])\s*/i,
+        ""
+      )
+      .trim();
     if (cleanIntro) {
       parts.push(`【考點導讀】\n${cleanIntro}`);
     }
@@ -82,7 +87,12 @@ export function formatStandardExplanation(sections: StandardExplanationSections)
 
   if (sections.conceptNote && sections.conceptNote.trim()) {
     let cleanConcept = sections.conceptNote.trim();
-    cleanConcept = cleanConcept.replace(/^\s*【\s*(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明)\s*】\s*[:：]?\s*/i, "").trim();
+    cleanConcept = cleanConcept
+      .replace(
+        /^\s*(?:【\s*(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念)\s*】\s*[:：]?|(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念)\s*[:：])\s*/i,
+        ""
+      )
+      .trim();
     if (cleanConcept) {
       parts.push(`【觀念說明】\n${cleanConcept}`);
     }
@@ -90,7 +100,12 @@ export function formatStandardExplanation(sections: StandardExplanationSections)
 
   if (sections.examTakeaway && sections.examTakeaway.trim()) {
     let cleanExam = sections.examTakeaway.trim();
-    cleanExam = cleanExam.replace(/^\s*【\s*(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論)\s*】\s*[:：]?\s*/i, "").trim();
+    cleanExam = cleanExam
+      .replace(
+        /^\s*(?:【\s*(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論|記憶關鍵)\s*】\s*[:：]?|(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論|記憶關鍵)\s*[:：])\s*/i,
+        ""
+      )
+      .trim();
     if (cleanExam) {
       parts.push(`【考試記憶重點】\n${cleanExam}`);
     }
@@ -254,7 +269,15 @@ export function parseExplanation(
     // Check if starts with 【考點導讀】
     const introTagMatch = textBeforeSection3.match(/^\s*【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?\s*/i);
     if (introTagMatch) {
-      optionsTargetText = textBeforeSection3.substring(introTagMatch[0].length).trim();
+      const rest = textBeforeSection3.substring(introTagMatch[0].length).trim();
+      const firstMarkerMatch = rest.search(/(?:^|[\r\n])\s*(?:[A-Ha-h][\.．:：\、]|\([A-Ha-h]\)|（[A-Ha-h]）|\[[A-Ha-h]\]|【[A-Ha-h]】)/);
+      if (firstMarkerMatch >= 0) {
+        explicitIntro = rest.substring(0, firstMarkerMatch).trim();
+        optionsTargetText = rest.substring(firstMarkerMatch).trim();
+      } else {
+        explicitIntro = rest;
+        optionsTargetText = "";
+      }
     }
   }
 
