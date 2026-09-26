@@ -15,7 +15,9 @@ import { battleAudio } from "@/lib/battleAudio";
 export default function BattleRoomPage() {
   const params = useParams();
   const router = useRouter();
-  const roomCode = typeof params?.code === "string" ? params.code.trim().replace(/\D/g, "").slice(0, 4) : "";
+  const rawParam = typeof params?.code === "string" ? params.code.trim() : "";
+  const roomCode = rawParam.replace(/\D/g, "").slice(0, 4);
+  const isValidCode = Boolean(roomCode.length === 4 && /^[1-9][0-9]{3}$/.test(roomCode));
 
   const [room, setRoom] = useState<BattleRoom | null>(null);
   const [playerId, setPlayerId] = useState<string>("");
@@ -39,7 +41,7 @@ export default function BattleRoomPage() {
 
   // Fetch latest room state
   const fetchRoom = useCallback(async (): Promise<BattleRoom | null> => {
-    if (!roomCode) return null;
+    if (!isValidCode) return null;
     try {
       const res = await fetch(`/api/battle/${roomCode}`);
       if (!res.ok) {
@@ -130,7 +132,11 @@ export default function BattleRoomPage() {
 
   // Initial load with reconnect & resume support
   useEffect(() => {
-    if (!roomCode) return;
+    if (!isValidCode) {
+      setLoading(false);
+      setError("房間代碼格式不正確，請輸入 4 碼純數字 (1000 ~ 9999)。");
+      return;
+    }
 
     let storedPlayerId = localStorage.getItem(`battle_player_${roomCode}`) || "";
     let activeBattleData: any = null;

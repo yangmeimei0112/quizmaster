@@ -7,9 +7,9 @@ export async function POST(req: NextRequest) {
     const { code, playerName, playerAvatar, existingPlayerId, playerId } = body;
 
     const rawCode = typeof code === "string" ? code.trim() : "";
-    const cleanCode = rawCode.replace(/\D/g, "").slice(0, 4);
+    const cleanCode = rawCode.replace(/\D/g, "");
 
-    if (!cleanCode || cleanCode.length < 4) {
+    if (!cleanCode || cleanCode.length !== 4 || !/^[1-9][0-9]{3}$/.test(cleanCode)) {
       return NextResponse.json({ error: "請輸入4碼純數字房間代碼" }, { status: 400 });
     }
     const cleanName = (playerName || "冒險者").trim();

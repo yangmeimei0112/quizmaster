@@ -134,6 +134,13 @@ async function runAdversarialReview() {
     return String(val || "").replace(/\D/g, "").slice(0, 4);
   }
 
+  function validateNumericRoomCode(raw) {
+    const rawStr = typeof raw === "string" ? raw.trim() : "";
+    const digits = rawStr.replace(/\D/g, "");
+    if (digits.length !== 4) return false;
+    return /^[1-9][0-9]{3}$/.test(digits);
+  }
+
   assert.equal(sanitizeRoomCodeInput("abcd"), "", "純英文應被過濾為空字串");
   assert.equal(sanitizeRoomCodeInput("R7X2"), "72", "舊版英數字串應僅保留數字");
   assert.equal(sanitizeRoomCodeInput("8520"), "8520", "標準 4 碼純數字完整保留");
@@ -143,7 +150,49 @@ async function runAdversarialReview() {
   assert.equal(sanitizeRoomCodeInput("！＠＃＄"), "", "特殊全形半形標點應過濾");
   assert.equal(sanitizeRoomCodeInput(null), "", "null 輸入安全處理");
   assert.equal(sanitizeRoomCodeInput(undefined), "", "undefined 輸入安全處理");
-  console.log("  ✓ 前端輸入防禦邏輯 8 種極端輸入情境驗證通過");
+
+  // 1000~9999 邊界與 0 開頭防護驗證
+  assert.equal(validateNumericRoomCode("0123"), false, "首碼為 0 的 4 碼數字應判定無效 (0123)");
+  assert.equal(validateNumericRoomCode("0000"), false, "全 0 代碼應判定無效 (0000)");
+  assert.equal(validateNumericRoomCode("0999"), false, "0999 應判定無效");
+  assert.equal(validateNumericRoomCode("1000"), true, "邊界下限 1000 應判定合法");
+  assert.equal(validateNumericRoomCode("9999"), true, "邊界上限 9999 應判定合法");
+  assert.equal(validateNumericRoomCode("8520"), true, "標準 8520 應判定合法");
+  assert.equal(validateNumericRoomCode(" 8520 "), true, "帶空格合法代碼應判定合法");
+  assert.equal(validateNumericRoomCode("12"), false, "少於 4 碼數字應判定無效 (12)");
+  assert.equal(validateNumericRoomCode("12345"), false, "多於 4 碼數字應判定無效 (12345)");
+  assert.equal(validateNumericRoomCode("ABCD"), false, "純英文字母應判定無效 (ABCD)");
+
+  // 契約驗證：join/route.ts 必須具備 /^[1-9][0-9]{3}$/ 嚴格驗證
+  const joinRouteSrc = fs.readFileSync(path.resolve(__dirname, "../src/app/api/battle/join/route.ts"), "utf-8");
+  assert.ok(
+    joinRouteSrc.includes("/^[1-9][0-9]{3}$/"),
+    "join/route.ts 必須包含 /^[1-9][0-9]{3}$/ 嚴格正規表達式驗證"
+  );
+  assert.ok(
+    joinRouteSrc.includes("cleanCode.length !== 4"),
+    "join/route.ts 必須嚴格比對 cleanCode.length !== 4"
+  );
+
+  // 契約驗證：[code]/page.tsx 必須防範無效代碼進入無限 Loading
+  const codePageSrc = fs.readFileSync(path.resolve(__dirname, "../src/app/battle/[code]/page.tsx"), "utf-8");
+  assert.ok(
+    codePageSrc.includes("isValidCode"),
+    "battle/[code]/page.tsx 必須具備 isValidCode 邊界檢驗狀態"
+  );
+  assert.ok(
+    codePageSrc.includes("setLoading(false)"),
+    "battle/[code]/page.tsx 必須在代碼不合法時立即呼叫 setLoading(false) 解除載入中狀態"
+  );
+
+  // 契約驗證：battle/page.tsx 活躍對戰快取必須清理舊版非純數字代碼
+  const battlePortalSrc = fs.readFileSync(path.resolve(__dirname, "../src/app/battle/page.tsx"), "utf-8");
+  assert.ok(
+    battlePortalSrc.includes("cleanActiveCode"),
+    "battle/page.tsx 必須對 active_battle 快取代碼進行純數字清理與驗證"
+  );
+
+  console.log("  ✓ 前端與後端 1000~9999 邊界、首碼非 0 與防無窮 Loading 檢驗全部通過");
 
   // -------------------------------------------------------------
   // ATTACK 4: 資料庫重置腳本事務原子性、冪等性與題庫筆數零損耗檢驗

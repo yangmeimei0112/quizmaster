@@ -57,7 +57,12 @@ export default function BattlePortalPage() {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && parsed.code && parsed.playerId) {
-          fetch(`/api/battle/${parsed.code}`)
+          const cleanActiveCode = String(parsed.code).replace(/\D/g, "");
+          if (cleanActiveCode.length !== 4 || !/^[1-9][0-9]{3}$/.test(cleanActiveCode)) {
+            localStorage.removeItem("quizmaster_active_battle");
+            return;
+          }
+          fetch(`/api/battle/${cleanActiveCode}`)
             .then((res) => {
               if (res.ok) return res.json();
               return null;
@@ -136,7 +141,7 @@ export default function BattlePortalPage() {
     setJoinError("");
 
     const cleanCode = joinCode.replace(/\D/g, "").slice(0, 4);
-    if (!cleanCode || cleanCode.length < 4) {
+    if (!cleanCode || cleanCode.length !== 4 || !/^[1-9][0-9]{3}$/.test(cleanCode)) {
       setJoinError("請輸入4碼純數字房間代碼");
       setIsJoining(false);
       return;
