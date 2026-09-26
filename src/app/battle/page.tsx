@@ -135,9 +135,9 @@ export default function BattlePortalPage() {
     setIsJoining(true);
     setJoinError("");
 
-    const cleanCode = joinCode.trim().toUpperCase();
-    if (!cleanCode) {
-      setJoinError("請輸入4碼房間代碼");
+    const cleanCode = joinCode.replace(/\D/g, "").slice(0, 4);
+    if (!cleanCode || cleanCode.length < 4) {
+      setJoinError("請輸入4碼純數字房間代碼");
       setIsJoining(false);
       return;
     }
@@ -512,16 +512,18 @@ export default function BattlePortalPage() {
             {/* 4-digit Code input */}
             <div>
               <label className="block text-xs font-semibold text-foreground-muted mb-1.5">
-                4 碼房間代碼 (英數不分大小寫)
+                4 碼純數字房間代碼 (1000 ~ 9999)
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 4))}
-                placeholder="例如：R7X2"
+                onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                placeholder="例如：8520"
                 maxLength={4}
                 required
-                className="w-full min-h-[56px] px-4 py-3 rounded-2xl bg-white/[0.04] border-2 border-white/[0.12] focus:border-amber-400 text-center font-mono font-black text-2xl tracking-[0.4em] text-amber-300 focus:outline-none transition-all placeholder:text-foreground-muted/40 uppercase"
+                className="w-full min-h-[56px] px-4 py-3 rounded-2xl bg-white/[0.04] border-2 border-white/[0.12] focus:border-amber-400 text-center font-mono font-black text-2xl tracking-[0.4em] text-amber-300 focus:outline-none transition-all placeholder:text-foreground-muted/40"
               />
             </div>
 

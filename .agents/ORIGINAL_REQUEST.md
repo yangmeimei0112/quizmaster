@@ -95,3 +95,53 @@ Integrity mode: development
 - [ ] 個人錯題本與全站高頻排行可正常切換並呈現對應之數據。
 - [ ] 既有全部測試套件（`npm test`）100% 通過，且增補新功能的自動化測試。
 - [ ] `npm run build` 全站路由編譯打包 Exit code 0。
+
+## 2026-09-26T18:24:21Z
+
+This is a single self-contained fix; keep it small and focused.
+
+清空全站個人錯題本與題庫所有作答統計數值，並將對戰模式的 4 碼房間代碼生成與輸入全面改為 1000~9999 純數字格式（無英文字母）。
+
+Working directory: c:/Users/yaco9/Documents/antigravity/lively-galileo
+Integrity mode: development
+
+## Requirements
+
+### R1. 全站錯題記錄與統計數據徹底清空歸零 (Complete Mistake & Stats Reset)
+- **清空個人錯題本**：清空資料庫中所有使用者的個人錯題資料（清空 `WrongQuestionRecord` 資料表）。
+- **全站題庫統計數據全數歸零**：
+  - 更新題庫所有題目，將 `wrongCount = 0`、`totalAttempts = 0`、`correctCount = 0`、`countA = 0`、`countB = 0`、`countC = 0`、`countD = 0`。
+- **提供專用重置腳本**：建立 `scripts/reset_mistake_records.js`（支援直接執行重置資料庫，或可在後端維護調用），執行完成後驗證題庫筆數無損且統計已徹底重設。
+- **重新開始記錄驗證**：進入自測刷題（`/practice`）、模擬考（`MockExamView`）或多人對戰（`BattlePlayView`）作答後，全新產生的作答數據能從 1 開始重新正確累積。
+
+### R2. 對戰模式 4 碼房間代碼全面純數字化 (1000~9999 Numeric Room Code)
+- **後端房間代碼生成重構**：
+  - 檔案：`src/lib/battleStore.ts` 中的 `generateRoomCode()`
+  - 將原本英數字符（`CODE_CHARS`）全面改為 **4 碼純數字（1000 ~ 9999）**，不以 0 開頭，不包含任何英文字母。
+  - 確保代碼在運行中的房間池中具備唯一性。
+- **前端輸入框與驗證純數字化**：
+  - 檔案：`src/app/battle/page.tsx`、`src/app/battle/[code]/page.tsx` 等。
+  - 輸入框加入 `inputMode="numeric"` 與 `pattern="[0-9]*"`，在手機與平板上自動彈出數字鍵盤。
+  - 輸入時自動過濾非數字字元（`replace(/\D/g, "").slice(0, 4)`）。
+  - 更新 Placeholder 為純數字範例（如「例如：8520」）。
+  - 加入房間之 API 請求與驗證全面相容 4 碼純數字格式。
+
+## Acceptance Criteria
+
+### Data Reset Verification
+- [ ] 執行重置腳本後，`WrongQuestionRecord` 表筆數為 0。
+- [ ] 資料庫中所有 `Question` 記錄之 `wrongCount`、`totalAttempts`、`correctCount`、`countA`、`countB`、`countC`、`countD` 均嚴格為 0。
+- [ ] 前端個人錯題本與全站錯題排行榜皆呈現無錯題/尚未有作答數據的初始乾淨狀態。
+- [ ] 作答一題錯題後，該題與個人的統計數據能正常從 1 開始重新累加。
+
+### Battle Room Code Verification
+- [ ] 呼叫 `generateRoomCode()` 產生的代碼為純數字且介於 1000 至 9999 之間，不包含任何英文字元。
+- [ ] 隨機生成 1,000 組房間代碼，100% 符合 `/^[1-9][0-9]{3}$/` 正規表達式。
+- [ ] 前端對戰大廳輸入框在輸入英文字母時會自動被過濾，只接受 4 碼數字。
+- [ ] 透過 4 碼純數字代碼能順利創建、加入房間並開打對戰。
+
+### Quality & Regression Guard
+- [ ] 現有自動化測試套件（`npm test`）100% 通過（同步調整受代碼英文字母格式影響之舊測試案例）。
+- [ ] `npm run build` 通過編譯打包，Exit Code 0。
+- [ ] 完成後執行 `git add -A; git commit -m "..."; git push origin main`。
+

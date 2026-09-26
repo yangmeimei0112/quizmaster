@@ -48,7 +48,7 @@ export interface BattleReviewItem {
 }
 
 export interface BattleRoom {
-  code: string; // 4-char uppercase alphanumeric, e.g. "R7X2"
+  code: string; // 4-digit numeric string (1000 ~ 9999), e.g. "8520"
   hostId: string;
   settings: BattleSettings;
   stage: BattleStage;
@@ -97,21 +97,23 @@ export function cleanupStaleRooms(force: boolean = false) {
   }
 }
 
-// 4-character code generator (excluding easily confused chars: 0/O, 1/I)
-const CODE_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+// 4-digit numeric code generator (1000 ~ 9999, non-zero first digit, purely numeric)
 export function generateRoomCode(): string {
   cleanupStaleRooms(true);
-  for (let attempt = 0; attempt < 100; attempt++) {
-    let code = "";
-    for (let i = 0; i < 4; i++) {
-      code += CODE_CHARS.charAt(Math.floor(Math.random() * CODE_CHARS.length));
-    }
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    const code = String(Math.floor(Math.random() * 9000) + 1000);
     if (!roomsStore.has(code)) {
       return code;
     }
   }
-  // Fallback timestamp code
-  return Math.random().toString(36).substring(2, 6).toUpperCase();
+  // Fallback: scan available 1000~9999 sequentially if dense
+  for (let c = 1000; c <= 9999; c++) {
+    const code = String(c);
+    if (!roomsStore.has(code)) {
+      return code;
+    }
+  }
+  throw new Error("房間代碼已用盡，無法建立更多房間");
 }
 
 // Fisher-Yates shuffle

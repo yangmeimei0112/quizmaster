@@ -15,7 +15,7 @@ import { battleAudio } from "@/lib/battleAudio";
 export default function BattleRoomPage() {
   const params = useParams();
   const router = useRouter();
-  const roomCode = typeof params?.code === "string" ? params.code.toUpperCase() : "";
+  const roomCode = typeof params?.code === "string" ? params.code.trim().replace(/\D/g, "").slice(0, 4) : "";
 
   const [room, setRoom] = useState<BattleRoom | null>(null);
   const [playerId, setPlayerId] = useState<string>("");

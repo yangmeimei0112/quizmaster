@@ -59,17 +59,20 @@ async function runBattleTests() {
   });
 
   // -------------------------------------------------------------
-  // 測試 2：4 碼英數大寫唯一房間代碼生成
+  // 測試 2：4 碼純數字 (1000~9999) 房間代碼生成
   // -------------------------------------------------------------
-  console.log("\n[測試 2] 驗證 4 碼英數大寫唯一房間代碼格式...");
+  console.log("\n[測試 2] 驗證 4 碼純數字 (1000~9999) 房間代碼格式...");
   const sampleCodes = new Set();
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 1000; i++) {
     const code = generateRoomCode();
     assert(code.length === 4, `代碼長度為 4 碼: ${code}`);
-    assert(/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}$/.test(code), `代碼為合法英數大寫無混淆字元: ${code}`);
+    assert(/^[1-9][0-9]{3}$/.test(code), `代碼為合法 1000~9999 純數字格式: ${code}`);
+    const num = Number(code);
+    assert(num >= 1000 && num <= 9999, `代碼數值介於 1000 至 9999 之間: ${code}`);
+    assert(!/[a-zA-Z]/.test(code), `代碼不包含任何英文字母: ${code}`);
     sampleCodes.add(code);
   }
-  assert(sampleCodes.size === 50, "50 次生成之代碼皆不重複");
+  assert(sampleCodes.size >= 800, "1000 次隨機生成具備高唯一性");
 
   // -------------------------------------------------------------
   // 測試 3：創建房間與房主身分建立
