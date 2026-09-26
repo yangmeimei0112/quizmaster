@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { normalizeText, calculateSimilarity } from "@/lib/similarity";
+import { normalizeText, calculateSimilarity, compareQuestionOptions } from "@/lib/similarity";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,9 +14,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 取得現有資料庫題幹資料（包含 normalizedStem 用於重複檢測）
+    // 取得現有資料庫題目資料（包含選項與答案用於選項一致性比對）
     const existingQuestions = await prisma.question.findMany({
-      select: { id: true, stem: true, normalizedStem: true },
+      select: {
+        id: true,
+        stem: true,
+        normalizedStem: true,
+        optionA: true,
+        optionB: true,
+        optionC: true,
+        optionD: true,
+        correctAnswers: true,
+      },
     });
 
     const existingNormalizedSet = new Set(
@@ -72,30 +81,58 @@ export async function POST(req: NextRequest) {
 
       const normStem = normalizeText(stem);
 
-      // 防重複比對（非強制建立時）
-      if (!forceCreate) {
-        // 1. 完全相同題幹 (100% Exact Match)
+      // 防重複比對（非強制建立且未經使用者查證放行時）
+      const shouldBypassDuplicateCheck =
+        forceCreate || q.forceCreate === true || q.verifiedNotDuplicate === true;
+
+      if (!shouldBypassDuplicateCheck) {
+        // 1. 完全相同題幹 (100% Exact Match) -> 需同時比對選項
         if (existingNormalizedSet.has(normStem)) {
-          skippedList.push({
-            index: i + 1,
-            stem,
-            reason: "題庫中已存在完全相同題目",
-          });
-          continue;
+          const matchingStemQuestions = existingQuestions.filter(
+            (ex) => (ex.normalizedStem || normalizeText(ex.stem)) === normStem
+          );
+
+          let hasIdenticalOptions = false;
+          for (const ex of matchingStemQuestions) {
+            const optRes = compareQuestionOptions(
+              { optionA, optionB, optionC, optionD },
+              ex
+            );
+            if (!optRes.hasOptions || optRes.isConsistent) {
+              hasIdenticalOptions = true;
+              break;
+            }
+          }
+
+          if (hasIdenticalOptions) {
+            skippedList.push({
+              index: i + 1,
+              stem,
+              reason: "題庫中已存在完全相同題目（題幹與選項高度一致）",
+            });
+            continue;
+          }
         }
 
-        // 2. 高相似度比對 (>= 85%)
+        // 2. 高相似度比對 (嚴格以 80% 為界線，且選項亦高度一致才視為重複)
         let isHighSimilarity = false;
         let matchedStem = "";
         let maxSim = 0;
 
         for (const ex of existingQuestions) {
           const sim = calculateSimilarity(stem, ex.stem);
-          if (sim.similarity >= 85) {
-            isHighSimilarity = true;
-            matchedStem = ex.stem;
-            maxSim = sim.similarity;
-            break;
+          if (sim.similarity >= 80) {
+            const optRes = compareQuestionOptions(
+              { optionA, optionB, optionC, optionD },
+              ex
+            );
+            // 若選項內容不一致 (< 80%)，視為不同題目，不得判定為重複
+            if (!optRes.hasOptions || optRes.isConsistent) {
+              isHighSimilarity = true;
+              matchedStem = ex.stem;
+              maxSim = sim.similarity;
+              break;
+            }
           }
         }
 
@@ -103,7 +140,7 @@ export async function POST(req: NextRequest) {
           skippedList.push({
             index: i + 1,
             stem,
-            reason: `與現有題目「${matchedStem}」高度相似 (${maxSim}%)`,
+            reason: `與現有題目「${matchedStem}」高度相似 (${maxSim}%) 且選項高度一致`,
           });
           continue;
         }
@@ -139,6 +176,11 @@ export async function POST(req: NextRequest) {
           id: created.id,
           stem: created.stem,
           normalizedStem: normStem,
+          optionA: created.optionA,
+          optionB: created.optionB,
+          optionC: created.optionC,
+          optionD: created.optionD,
+          correctAnswers: created.correctAnswers,
         });
       } catch (createErr: any) {
         errorsList.push({

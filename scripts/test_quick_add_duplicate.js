@@ -161,7 +161,7 @@ async function runAllTests() {
 
   test("Check-Duplicate API: 支援多題批次比對 (Array.isArray(stems))", () => {
     assert(checkDuplicateRouteContent.includes("Array.isArray(stems)"), "check-duplicate 路由應支援 stems 陣列");
-    assert(checkDuplicateRouteContent.includes("hasHighSimilarity: maxSimilarity >= 70"), "高相似度門檻應設定為 >= 70%");
+    assert(checkDuplicateRouteContent.includes("hasHighSimilarity: maxSimilarity >= 80"), "高相似度門檻應設定為 >= 80%");
   });
 
   test("Question Types: 正確定義 QuestionDuplicateStatus 介面", () => {
@@ -220,11 +220,11 @@ async function runAllTests() {
     assert.strictEqual(computed[2].matchedBatchIndex, 1, "命中索引應為第 1 題");
   });
 
-  test("同批次高相似度比對邏輯模擬 (>= 70%)", () => {
-    const stemA = "發展專案團隊（Develop Project Team）的產出（Output）為下列哪一項？";
+  test("同批次高相似度比對邏輯模擬 (>= 80%)", () => {
+    const stemA = "發展專案團隊的產出為下列哪一項？";
     const stemB = "請問發展專案團隊的產出為下列哪一項？";
     const simRes = calculateSimilarity(stemA, stemB);
-    assert(simRes.similarity >= 70, `微調題幹相似度應 >= 70% (實際: ${simRes.similarity}%)`);
+    assert(simRes.similarity >= 80, `微調題幹相似度應 >= 80% (實際: ${simRes.similarity}%)`);
   });
 
   console.log("\n--- 3. 膠囊切換標記與卡片警示靜態驗證 ---");

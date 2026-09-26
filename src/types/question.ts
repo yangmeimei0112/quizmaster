@@ -70,6 +70,13 @@ export interface SimilarMatch {
   similarity: number;
   isExact: boolean;
   level: "NONE" | "LOW" | "MEDIUM" | "HIGH" | "EXACT";
+  optionA?: string;
+  optionB?: string;
+  optionC?: string;
+  optionD?: string;
+  correctAnswers?: string;
+  optionsSimilarity?: number;
+  optionsMatch?: boolean;
 }
 
 export interface QuestionDuplicateStatus {
@@ -82,4 +89,6 @@ export interface QuestionDuplicateStatus {
   matchedStem: string;
   matchedBatchIndex?: number;
   matchedQuestion?: SimilarMatch;
+  optionsSimilarity?: number;
+  optionsMatch?: boolean;
 }

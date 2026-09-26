@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { QuestionType, QuestionDuplicateStatus, SimilarMatch } from "@/types/question";
 import { parseMultipleQuestions, ParsedQuestionResult } from "@/lib/questionParser";
-import { normalizeText, calculateSimilarity } from "@/lib/similarity";
+import { normalizeText, calculateSimilarity, compareQuestionOptions } from "@/lib/similarity";
 import ImageAttachmentField from "@/components/ImageAttachmentField";
 import { invalidateQuestionsCache } from "@/lib/questionsCache";
 import { normalizeExplanationToFourSections } from "@/lib/explanationParser";
@@ -50,6 +50,7 @@ interface QuickAddModalProps {
     optionD: string;
     correctAnswers: string[];
     explanation: string;
+    forceCreate?: boolean;
   }) => Promise<boolean>;
   onBatchSaved?: (data: { createdCount: number; skippedCount: number }) => void;
 }
@@ -88,6 +89,8 @@ export default function QuickAddModal({
   const [duplicateStatuses, setDuplicateStatuses] = useState<QuestionDuplicateStatus[]>([]);
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
   const [verifiedStatuses, setVerifiedStatuses] = useState<Record<number, 'IS_DUPLICATE' | 'NOT_DUPLICATE' | null>>({});
+  const [showComparisonModal, setShowComparisonModal] = useState(false);
+  const lastCheckedKeyRef = useRef<string>("");
 
   // 題目切換膠囊橫向容器與當前選中膠囊之 ref (用於方向鍵切換時自動平滑滾動跟隨)
   const tabsContainerRef = useRef<HTMLDivElement | null>(null);
@@ -134,6 +137,8 @@ export default function QuickAddModal({
       setDuplicateStatuses([]);
       setIsCheckingDuplicates(false);
       setVerifiedStatuses({});
+      setShowComparisonModal(false);
+      lastCheckedKeyRef.current = "";
       return;
     }
 
@@ -164,6 +169,8 @@ export default function QuickAddModal({
         setBatchNotice("");
         setDuplicateStatuses([]);
         setVerifiedStatuses({});
+        setShowComparisonModal(false);
+        lastCheckedKeyRef.current = "";
         setIsCheckingDuplicates(mapped.length > 0);
       });
     }, 120);
@@ -193,7 +200,17 @@ export default function QuickAddModal({
         const res = await fetch("/api/questions/check-duplicate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stems }),
+          body: JSON.stringify({
+            questions: parsedList.map((q) => ({
+              stem: q.stem,
+              optionA: q.optionA,
+              optionB: q.optionB,
+              optionC: q.optionC,
+              optionD: q.optionD,
+              correctAnswers: q.correctAnswers,
+            })),
+            stems,
+          }),
           signal: controller.signal,
         });
 
@@ -222,6 +239,8 @@ export default function QuickAddModal({
           let batchMaxSim = 0;
           let batchMatchedStem = "";
           let batchMatchedIndex = -1;
+          let batchMatchedOptionsSim: number | undefined = undefined;
+          let batchMatchedOptionsConsistent = false;
 
           const normCurrent = normalizeText(currentStem);
 
@@ -229,27 +248,35 @@ export default function QuickAddModal({
             const prevStem = parsedList[j].stem.trim();
             if (!prevStem) continue;
 
-            if (normCurrent && normCurrent === normalizeText(prevStem)) {
-              batchExactMatch = true;
-              batchMaxSim = 100;
-              batchMatchedStem = parsedList[j].stem;
-              batchMatchedIndex = j + 1;
-              break;
+            const isStemExact = Boolean(normCurrent && normCurrent === normalizeText(prevStem));
+            const sim = isStemExact ? { similarity: 100, isExact: true } : calculateSimilarity(currentStem, prevStem);
+
+            // 閾值規則：相似度嚴格以 80% 為界線，相似度 < 80% 直接判定為非重複
+            if (sim.similarity < 80) continue;
+
+            // 選項一致性檢測 (Option Similarity Check)
+            const optRes = compareQuestionOptions(parsedList[i], parsedList[j]);
+            if (optRes.hasOptions && !optRes.isConsistent) {
+              // 若題幹相似，但選項內容不一致，視為不同題目
+              continue;
             }
 
-            const sim = calculateSimilarity(currentStem, prevStem);
             if (sim.similarity > batchMaxSim) {
               batchMaxSim = sim.similarity;
               batchMatchedStem = parsedList[j].stem;
               batchMatchedIndex = j + 1;
+              batchMatchedOptionsSim = optRes.similarity;
+              batchMatchedOptionsConsistent = optRes.isConsistent;
             }
-            if (sim.isExact || sim.similarity === 100) {
+
+            const isOptionsExact = !optRes.hasOptions || optRes.similarity === 100;
+            if (isStemExact && isOptionsExact) {
               batchExactMatch = true;
               break;
             }
           }
 
-          const isBatchHighSim = batchMaxSim >= 70;
+          const isBatchHighSim = batchMaxSim >= 80;
 
           // 判定最終重複狀態
           if (dbRes?.hasExactMatch) {
@@ -262,6 +289,8 @@ export default function QuickAddModal({
               duplicateSource: "DATABASE",
               matchedStem: dbRes.matches?.[0]?.stem || currentStem,
               matchedQuestion: dbRes.matches?.[0],
+              optionsSimilarity: dbRes.matches?.[0]?.optionsSimilarity,
+              optionsMatch: dbRes.matches?.[0]?.optionsMatch,
             });
           } else if (batchExactMatch) {
             computedStatuses.push({
@@ -273,6 +302,8 @@ export default function QuickAddModal({
               duplicateSource: "BATCH",
               matchedStem: batchMatchedStem,
               matchedBatchIndex: batchMatchedIndex,
+              optionsSimilarity: batchMatchedOptionsSim,
+              optionsMatch: batchMatchedOptionsConsistent,
             });
           } else if (dbRes?.hasHighSimilarity || isBatchHighSim) {
             const dbSim = dbRes?.maxSimilarity || 0;
@@ -286,6 +317,8 @@ export default function QuickAddModal({
                 duplicateSource: "DATABASE",
                 matchedStem: dbRes?.matches?.[0]?.stem || "",
                 matchedQuestion: dbRes?.matches?.[0],
+                optionsSimilarity: dbRes?.matches?.[0]?.optionsSimilarity,
+                optionsMatch: dbRes?.matches?.[0]?.optionsMatch,
               });
             } else {
               computedStatuses.push({
@@ -297,6 +330,8 @@ export default function QuickAddModal({
                 duplicateSource: "BATCH",
                 matchedStem: batchMatchedStem,
                 matchedBatchIndex: batchMatchedIndex,
+                optionsSimilarity: batchMatchedOptionsSim,
+                optionsMatch: batchMatchedOptionsConsistent,
               });
             }
           } else {
@@ -314,6 +349,13 @@ export default function QuickAddModal({
 
         if (controller.signal.aborted) return;
         setDuplicateStatuses(computedStatuses);
+
+        // 偵測完畢主動彈出「高相似對照視窗」：只要有任何超過 80% 相似度的題目，立即彈出
+        const hasHighSimItems = computedStatuses.some((s) => s.isHighSimilarity);
+        if (hasHighSimItems && lastCheckedKeyRef.current !== stemsKey) {
+          lastCheckedKeyRef.current = stemsKey;
+          setShowComparisonModal(true);
+        }
       } catch (err: any) {
         if (err.name !== "AbortError") {
           console.error("Duplicate check error:", err);
@@ -340,8 +382,12 @@ export default function QuickAddModal({
     if (isCheckingDuplicates) return [];
     return parsedList
       .map((_, idx) => idx)
-      .filter((idx) => duplicateStatuses[idx]?.isExactMatch);
-  }, [parsedList, duplicateStatuses, isCheckingDuplicates]);
+      .filter((idx) => {
+        if (verifiedStatuses[idx] === 'NOT_DUPLICATE') return false;
+        if (verifiedStatuses[idx] === 'IS_DUPLICATE') return true;
+        return Boolean(duplicateStatuses[idx]?.isExactMatch);
+      });
+  }, [parsedList, duplicateStatuses, verifiedStatuses, isCheckingDuplicates]);
 
   const exactDuplicateCount = exactDuplicateIndices.length;
 
@@ -355,6 +401,8 @@ export default function QuickAddModal({
   const nonDuplicateItems = useMemo(() => {
     if (isCheckingDuplicates) return [];
     return parsedList.filter((_, idx) => {
+      // 只要經確認不是重複題（NOT_DUPLICATE），在送出時務必完整保留！
+      if (verifiedStatuses[idx] === 'NOT_DUPLICATE') return true;
       // Exclude 100% exact duplicates unconditionally
       if (duplicateStatuses[idx]?.isExactMatch) return false;
       // Exclude items user confirmed as duplicate
@@ -368,13 +416,30 @@ export default function QuickAddModal({
   const remainingCount = nonDuplicateItems.length;
   const allAreDuplicates = parsedList.length > 0 && !isCheckingDuplicates && remainingCount === 0;
 
+  // 所有高相似度題目集合 (用於專屬對照彈窗)
+  const highSimilarityItems = useMemo(() => {
+    if (isCheckingDuplicates) return [];
+    return parsedList
+      .map((item, idx) => ({ item, idx, dup: duplicateStatuses[idx] }))
+      .filter(({ dup }) => Boolean(dup && dup.isHighSimilarity));
+  }, [parsedList, duplicateStatuses, isCheckingDuplicates]);
+
+  const verifiedHighSimCount = useMemo(() => {
+    return highSimilarityItems.filter(
+      ({ idx }) => verifiedStatuses[idx] !== null && verifiedStatuses[idx] !== undefined
+    ).length;
+  }, [highSimilarityItems, verifiedStatuses]);
+
   // 當前題目重複判定狀態
   const currentDup = duplicateStatuses[activeIndex] || null;
   const isCurrentDupChecking = isCheckingDuplicates || !currentDup || currentDup.isChecking;
   const isSingleExactDuplicate =
-    parsedList.length === 1 && !isCurrentDupChecking && Boolean(duplicateStatuses[0]?.isExactMatch);
+    parsedList.length === 1 &&
+    !isCurrentDupChecking &&
+    Boolean(duplicateStatuses[0]?.isExactMatch) &&
+    verifiedStatuses[0] !== 'NOT_DUPLICATE';
 
-  // 單題高相似度（70-99%，非100%）
+  // 單題高相似度（80-99%，非100%）
   const isExactMatch = Boolean(duplicateStatuses[0]?.isExactMatch);
   const isSingleHighSimilarity =
     parsedList.length === 1 &&
@@ -551,13 +616,13 @@ export default function QuickAddModal({
       return;
     }
 
-    // 單題若完全重複，嚴格阻擋直接新增
-    if (currentDup?.isExactMatch) {
+    // 單題若完全重複，嚴格阻擋直接新增（若經查證確認非重複則允許新增）
+    if (currentDup?.isExactMatch && verifiedStatuses[0] !== 'NOT_DUPLICATE') {
       setFormError("⚠️ 題庫中已有完全相同 (100%) 的題目，禁止直接新增！請先修改題幹至不重複方能解鎖。");
       return;
     }
 
-    // 單題高相似度（70-99%）：未查證或確認為重複時阻擋
+    // 單題高相似度（80-99%）：未查證或確認為重複時阻擋
     if (isSingleHighSimilarity) {
       if (verifiedStatuses[0] === null || verifiedStatuses[0] === undefined) {
         setFormError("請先查證是否為重複題目後再送出");
@@ -596,6 +661,7 @@ export default function QuickAddModal({
     setFormError("");
 
     try {
+      const isVerifiedNotDup = verifiedStatuses[0] === 'NOT_DUPLICATE';
       const success = await onDirectSave({
         stem: currentItem.stem,
         type: currentItem.type,
@@ -606,6 +672,7 @@ export default function QuickAddModal({
         optionD: currentItem.optionD,
         correctAnswers: currentItem.correctAnswers,
         explanation: currentItem.explanation,
+        forceCreate: isVerifiedNotDup,
       });
 
       if (success) {
@@ -673,7 +740,7 @@ export default function QuickAddModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          questions: parsedList.map((item) => ({
+          questions: parsedList.map((item, idx) => ({
             stem: item.stem,
             type: item.type,
             imageUrl: item.imageUrl || null,
@@ -683,6 +750,8 @@ export default function QuickAddModal({
             optionD: item.optionD,
             correctAnswers: item.correctAnswers,
             explanation: item.explanation,
+            verifiedNotDuplicate: verifiedStatuses[idx] === 'NOT_DUPLICATE',
+            forceCreate: verifiedStatuses[idx] === 'NOT_DUPLICATE',
           })),
         }),
       });
@@ -778,17 +847,23 @@ export default function QuickAddModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          questions: nonDuplicateItems.map((item) => ({
-            stem: item.stem,
-            type: item.type,
-            imageUrl: item.imageUrl || null,
-            optionA: item.optionA,
-            optionB: item.optionB,
-            optionC: item.optionC,
-            optionD: item.optionD,
-            correctAnswers: item.correctAnswers,
-            explanation: item.explanation,
-          })),
+          questions: nonDuplicateItems.map((item) => {
+            const origIdx = parsedList.indexOf(item);
+            const isVerifiedNotDup = origIdx !== -1 && verifiedStatuses[origIdx] === 'NOT_DUPLICATE';
+            return {
+              stem: item.stem,
+              type: item.type,
+              imageUrl: item.imageUrl || null,
+              optionA: item.optionA,
+              optionB: item.optionB,
+              optionC: item.optionC,
+              optionD: item.optionD,
+              correctAnswers: item.correctAnswers,
+              explanation: item.explanation,
+              verifiedNotDuplicate: isVerifiedNotDup,
+              forceCreate: isVerifiedNotDup,
+            };
+          }),
         }),
       });
 
@@ -1310,16 +1385,36 @@ export default function QuickAddModal({
                   </div>
                 ) : currentDup?.isHighSimilarity ? (
                   <div className="p-3.5 sm:p-4 rounded-xl bg-amber-950/50 border border-amber-500/80 text-amber-100 text-xs space-y-3 animate-fade-in shadow-[0_0_15px_rgba(245,158,11,0.15)]">
-                    <div className="flex items-center gap-2 font-bold text-amber-300 text-sm">
+                    <div className="flex flex-wrap items-center gap-2 font-bold text-amber-300 text-sm">
                       <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                       <span>
                         {currentDup.duplicateSource === "BATCH"
                           ? `⚠️ 與同批次第 ${currentDup.matchedBatchIndex} 題高度相似 (${currentDup.similarity}%)`
                           : `⚠️ 發現高度相似題目 (${currentDup.similarity}%)`}
                       </span>
-                      <span className="ml-auto px-2 py-0.5 rounded-full bg-amber-600/60 text-amber-100 text-[10px] font-bold border border-amber-500/50 shrink-0">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-600/60 text-amber-100 text-[10px] font-bold border border-amber-500/50 shrink-0">
                         {currentDup.similarity}% 相似
                       </span>
+                      {currentDup.optionsSimilarity !== undefined && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                            currentDup.optionsMatch
+                              ? "bg-emerald-600/60 text-emerald-100 border-emerald-500/50"
+                              : "bg-cyan-600/60 text-cyan-100 border-cyan-500/50"
+                          }`}
+                        >
+                          {currentDup.optionsMatch
+                            ? `選項高度一致 (${currentDup.optionsSimilarity}%)`
+                            : `選項內容不同 (${currentDup.optionsSimilarity}%)`}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setShowComparisonModal(true)}
+                        className="ml-auto px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[11px] font-bold border border-amber-500/40 transition-colors flex items-center gap-1 touch-tactile"
+                      >
+                        <span>🔍 開啟高相似對照視窗</span>
+                      </button>
                     </div>
 
                     {/* 左右對比面板 */}
@@ -1775,6 +1870,304 @@ export default function QuickAddModal({
           </div>
         </div>
       </div>
+
+      {/* 5. 專屬高相似題目集中對照彈窗 (Comparison Modal) */}
+      {showComparisonModal && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-hidden animate-fade-in"
+          onClick={() => setShowComparisonModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="comparison-modal-title"
+        >
+          <div
+            className="relative bg-[#0c0d14] border border-amber-500/50 w-full sm:max-w-4xl rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.25)] max-h-[90vh] flex flex-col text-foreground overflow-hidden animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 sm:px-7 py-4 border-b border-white/[0.08] bg-white/[0.02] shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center justify-center shadow-[0_0_18px_rgba(245,158,11,0.35)] shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3
+                    id="comparison-modal-title"
+                    className="text-base sm:text-lg font-bold font-game text-foreground flex items-center gap-2"
+                  >
+                    <span>高相似題目對照與判斷</span>
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-bold">
+                      {highSimilarityItems.length} 題相似 (≥ 80%)
+                    </span>
+                  </h3>
+                  <p className="text-xs text-foreground-muted">
+                    偵測到以下題目與題庫（或同批次）相似度達 80% 以上。請逐題對照並點選按鈕判斷是否為重複題（判定為未重複者，送出時保證完整保留並寫入題庫）。
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowComparisonModal(false)}
+                className="min-w-[40px] min-h-[40px] flex items-center justify-center text-foreground-muted hover:text-foreground rounded-xl hover:bg-white/[0.08] transition-colors"
+                aria-label="關閉對照視窗"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: List of All High-Similarity Items */}
+            <div className="overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6 flex-1 text-xs">
+              {highSimilarityItems.length === 0 ? (
+                <div className="py-12 text-center text-foreground-muted">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2 opacity-80" />
+                  <p className="text-sm font-semibold text-emerald-300">目前無超過 80% 相似度之題目！</p>
+                </div>
+              ) : (
+                highSimilarityItems.map(({ item, idx, dup }) => {
+                  const isVerifiedDup = verifiedStatuses[idx] === "IS_DUPLICATE";
+                  const isVerifiedNotDup = verifiedStatuses[idx] === "NOT_DUPLICATE";
+
+                  // 取得對比目標題目的題幹、選項與正解
+                  const isBatchSource = dup.duplicateSource === "BATCH" && typeof dup.matchedBatchIndex === "number";
+                  const matchedBatchItem = isBatchSource ? parsedList[dup.matchedBatchIndex! - 1] : null;
+
+                  const targetStem = isBatchSource
+                    ? matchedBatchItem?.stem || dup.matchedStem
+                    : dup.matchedQuestion?.stem || dup.matchedStem;
+                  const targetOptA = isBatchSource
+                    ? matchedBatchItem?.optionA || ""
+                    : dup.matchedQuestion?.optionA || "";
+                  const targetOptB = isBatchSource
+                    ? matchedBatchItem?.optionB || ""
+                    : dup.matchedQuestion?.optionB || "";
+                  const targetOptC = isBatchSource
+                    ? matchedBatchItem?.optionC || ""
+                    : dup.matchedQuestion?.optionC || "";
+                  const targetOptD = isBatchSource
+                    ? matchedBatchItem?.optionD || ""
+                    : dup.matchedQuestion?.optionD || "";
+                  const targetAnswers = isBatchSource
+                    ? matchedBatchItem?.correctAnswers.join(",") || ""
+                    : dup.matchedQuestion?.correctAnswers || "";
+
+                  const optionsSim = dup.optionsSimilarity ?? dup.matchedQuestion?.optionsSimilarity;
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${
+                        isVerifiedNotDup
+                          ? "bg-emerald-950/20 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+                          : isVerifiedDup
+                          ? "bg-rose-950/20 border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.15)]"
+                          : "bg-white/[0.02] border-amber-500/40 hover:border-amber-500/60"
+                      }`}
+                    >
+                      {/* Item Top Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-white/[0.08]">
+                        <div className="flex items-center gap-2">
+                          <span className="font-game font-bold text-sm text-foreground">
+                            第 {idx + 1} 題
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold">
+                            題幹 {dup.similarity}% 相似
+                          </span>
+                          {optionsSim !== undefined && (
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${
+                                dup.optionsMatch
+                                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                                  : "bg-cyan-500/20 text-cyan-300 border-cyan-500/40"
+                              }`}
+                            >
+                              {dup.optionsMatch ? `選項高度一致 (${optionsSim}%)` : `選項內容不同 (${optionsSim}%)`}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-foreground-muted">
+                          比對來源：
+                          <span className="font-semibold text-amber-200 ml-1">
+                            {isBatchSource
+                              ? `同批次第 ${dup.matchedBatchIndex} 題`
+                              : "題庫現存題目"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 左右對照卡片 (使用者輸入 vs 題庫/批次相似題目) */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* 左：使用者輸入的題目 */}
+                        <div className="p-3.5 rounded-xl bg-black/40 border border-white/[0.08] space-y-2.5">
+                          <div className="flex items-center justify-between pb-1 border-b border-white/[0.06]">
+                            <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                              <span>【您輸入的題目】</span>
+                            </span>
+                            <span className="text-[10px] text-foreground-muted">
+                              正解: {item.correctAnswers.join(", ") || "無"}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-semibold text-foreground-muted mb-0.5">題幹內容：</div>
+                            <p className="text-foreground text-xs leading-relaxed font-mono break-words bg-white/[0.02] p-2 rounded-lg border border-white/[0.04]">
+                              {item.stem || "（空白）"}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-[10px] font-semibold text-foreground-muted">選項 (A, B, C, D)：</div>
+                            <div className="grid gap-1 font-mono text-[11px]">
+                              {[
+                                { key: "A", val: item.optionA },
+                                { key: "B", val: item.optionB },
+                                { key: "C", val: item.optionC },
+                                { key: "D", val: item.optionD },
+                              ].map((opt) => (
+                                <div
+                                  key={opt.key}
+                                  className={`px-2 py-1 rounded flex items-start gap-1.5 ${
+                                    item.correctAnswers.includes(opt.key)
+                                      ? "bg-emerald-500/15 text-emerald-300 font-semibold"
+                                      : "bg-white/[0.02] text-foreground-muted"
+                                  }`}
+                                >
+                                  <span className="shrink-0 font-bold">{opt.key}.</span>
+                                  <span className="break-words">{opt.val || "（空）"}</span>
+                                  {item.correctAnswers.includes(opt.key) && (
+                                    <span className="ml-auto text-[9px] bg-emerald-500/30 px-1 rounded text-emerald-200 shrink-0">正解</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 右：題庫/同批次相似題目 */}
+                        <div className="p-3.5 rounded-xl bg-black/40 border border-white/[0.08] space-y-2.5">
+                          <div className="flex items-center justify-between pb-1 border-b border-white/[0.06]">
+                            <span className="font-bold text-amber-400 flex items-center gap-1.5">
+                              <span>【{isBatchSource ? `同批次第 ${dup.matchedBatchIndex} 題` : "題庫中相似題目"}】</span>
+                            </span>
+                            <span className="text-[10px] text-foreground-muted">
+                              正解: {targetAnswers || "—"}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-semibold text-foreground-muted mb-0.5">題幹內容：</div>
+                            <p className="text-foreground text-xs leading-relaxed font-mono break-words bg-white/[0.02] p-2 rounded-lg border border-white/[0.04]">
+                              {targetStem || "（無題幹資料）"}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-[10px] font-semibold text-foreground-muted">選項 (A, B, C, D)：</div>
+                            <div className="grid gap-1 font-mono text-[11px]">
+                              {[
+                                { key: "A", val: targetOptA },
+                                { key: "B", val: targetOptB },
+                                { key: "C", val: targetOptC },
+                                { key: "D", val: targetOptD },
+                              ].map((opt) => (
+                                <div
+                                  key={opt.key}
+                                  className={`px-2 py-1 rounded flex items-start gap-1.5 ${
+                                    targetAnswers.includes(opt.key)
+                                      ? "bg-amber-500/15 text-amber-300 font-semibold"
+                                      : "bg-white/[0.02] text-foreground-muted"
+                                  }`}
+                                >
+                                  <span className="shrink-0 font-bold">{opt.key}.</span>
+                                  <span className="break-words">{opt.val || "（空）"}</span>
+                                  {targetAnswers.includes(opt.key) && (
+                                    <span className="ml-auto text-[9px] bg-amber-500/30 px-1 rounded text-amber-200 shrink-0">正解</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 判斷按鈕組與狀態反饋 */}
+                      <div className="pt-3 mt-3 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="text-xs">
+                          {isVerifiedNotDup ? (
+                            <span className="text-emerald-300 font-bold flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                              <span>✓ 已確認不是重複題（送出時將 100% 完整保留並寫入題庫）</span>
+                            </span>
+                          ) : isVerifiedDup ? (
+                            <span className="text-rose-300 font-bold flex items-center gap-1.5">
+                              <AlertTriangle className="w-4 h-4 text-rose-400" />
+                              <span>⚠️ 已確認為重複題目（送出時將自動排除）</span>
+                            </span>
+                          ) : (
+                            <span className="text-amber-300/80 flex items-center gap-1.5">
+                              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                              <span>尚未判定，請點選右側按鈕進行查證：</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setVerifiedStatuses((prev) => ({
+                                ...prev,
+                                [idx]: prev[idx] === "IS_DUPLICATE" ? null : "IS_DUPLICATE",
+                              }))
+                            }
+                            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold font-game transition-all flex items-center gap-1.5 border touch-tactile ${
+                              isVerifiedDup
+                                ? "bg-rose-600 text-white border-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.5)] ring-2 ring-rose-400/40"
+                                : "bg-rose-950/30 text-rose-300 border-rose-500/40 hover:bg-rose-900/40"
+                            }`}
+                          >
+                            <span>⚠️ 是，本題為重複題目</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setVerifiedStatuses((prev) => ({
+                                ...prev,
+                                [idx]: prev[idx] === "NOT_DUPLICATE" ? null : "NOT_DUPLICATE",
+                              }))
+                            }
+                            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold font-game transition-all flex items-center gap-1.5 border touch-tactile ${
+                              isVerifiedNotDup
+                                ? "bg-emerald-600 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] ring-2 ring-emerald-400/40"
+                                : "bg-emerald-950/30 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/40"
+                            }`}
+                          >
+                            <span>✓ 否，本題未與題庫重複</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-5 sm:px-7 py-3.5 border-t border-white/[0.08] bg-[#0a0a0c]/95 shrink-0">
+              <div className="text-xs text-foreground-muted">
+                已完成判定：
+                <strong className="text-amber-300 font-mono text-sm ml-1">
+                  {verifiedHighSimCount}
+                </strong>{" "}
+                / {highSimilarityItems.length} 題
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowComparisonModal(false)}
+                className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs font-bold font-game shadow-glow transition-all flex items-center gap-2 touch-tactile"
+              >
+                <Check className="w-4 h-4" />
+                <span>確認完成，關閉對照視窗</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -160,6 +160,7 @@ export default function AddQuestionPage() {
     optionD: string;
     correctAnswers: string[];
     explanation: string;
+    forceCreate?: boolean;
   }): Promise<boolean> => {
     try {
       const res = await fetch("/api/questions", {
@@ -175,7 +176,7 @@ export default function AddQuestionPage() {
           optionD: data.optionD,
           correctAnswers: data.correctAnswers,
           explanation: data.explanation,
-          forceCreate: false,
+          forceCreate: data.forceCreate ?? false,
         }),
       });
 

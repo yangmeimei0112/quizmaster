@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { normalizeText, calculateSimilarity } from "@/lib/similarity";
+import { normalizeText, calculateSimilarity, compareQuestionOptions } from "@/lib/similarity";
 
 // GET: 查詢題目列表與搜尋
 export async function GET(req: NextRequest) {
@@ -132,43 +132,77 @@ export async function POST(req: NextRequest) {
 
     // 後端防重複檢查 (如果沒有強制新增)
     if (!forceCreate) {
-      // 1. 優先使用 normalizedStem 索引進行 O(1) 精確重複命中偵測
-      const exactMatch = await prisma.question.findFirst({
+      // 1. 完全相同題幹偵測 (需同時比對選項是否一致)
+      const exactMatches = await prisma.question.findMany({
         where: { normalizedStem: normStem },
-        select: { id: true, stem: true, normalizedStem: true },
+        select: {
+          id: true,
+          stem: true,
+          normalizedStem: true,
+          optionA: true,
+          optionB: true,
+          optionC: true,
+          optionD: true,
+          correctAnswers: true,
+        },
       });
 
-      if (exactMatch) {
-        return NextResponse.json(
-          {
-            error: "題庫中已存在完全相同的題目！",
-            isDuplicate: true,
-            exactMatch: true,
-            matchedQuestion: exactMatch,
-          },
-          { status: 409 }
-        );
+      if (exactMatches.length > 0) {
+        const exactMatch = exactMatches.find((ex) => {
+          const optRes = compareQuestionOptions(
+            { optionA, optionB, optionC, optionD },
+            ex
+          );
+          return !optRes.hasOptions || optRes.isConsistent;
+        });
+
+        if (exactMatch) {
+          return NextResponse.json(
+            {
+              error: "題庫中已存在完全相同的題目（題幹與選項一致）！",
+              isDuplicate: true,
+              exactMatch: true,
+              matchedQuestion: exactMatch,
+            },
+            { status: 409 }
+          );
+        }
       }
 
-      // 2. 若無完全重複，比對模糊相似度
+      // 2. 模糊相似度比對 (嚴格以 80% 為界線，且選項亦高度一致才視為重複)
       const existing = await prisma.question.findMany({
-        select: { id: true, stem: true, normalizedStem: true },
+        select: {
+          id: true,
+          stem: true,
+          normalizedStem: true,
+          optionA: true,
+          optionB: true,
+          optionC: true,
+          optionD: true,
+          correctAnswers: true,
+        },
       });
 
       for (const item of existing) {
         const sim = calculateSimilarity(stem, item.stem);
-        if (sim.similarity >= 85) {
-          return NextResponse.json(
-            {
-              error: `發現極高相似度題目 (${sim.similarity}%)，請確認是否要重複新增`,
-              isDuplicate: true,
-              exactMatch: false,
-              similarity: sim.similarity,
-              matchedQuestion: item,
-              requiresConfirmation: true,
-            },
-            { status: 409 }
+        if (sim.similarity >= 80) {
+          const optRes = compareQuestionOptions(
+            { optionA, optionB, optionC, optionD },
+            item
           );
+          if (!optRes.hasOptions || optRes.isConsistent) {
+            return NextResponse.json(
+              {
+                error: `發現極高相似度題目 (${sim.similarity}%)，請確認是否要重複新增`,
+                isDuplicate: true,
+                exactMatch: false,
+                similarity: sim.similarity,
+                matchedQuestion: item,
+                requiresConfirmation: true,
+              },
+              { status: 409 }
+            );
+          }
         }
       }
     }

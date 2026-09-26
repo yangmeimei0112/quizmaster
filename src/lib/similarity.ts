@@ -196,7 +196,7 @@ export function calculateSimilarity(text1: string, text2: string): SimilarityRes
 
   let level: SimilarityResult["level"] = "NONE";
   if (similarity >= 95) level = "EXACT";
-  else if (similarity >= 75) level = "HIGH";
+  else if (similarity >= 80) level = "HIGH";
   else if (similarity >= 50) level = "MEDIUM";
   else if (similarity >= 30) level = "LOW";
 
@@ -204,5 +204,72 @@ export function calculateSimilarity(text1: string, text2: string): SimilarityRes
     similarity,
     isExact: similarity === 100,
     level,
+  };
+}
+
+export interface OptionsComparisonResult {
+  similarity: number; // 0 ~ 100
+  isConsistent: boolean; // similarity >= 80
+  hasOptions: boolean;
+  matchDetails?: string;
+}
+
+/**
+ * 比較兩道題目的選項 (A, B, C, D) 內容一致性
+ * 藉由 4! = 24 種全排列最佳二分圖配對，計算選項最大綜合相似度
+ * 相似度嚴格以 80% 為界線
+ */
+export function compareQuestionOptions(
+  opts1: { optionA?: string; optionB?: string; optionC?: string; optionD?: string },
+  opts2: { optionA?: string; optionB?: string; optionC?: string; optionD?: string }
+): OptionsComparisonResult {
+  const list1 = [opts1.optionA || "", opts1.optionB || "", opts1.optionC || "", opts1.optionD || ""].map((s) => s.trim());
+  const list2 = [opts2.optionA || "", opts2.optionB || "", opts2.optionC || "", opts2.optionD || ""].map((s) => s.trim());
+
+  const hasOpts1 = list1.some((s) => s.length > 0);
+  const hasOpts2 = list2.some((s) => s.length > 0);
+
+  if (!hasOpts1 || !hasOpts2) {
+    return { similarity: 100, isConsistent: true, hasOptions: false, matchDetails: "無選項資料" };
+  }
+
+  // 4 個選項全排列 (24 種配對組合)
+  const perms = [
+    [0,1,2,3],[0,1,3,2],[0,2,1,3],[0,2,3,1],[0,3,1,2],[0,3,2,1],
+    [1,0,2,3],[1,0,3,2],[1,2,0,3],[1,2,3,0],[1,3,0,2],[1,3,2,0],
+    [2,0,1,3],[2,0,3,1],[2,1,0,3],[2,1,3,0],[2,3,0,1],[2,3,1,0],
+    [3,0,1,2],[3,0,2,1],[3,1,0,2],[3,1,2,0],[3,2,0,1],[3,2,1,0],
+  ];
+
+  // 預算 4x4 相似度矩陣
+  const simMatrix: number[][] = [];
+  for (let i = 0; i < 4; i++) {
+    simMatrix[i] = [];
+    for (let j = 0; j < 4; j++) {
+      if (!list1[i] && !list2[j]) {
+        simMatrix[i][j] = 100;
+      } else if (!list1[i] || !list2[j]) {
+        simMatrix[i][j] = 0;
+      } else {
+        simMatrix[i][j] = calculateSimilarity(list1[i], list2[j]).similarity;
+      }
+    }
+  }
+
+  let maxAvgSim = 0;
+  for (const p of perms) {
+    const sum = simMatrix[0][p[0]] + simMatrix[1][p[1]] + simMatrix[2][p[2]] + simMatrix[3][p[3]];
+    const avg = Math.round(sum / 4);
+    if (avg > maxAvgSim) {
+      maxAvgSim = avg;
+    }
+  }
+
+  const isConsistent = maxAvgSim >= 80;
+  return {
+    similarity: maxAvgSim,
+    isConsistent,
+    hasOptions: true,
+    matchDetails: isConsistent ? `選項高度一致 (${maxAvgSim}%)` : `選項內容不一致 (${maxAvgSim}%)`,
   };
 }
