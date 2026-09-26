@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // 2. 若使用者已登入，更新或記錄至其個人專屬錯題本
+    // 2. 若使用者已登入，更新或記錄至其個人專屬錯題本與題目掌握作答進度
     let savedToPersonal = false;
     if (user) {
       await Promise.all(
@@ -187,6 +187,30 @@ export async function POST(req: NextRequest) {
               : false;
 
           try {
+            // 同步記錄或累計個人作答進度 (UserQuestionProgress)
+            await prisma.userQuestionProgress.upsert({
+              where: {
+                userId_questionId: {
+                  userId: user.id,
+                  questionId: item.questionId,
+                },
+              },
+              update: {
+                attemptCount: { increment: 1 },
+                ...(isCorrect ? { correctCount: { increment: 1 } } : {}),
+                lastAnswer: item.userAnswer || null,
+                updatedAt: new Date(),
+              },
+              create: {
+                userId: user.id,
+                questionId: item.questionId,
+                isMastered: false,
+                attemptCount: 1,
+                correctCount: isCorrect ? 1 : 0,
+                lastAnswer: item.userAnswer || null,
+              },
+            });
+
             if (!isCorrect) {
               // 答錯：upsert 錯題紀錄
               await prisma.wrongQuestionRecord.upsert({
@@ -234,7 +258,7 @@ export async function POST(req: NextRequest) {
               }
             }
           } catch (err) {
-            console.error("Update wrong record error:", err);
+            console.error("Update wrong record or question progress error:", err);
           }
         })
       );

@@ -23,8 +23,23 @@ export interface Question {
   countB?: number;
   countC?: number;
   countD?: number;
+  isMastered?: boolean;
+  isTested?: boolean;
   createdAt: string | Date;
   updatedAt: string | Date;
+}
+
+export interface UserQuestionProgress {
+  id: string;
+  userId: string;
+  questionId: string;
+  isMastered: boolean;
+  attemptCount: number;
+  correctCount: number;
+  lastAnswer?: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  question?: Question;
 }
 
 export interface User {

@@ -33,6 +33,7 @@ model Question {
   updatedAt      DateTime              @updatedAt
 
   wrongRecords   WrongQuestionRecord[]
+  userProgress   UserQuestionProgress[]
 
   @@index([normalizedStem])
   @@index([type])
@@ -41,14 +42,15 @@ model Question {
 }
 
 model User {
-  id           String                @id @default(cuid())
-  username     String                @unique
-  password     String
-  name         String?
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
+  id               String                 @id @default(cuid())
+  username         String                 @unique
+  password         String
+  name             String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
-  wrongRecords WrongQuestionRecord[]
+  wrongRecords     WrongQuestionRecord[]
+  questionProgress UserQuestionProgress[]
 }
 
 model WrongQuestionRecord {
@@ -68,4 +70,24 @@ model WrongQuestionRecord {
   @@unique([userId, questionId])
   @@index([userId])
   @@index([questionId])
+}
+
+model UserQuestionProgress {
+  id             String   @id @default(cuid())
+  userId         String
+  questionId     String
+  isMastered     Boolean  @default(false)
+  attemptCount   Int      @default(0)
+  correctCount   Int      @default(0)
+  lastAnswer     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question       Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId])
+  @@index([questionId])
+  @@index([isMastered])
 }

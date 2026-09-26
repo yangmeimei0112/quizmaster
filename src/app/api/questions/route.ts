@@ -1,15 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import { normalizeText, calculateSimilarity, compareQuestionOptions } from "@/lib/similarity";
 
 // GET: 查詢題目列表與搜尋
 export async function GET(req: NextRequest) {
   try {
+    const user = await getCurrentUser(req);
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim() || "";
     const type = searchParams.get("type") || "ALL";
     const category = searchParams.get("category") || "ALL";
     const difficulty = searchParams.get("difficulty") || "ALL";
+    const mode = searchParams.get("mode")?.toLowerCase();
+
+    // 檢查未曾測驗與我不會的題目登入權限
+    if ((mode === "untested" || mode === "unmastered") && !user) {
+      return NextResponse.json(
+        {
+          error: "此模式需登入使用，紀錄您的專屬作答軌跡",
+          requiresAuth: true,
+          questions: [],
+          stats: { total: 0, singleCount: 0, multipleCount: 0, categories: [] },
+        },
+        { status: 401 }
+      );
+    }
 
     // 建立篩選條件
     const where: any = {};
@@ -34,6 +50,46 @@ export async function GET(req: NextRequest) {
         { explanation: { contains: q } },
         { tags: { contains: q } },
       ];
+    }
+
+    // 處理掌握度與作答歷程
+    let progressMap: Record<string, { isMastered: boolean; attemptCount: number }> = {};
+    if (user) {
+      const [userProgressList, userWrongList] = await Promise.all([
+        prisma.userQuestionProgress.findMany({
+          where: { userId: user.id },
+        }),
+        prisma.wrongQuestionRecord.findMany({
+          where: { userId: user.id },
+          select: { questionId: true, totalAttempts: true, wrongCount: true },
+        }),
+      ]);
+
+      for (const wr of userWrongList) {
+        progressMap[wr.questionId] = {
+          isMastered: false,
+          attemptCount: wr.totalAttempts || wr.wrongCount || 1,
+        };
+      }
+      for (const p of userProgressList) {
+        progressMap[p.questionId] = {
+          isMastered: p.isMastered,
+          attemptCount: p.attemptCount,
+        };
+      }
+
+      if (mode === "untested") {
+        const testedIds = Object.keys(progressMap).filter(
+          (qid) => (progressMap[qid]?.attemptCount ?? 0) > 0
+        );
+        where.id = { notIn: testedIds };
+      } else if (mode === "unmastered") {
+        const unmasteredIds = Object.keys(progressMap).filter((qid) => {
+          const item = progressMap[qid];
+          return item && item.attemptCount > 0 && !item.isMastered;
+        });
+        where.id = { in: unmasteredIds };
+      }
     }
 
     const hasFilters = Object.keys(where).length > 0;

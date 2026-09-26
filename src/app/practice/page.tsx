@@ -17,9 +17,11 @@ import {
   AlertTriangle,
   FileDown,
   Maximize2,
+  Lightbulb,
 } from "lucide-react";
 import { Question } from "@/types/question";
 import { getCachedQuestions, setCachedQuestions } from "@/lib/questionsCache";
+import { useAuth } from "@/lib/AuthContext";
 import MockExamView from "@/components/practice/MockExamView";
 import WrongQuestionsRanking from "@/components/practice/WrongQuestionsRanking";
 import ExportModal from "@/components/ExportModal";
@@ -27,8 +29,10 @@ import ImageLightboxModal from "@/components/ImageLightboxModal";
 import ExplanationCard from "@/components/ExplanationCard";
 
 type PracticeMode = "NONE" | "INSTANT" | "MOCK_EXAM";
+type PracticeScope = "ALL" | "UNTESTED" | "UNMASTERED";
 
 export default function PracticePage() {
+  const { user, openAuthModal } = useAuth();
   const [allQuestions, setAllQuestions] = useState<Question[]>(() => getCachedQuestions() || []);
   const [quizQueue, setQuizQueue] = useState<Question[]>([]);
   const [mockExamQueue, setMockExamQueue] = useState<Question[]>([]);
@@ -40,8 +44,14 @@ export default function PracticePage() {
   const [quizMode, setQuizMode] = useState<PracticeMode>("NONE");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  // 即時測驗設定
+  // 即時測驗設定：題型與練習範圍偏好
   const [selectedType, setSelectedType] = useState<string>("ALL");
+  const [selectedScope, setSelectedScope] = useState<PracticeScope>("ALL");
+  const [userMastery, setUserMastery] = useState<
+    Record<string, { isMastered: boolean; attemptCount: number; correctCount?: number }>
+  >({});
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
+  const [isMasteryUpdating, setIsMasteryUpdating] = useState(false);
 
   // 即時測驗進行狀態
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -71,13 +81,71 @@ export default function PracticePage() {
     loadQuestions();
   }, []);
 
-  // 依篩選過濾可用的題目 (即時練習模式)
+  // 載入使用者題目掌握度資料
+  const fetchMastery = useCallback(async () => {
+    if (!user) {
+      setUserMastery({});
+      return;
+    }
+    try {
+      const res = await fetch("/api/practice/mastery");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.progressMap) {
+          setUserMastery(data.progressMap);
+        }
+      }
+    } catch (err) {
+      console.error("載入題目掌握度失敗:", err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchMastery();
+  }, [fetchMastery]);
+
+  // 使用者若登出，自動將篩選範圍退回全部
+  useEffect(() => {
+    if (!user && selectedScope !== "ALL") {
+      setSelectedScope("ALL");
+      setAuthNotice(null);
+    }
+  }, [user, selectedScope]);
+
+  // 切換練習範圍偏好 (未登入阻擋防呆)
+  const handleSelectScope = useCallback(
+    (scope: PracticeScope) => {
+      if (scope !== "ALL" && !user) {
+        setAuthNotice("此模式需登入使用，紀錄您的專屬作答軌跡");
+        openAuthModal("login");
+        return;
+      }
+      setAuthNotice(null);
+      setSelectedScope(scope);
+    },
+    [user, openAuthModal]
+  );
+
+  // 依篩選過濾可用的題目 (即時練習模式：題型偏好 + 掌握度偏好)
   const filteredQuestions = useMemo(() => {
     return allQuestions.filter((q) => {
+      // 1. 題型篩選
       if (selectedType !== "ALL" && q.type !== selectedType) return false;
+
+      // 2. 練習範圍/偏好篩選
+      if (selectedScope === "UNTESTED") {
+        const prog = userMastery[q.id];
+        // 該登入使用者未曾作答過 (無紀錄或 attemptCount === 0)
+        if (prog && prog.attemptCount > 0) return false;
+      } else if (selectedScope === "UNMASTERED") {
+        const prog = userMastery[q.id];
+        // 曾作答但尚未標記為「我會了」(isMastered: false)
+        if (!prog || prog.attemptCount === 0 || prog.isMastered) return false;
+      }
+
       return true;
     });
-  }, [allQuestions, selectedType]);
+  }, [allQuestions, selectedType, selectedScope, userMastery]);
 
   // 開始即時隨機練習
   const handleStartQuiz = useCallback(() => {
@@ -176,6 +244,54 @@ export default function PracticePage() {
     [isAnswerSubmitted, currentQ]
   );
 
+  // 切換「這題我會了」掌握度狀態 (即時同步後端資料庫)
+  const handleToggleMastery = useCallback(async () => {
+    if (!currentQ) return;
+    if (!user) {
+      setAuthNotice("登入後即可標記個人掌握狀態，精準複習弱項");
+      openAuthModal("login");
+      return;
+    }
+
+    const currentStatus = !!userMastery[currentQ.id]?.isMastered;
+    const newStatus = !currentStatus;
+
+    // 樂觀更新狀態
+    setUserMastery((prev) => ({
+      ...prev,
+      [currentQ.id]: {
+        isMastered: newStatus,
+        attemptCount: Math.max(prev[currentQ.id]?.attemptCount || 1, 1),
+        correctCount: prev[currentQ.id]?.correctCount || 0,
+      },
+    }));
+
+    setIsMasteryUpdating(true);
+    try {
+      const res = await fetch("/api/practice/mastery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId: currentQ.id, isMastered: newStatus }),
+      });
+      if (!res.ok) {
+        throw new Error("更新掌握狀態失敗");
+      }
+    } catch (err) {
+      console.error("Mastery toggle failed:", err);
+      // 失敗時復原
+      setUserMastery((prev) => ({
+        ...prev,
+        [currentQ.id]: {
+          isMastered: currentStatus,
+          attemptCount: prev[currentQ.id]?.attemptCount || 1,
+          correctCount: prev[currentQ.id]?.correctCount || 0,
+        },
+      }));
+    } finally {
+      setIsMasteryUpdating(false);
+    }
+  }, [currentQ, user, userMastery, openAuthModal]);
+
   // 即時練習：提交作答並揭曉
   const handleSubmitAnswer = useCallback(() => {
     if (selectedAnswers.length === 0 || !currentQ) return;
@@ -188,7 +304,19 @@ export default function PracticePage() {
       setScore((s) => s + 1);
     }
 
-    // 無論答對或答錯，均即時非同步記錄至後端統計與錯題系統
+    // 標記該題已測驗過至本地掌握進度
+    if (user) {
+      setUserMastery((prev) => ({
+        ...prev,
+        [currentQ.id]: {
+          isMastered: prev[currentQ.id]?.isMastered ?? false,
+          attemptCount: (prev[currentQ.id]?.attemptCount ?? 0) + 1,
+          correctCount: (prev[currentQ.id]?.correctCount ?? 0) + (isCorrect ? 1 : 0),
+        },
+      }));
+    }
+
+    // 無論答對或答錯，均即時非同步記錄至後端統計與錯題系統（同時同步 UserQuestionProgress）
     fetch("/api/wrong-questions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -196,7 +324,7 @@ export default function PracticePage() {
     }).catch(console.error);
 
     setIsAnswerSubmitted(true);
-  }, [selectedAnswers, currentQ]);
+  }, [selectedAnswers, currentQ, user]);
 
   // 即時練習：下一題
   const handleNextQuestion = useCallback(() => {
@@ -540,6 +668,62 @@ export default function PracticePage() {
                 </div>
               )}
 
+              {/* 【💡 這題我會了】掌握度標記按鈕 (位於選項與解析中間) */}
+              {(() => {
+                const isMastered = !!userMastery[currentQ.id]?.isMastered;
+                return (
+                  <div className="pt-1 pb-1">
+                    <button
+                      type="button"
+                      data-mastery-btn="true"
+                      onClick={handleToggleMastery}
+                      disabled={isMasteryUpdating}
+                      className={`w-full py-3.5 px-4 rounded-2xl font-bold font-game text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all duration-300 border touch-manipulation touch-tactile ${
+                        !user
+                          ? "bg-white/[0.03] text-foreground-muted border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.15] cursor-pointer"
+                          : isMastered
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.35)] ring-1 ring-emerald-500/40 hover:bg-emerald-500/30"
+                          : "bg-white/[0.04] text-foreground-muted hover:text-foreground border-white/[0.1] hover:border-amber-400/40 hover:bg-amber-400/5"
+                      }`}
+                      title={
+                        !user
+                          ? "登入後即可標記個人掌握狀態，精準複習弱項"
+                          : isMastered
+                          ? "點擊取消「這題我會了」標記"
+                          : "點擊標記為「這題我會了」"
+                      }
+                    >
+                      {isMastered ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 animate-scale-in" />
+                          <span className="text-emerald-300 font-bold">✓ 已掌握（這題我會了）</span>
+                          <span className="text-[11px] text-emerald-400/70 font-normal ml-1 hidden sm:inline">
+                            (再次點擊可取消標記)
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Lightbulb className="w-4 h-4 text-amber-400 animate-pulse" />
+                          <span className={user ? "text-foreground font-semibold" : "text-foreground-muted"}>
+                            💡 標記為「這題我會了」
+                          </span>
+                          {!user && (
+                            <span className="text-[10px] bg-white/[0.08] text-foreground-muted px-2 py-0.5 rounded-full ml-1">
+                              需登入
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </button>
+                    {!user && (
+                      <p className="text-[11px] text-center text-foreground-muted/70 mt-1.5">
+                        🔒 登入後即可標記個人掌握狀態，精準複習弱項
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
               {currentQ.explanation && currentQ.explanation.trim() && (
                 <ExplanationCard
                   explanation={currentQ.explanation}
@@ -680,41 +864,111 @@ export default function PracticePage() {
               </p>
             </div>
 
-            {/* 題型偏好選擇 */}
-            <div className="space-y-2 text-xs pt-1">
-              <label className="font-bold font-game text-foreground">題型偏好：</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { key: "ALL", label: "全部題型" },
-                  { key: "SINGLE", label: "僅單選題" },
-                  { key: "MULTIPLE", label: "僅複選題" },
-                ].map((t) => {
-                  const isSelected = selectedType === t.key;
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => setSelectedType(t.key)}
-                      className={`min-h-[44px] p-2.5 rounded-xl font-bold font-game text-xs border text-center flex items-center justify-center transition-all ${
-                        isSelected
-                          ? "bg-white/[0.12] text-foreground border-white/[0.2] shadow-sm font-semibold"
-                          : "bg-white/[0.03] text-foreground-muted border-white/[0.06] hover:bg-white/[0.06] hover:text-foreground"
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  );
-                })}
+            {/* 練習範圍與題型偏好選擇 */}
+            <div className="space-y-3.5 pt-1">
+              {/* 題目練習範圍偏好 */}
+              <div className="space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold font-game text-foreground flex items-center gap-1.5">
+                    <span>練習題目偏好：</span>
+                    {!user && (
+                      <span className="text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/25">
+                        進階篩選需登入
+                      </span>
+                    )}
+                  </label>
+                  {authNotice && (
+                    <span className="text-[11px] text-amber-300 font-medium animate-fade-in">
+                      {authNotice}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    { key: "ALL", label: "全部題目" },
+                    { key: "UNTESTED", label: "未曾測驗的題目" },
+                    { key: "UNMASTERED", label: "測驗我不會的題目" },
+                  ].map((s) => {
+                    const isSelected = selectedScope === s.key;
+                    const isLocked = s.key !== "ALL" && !user;
+                    return (
+                      <button
+                        key={s.key}
+                        type="button"
+                        onClick={() => handleSelectScope(s.key as PracticeScope)}
+                        className={`min-h-[44px] p-2.5 rounded-xl font-bold font-game text-xs border text-center flex items-center justify-center gap-1.5 transition-all ${
+                          isSelected
+                            ? "bg-accent/25 text-white border-accent/60 shadow-[0_0_15px_rgba(94,106,210,0.35)] ring-1 ring-accent/50"
+                            : isLocked
+                            ? "bg-white/[0.02] text-foreground-muted border-white/[0.05] hover:bg-white/[0.05] hover:border-amber-500/30 cursor-pointer"
+                            : "bg-white/[0.03] text-foreground-muted border-white/[0.06] hover:bg-white/[0.06] hover:text-foreground"
+                        }`}
+                        title={isLocked ? "此模式需登入使用，紀錄您的專屬作答軌跡" : undefined}
+                      >
+                        <span>{s.label}</span>
+                        {isLocked && <span className="text-[11px]">🔒</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 題型偏好選擇 */}
+              <div className="space-y-1.5 text-xs">
+                <label className="font-bold font-game text-foreground">題型偏好：</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { key: "ALL", label: "全部題型" },
+                    { key: "SINGLE", label: "僅單選題" },
+                    { key: "MULTIPLE", label: "僅複選題" },
+                  ].map((t) => {
+                    const isSelected = selectedType === t.key;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => setSelectedType(t.key)}
+                        className={`min-h-[44px] p-2.5 rounded-xl font-bold font-game text-xs border text-center flex items-center justify-center transition-all ${
+                          isSelected
+                            ? "bg-white/[0.12] text-foreground border-white/[0.2] shadow-sm font-semibold"
+                            : "bg-white/[0.03] text-foreground-muted border-white/[0.06] hover:bg-white/[0.06] hover:text-foreground"
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* 數量提示 */}
-            <div className="text-xs text-foreground-muted flex items-center gap-1.5 pt-1">
-              <span>可練習題目：</span>
-              <strong className="text-cyan-300 font-mono font-bold text-sm">
-                {filteredQuestions.length}
-              </strong>
-              <span>題</span>
+            {/* 數量提示與狀態說明 */}
+            <div className="space-y-2 pt-1 text-xs">
+              <div className="text-foreground-muted flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span>符合條件題目：</span>
+                  <strong className="text-cyan-300 font-mono font-bold text-sm">
+                    {filteredQuestions.length}
+                  </strong>
+                  <span>題</span>
+                </div>
+                {selectedScope !== "ALL" && (
+                  <span className="text-[11px] text-[#9AA5FF] font-medium">
+                    {selectedScope === "UNTESTED" ? "已排除曾測驗題" : "僅含做錯或未掌握題"}
+                  </span>
+                )}
+              </div>
+
+              {filteredQuestions.length === 0 && (
+                <div className="p-3 rounded-xl bg-accent/10 border border-accent/25 text-[#9AA5FF] text-xs leading-relaxed animate-fade-in">
+                  {selectedScope === "UNMASTERED"
+                    ? "🎉 太棒了！您目前沒有未掌握的題目，可選擇「未曾測驗」或「全部題目」繼續挑戰！"
+                    : selectedScope === "UNTESTED"
+                    ? "🎉 厲害！題庫中的題目您皆已測驗過，可切換至「測驗我不會的題目」進行弱項精準複習！"
+                    : "目前暫無符合條件的題目，請嘗試調整篩選偏好。"}
+                </div>
+              )}
             </div>
           </div>
 
