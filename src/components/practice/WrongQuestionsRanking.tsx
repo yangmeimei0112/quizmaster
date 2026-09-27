@@ -8,7 +8,6 @@ import {
   Lock,
   ChevronDown,
   ChevronUp,
-  Search,
   RotateCcw,
   Trophy,
 } from "lucide-react";
@@ -136,7 +135,6 @@ export default function WrongQuestionsRanking({
   // In-Place Downward Smooth Expansion State (#11+)
   const [isExpandedBeyond10, setIsExpandedBeyond10] = useState(false);
   const [isBeyond10Loading, setIsBeyond10Loading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"ALL" | "SINGLE" | "MULTIPLE">("ALL");
   const question10Ref = useRef<HTMLDivElement>(null);
 
@@ -187,7 +185,6 @@ export default function WrongQuestionsRanking({
   const handleTabChange = (tab: "personal" | "global") => {
     setActiveTab(tab);
     setIsExpandedBeyond10(false);
-    setSearchQuery("");
     setTypeFilter("ALL");
   };
 
@@ -236,22 +233,9 @@ export default function WrongQuestionsRanking({
         if (typeFilter === "SINGLE" && q.type !== "SINGLE") return false;
         if (typeFilter === "MULTIPLE" && q.type !== "MULTIPLE") return false;
 
-        // Search query filter: stem, category, options, explanation
-        if (searchQuery && searchQuery.trim()) {
-          const qLower = searchQuery.trim().toLowerCase();
-          const matchStem = q.stem && q.stem.toLowerCase().includes(qLower);
-          const matchA = q.optionA && q.optionA.toLowerCase().includes(qLower);
-          const matchB = q.optionB && q.optionB.toLowerCase().includes(qLower);
-          const matchC = q.optionC && q.optionC.toLowerCase().includes(qLower);
-          const matchD = q.optionD && q.optionD.toLowerCase().includes(qLower);
-          const matchExp = q.explanation && q.explanation.toLowerCase().includes(qLower);
-          const matchCat = q.category && q.category.toLowerCase().includes(qLower);
-          return matchStem || matchA || matchB || matchC || matchD || matchExp || matchCat;
-        }
-
         return true;
       });
-  }, [activeTab, personalRecords, globalQuestions, typeFilter, searchQuery]);
+  }, [activeTab, personalRecords, globalQuestions, typeFilter]);
 
   // Render in-place downward smooth expansion section
   const renderExpandedSection = () => {
@@ -260,56 +244,42 @@ export default function WrongQuestionsRanking({
 
     return (
       <div className="pt-4 border-t border-white/10 space-y-4 animate-fade-in-down">
-        {/* Header with Search and Question Type Filter Tabs */}
-        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-rose-400" />
-              <span className="text-sm font-bold font-game text-foreground">
-                {activeTab === "personal"
-                  ? "個人專屬錯題本 · 排行榜以外錯題"
-                  : "全站高頻錯題 · 排行榜以外錯題"}
-              </span>
-              <span className="text-xs text-foreground-muted">
-                (第 11 題起，共 {remainingCount} 題)
-              </span>
-            </div>
-
-            {/* Question Type Filter Tabs: 全部, 單選題, 複選題 */}
-            <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06] shrink-0 self-start sm:self-center">
-              {(
-                [
-                  { label: "全部", value: "ALL" },
-                  { label: "單選題", value: "SINGLE" },
-                  { label: "複選題", value: "MULTIPLE" },
-                ] as const
-              ).map((t) => (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => setTypeFilter(t.value)}
-                  className={`min-h-[36px] sm:min-h-[32px] px-3 py-1 rounded-lg text-xs font-game font-bold transition-all touch-tactile ${
-                    typeFilter === t.value
-                      ? "bg-[#9AA5FF] text-slate-950 shadow-md font-black"
-                      : "text-foreground-muted hover:text-foreground"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+        {/* Header with Question Type Filter Tabs */}
+        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Flame className="w-4 h-4 text-rose-400" />
+            <span className="text-sm font-bold font-game text-foreground">
+              {activeTab === "personal"
+                ? "個人專屬錯題本 · 排行榜以外錯題"
+                : "全站高頻錯題 · 排行榜以外錯題"}
+            </span>
+            <span className="text-xs text-foreground-muted">
+              (第 11 題起，共 {remainingCount} 題)
+            </span>
           </div>
 
-          {/* Search Input */}
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜尋錯題題幹關鍵字、選項、解析或分類..."
-              className="w-full min-h-[44px] pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.10] text-base sm:text-sm text-foreground placeholder-white/30 focus:outline-none focus:border-accent shadow-inner"
-            />
+          {/* Question Type Filter Tabs: 全部, 單選題, 複選題 */}
+          <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06] shrink-0 self-start sm:self-center">
+            {(
+              [
+                { label: "全部", value: "ALL" },
+                { label: "單選題", value: "SINGLE" },
+                { label: "複選題", value: "MULTIPLE" },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setTypeFilter(t.value)}
+                className={`min-h-[36px] sm:min-h-[32px] px-3 py-1 rounded-lg text-xs font-game font-bold transition-all touch-tactile ${
+                  typeFilter === t.value
+                    ? "bg-[#9AA5FF] text-slate-950 shadow-md font-black"
+                    : "text-foreground-muted hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
         </div>
 
