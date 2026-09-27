@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { BattlePlayer } from "@/lib/battleStore";
 import AnimalAvatar from "./AnimalAvatar";
-import { Trophy, ChevronUp, ChevronDown, Check, X, Crown, Users } from "lucide-react";
+import { Trophy, ChevronUp, ChevronDown, Check, X, Crown, Users, Flag } from "lucide-react";
 
 interface CompetitorLiveBoardProps {
   players: BattlePlayer[];
@@ -157,7 +157,9 @@ export default function CompetitorLiveBoard({
                   <div className="flex items-center justify-between gap-2 mt-1 text-[11px]">
                     <span className="text-foreground-muted">
                       {player.isFinished ? (
-                        <span className="text-emerald-400 font-bold">🏁 完賽</span>
+                        <span className="text-emerald-400 font-bold inline-flex items-center gap-1">
+                          <Flag className="w-3 h-3" /> 完賽
+                        </span>
                       ) : (
                         <span>
                           第 <strong className="text-foreground">{player.currentIndex + 1}</strong>/

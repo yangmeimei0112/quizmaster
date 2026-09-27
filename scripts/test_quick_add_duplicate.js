@@ -229,8 +229,8 @@ async function runAllTests() {
 
   console.log("\n--- 3. 膠囊切換標記與卡片警示靜態驗證 ---");
 
-  test("切換膠囊標籤: 100% 完全重複鮮紅標籤 (⚠️已重複)", () => {
-    assert(quickAddContent.includes("(⚠️已重複)"), "膠囊缺少 (⚠️已重複) 鮮紅標籤");
+  test("切換膠囊標籤: 100% 完全重複鮮紅標籤 (已重複)", () => {
+    assert(quickAddContent.includes("已重複"), "膠囊缺少 已重複 鮮紅標籤");
     assert(quickAddContent.includes("bg-rose-600") || quickAddContent.includes("bg-rose-500"), "缺少鮮紅色高亮樣式");
   });
 
@@ -244,12 +244,12 @@ async function runAllTests() {
   });
 
   test("編輯卡片頂部警示橫幅: 100% 完全重複橫幅與題幹展示", () => {
-    assert(quickAddContent.includes("⚠️ 題庫中已有完全相同 (100%) 的題目"), "卡片缺少 100% 完全相同題目警示橫幅");
+    assert(quickAddContent.includes("題庫中已有完全相同 (100%) 的題目"), "卡片缺少 100% 完全相同題目警示橫幅");
     assert(quickAddContent.includes("currentDup.matchedStem"), "警示橫幅需展示題庫已存在之題幹內容");
   });
 
   test("編輯卡片頂部警示橫幅: 高度相似警示橫幅", () => {
-    assert(quickAddContent.includes("⚠️ 發現高度相似題目"), "卡片缺少高度相似題目警示橫幅");
+    assert(quickAddContent.includes("發現高度相似題目"), "卡片缺少高度相似題目警示橫幅");
   });
 
   console.log("\n--- 4. 多題批次排除與按鈕控制邏輯 ---");

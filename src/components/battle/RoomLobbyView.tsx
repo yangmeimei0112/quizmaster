@@ -17,6 +17,7 @@ import {
   ListOrdered,
   Sparkles,
   Palette,
+  X,
 } from "lucide-react";
 import { battleAudio } from "@/lib/battleAudio";
 
@@ -463,8 +464,9 @@ export default function RoomLobbyView({
                 type="button"
                 onClick={() => setShowAvatarModal(false)}
                 className="min-h-[44px] min-w-[44px] flex items-center justify-center text-foreground-muted hover:text-foreground"
+                aria-label="關閉"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { getAnimalAvatar } from "@/lib/avatars";
+import { Sparkles } from "lucide-react";
 
 interface AnimalAvatarProps {
   id: string;
@@ -36,7 +37,7 @@ export default function AnimalAvatar({
   const renderAnimalFace = (avatarId: string) => {
     switch (avatarId) {
       case "shiba":
-        // 🐕 元氣柴柴：麻糬鼓腮包子臉、水汪汪雙高光大眼、白麻糬眉豆、吐舌微笑
+        // 元氣柴柴：麻糬鼓腮包子臉、水汪汪雙高光大眼、白麻糬眉豆、吐舌微笑
         return (
           <g>
             <defs>
@@ -90,7 +91,7 @@ export default function AnimalAvatar({
         );
 
       case "panda":
-        // 🐼 呆萌胖達：圓滾大福臉、八字萌萌黑眼圈、水潤大眼、嘴咬鮮脆小竹葉
+        // 呆萌胖達：圓滾大福臉、八字萌萌黑眼圈、水潤大眼、嘴咬鮮脆小竹葉
         return (
           <g>
             <defs>
@@ -136,7 +137,7 @@ export default function AnimalAvatar({
         );
 
       case "fox":
-        // 🦊 機靈赤狐：蓬鬆雪白雙頰、靈動雙高光大眼、俏皮 :3 微笑、暖橘絨耳
+        // 機靈赤狐：蓬鬆雪白雙頰、靈動雙高光大眼、俏皮 :3 微笑、暖橘絨耳
         return (
           <g>
             <defs>
@@ -187,7 +188,7 @@ export default function AnimalAvatar({
         );
 
       case "lion":
-        // 🦁 王者小獅：向日葵波浪雲朵鬃毛、歪戴微光小金冠、陽光純真大眼、活力大笑
+        // 王者小獅：向日葵波浪雲朵鬃毛、歪戴微光小金冠、陽光純真大眼、活力大笑
         return (
           <g>
             <defs>
@@ -248,7 +249,7 @@ export default function AnimalAvatar({
         );
 
       case "tiger":
-        // 🐯 閃電小虎：圓圓小虎耳、額前迷你萌萌王字斑、蜜桃腮紅、微露尖萌乳牙
+        // 閃電小虎：圓圓小虎耳、額前迷你萌萌王字斑、蜜桃腮紅、微露尖萌乳牙
         return (
           <g>
             <defs>
@@ -303,7 +304,7 @@ export default function AnimalAvatar({
         );
 
       case "koala":
-        // 🐨 悠哉無尾熊：棉花糖超大圓耳、軟萌大黑橡膠鼻、睡眼萌感、尤加利小萌葉
+        // 悠哉無尾熊：棉花糖超大圓耳、軟萌大黑橡膠鼻、睡眼萌感、尤加利小萌葉
         return (
           <g>
             <defs>
@@ -352,7 +353,7 @@ export default function AnimalAvatar({
         );
 
       case "penguin":
-        // 🐧 滑雪企鵝：飯糰蛋蛋球體、頭戴粉萌毛線帽、心形天使面盤、扁圓亮橘小嘴
+        // 滑雪企鵝：飯糰蛋蛋球體、頭戴粉萌毛線帽、心形天使面盤、扁圓亮橘小嘴
         return (
           <g>
             <defs>
@@ -397,7 +398,7 @@ export default function AnimalAvatar({
         );
 
       case "rabbit":
-        // 🐰 活力兔兔：軟萌粉白包子臉、一垂一立俏皮折耳、紅寶石星光大眼、小白花飾品
+        // 活力兔兔：軟萌粉白包子臉、一垂一立俏皮折耳、紅寶石星光大眼、小白花飾品
         return (
           <g>
             <defs>
@@ -444,7 +445,7 @@ export default function AnimalAvatar({
         );
 
       case "cat":
-        // 🐱 喵星守衛：微尖紫羅蘭貓耳、琉璃金星光大眼、下垂軟萌小鬍鬚、:3 波浪波波嘴
+        // 喵星守衛：微尖紫羅蘭貓耳、琉璃金星光大眼、下垂軟萌小鬍鬚、:3 波浪波波嘴
         return (
           <g>
             <defs>
@@ -499,7 +500,7 @@ export default function AnimalAvatar({
         );
 
       case "owl":
-        // 🦉 智者貓頭鷹：木木梟球形呆萌感、大圓黑框學者眼鏡、水汪汪雙瞳、胸口愛心羽毛
+        // 智者貓頭鷹：木木梟球形呆萌感、大圓黑框學者眼鏡、水汪汪雙瞳、胸口愛心羽毛
         return (
           <g>
             <defs>
@@ -542,7 +543,7 @@ export default function AnimalAvatar({
         );
 
       case "deer":
-        // 🦌 森之小鹿：小芽小鹿角、下垂無辜鹿眼、額頭白斑點、粉嫩仙氣小仙子
+        // 森之小鹿：小芽小鹿角、下垂無辜鹿眼、額頭白斑點、粉嫩仙氣小仙子
         return (
           <g>
             <defs>
@@ -596,7 +597,7 @@ export default function AnimalAvatar({
         );
 
       case "monkey":
-        // 🐵 敏捷小猴：超大圓圓招風耳、愛心桃子面盤、調皮單眼眨眼 Wink 😉、可愛酒窩
+        // 敏捷小猴：超大圓圓招風耳、愛心桃子面盤、調皮單眼眨眼 Wink、可愛酒窩
         return (
           <g>
             <defs>
@@ -632,7 +633,7 @@ export default function AnimalAvatar({
               <circle cx="36.5" cy="46" r="2" fill="#FFFFFF" />
               <circle cx="39.5" cy="51" r="1" fill="#FFFFFF" opacity="0.8" />
             </g>
-            {/* Right eye: Playful Wink 😉 */}
+            {/* Right eye: Playful Wink */}
             <path d="M 58,49 Q 63,43 68,49" stroke="#1E293B" strokeWidth="2.8" strokeLinecap="round" fill="none" />
 
             {/* Tiny Nostrils & Big Grin with Dimples */}
@@ -673,10 +674,10 @@ export default function AnimalAvatar({
       {/* Mini badge icon if enabled */}
       {showBadge && (
         <span
-          className="absolute -bottom-1 -right-1 text-xs sm:text-sm px-1 rounded-full border border-black/40 shadow-sm"
+          className="absolute -bottom-1 -right-1 text-xs sm:text-sm p-0.5 rounded-full border border-black/40 shadow-sm flex items-center justify-center"
           style={{ backgroundColor: avatar.primaryColor }}
         >
-          {avatar.emoji}
+          <Sparkles className="w-2.5 h-2.5 text-white" />
         </span>
       )}
     </div>

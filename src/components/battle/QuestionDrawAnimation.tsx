@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Sparkles, Dices, Layers, ShieldCheck, Zap } from "lucide-react";
+import { Sparkles, Dices, Layers, ShieldCheck, Zap, Rocket, ArrowRight } from "lucide-react";
 import { BattleQuestion } from "@/lib/battleStore";
 import { battleAudio } from "@/lib/battleAudio";
 
@@ -117,7 +117,7 @@ export default function QuestionDrawAnimation({
         </div>
         <h2 className="text-2xl sm:text-3xl font-extrabold font-game text-foreground tracking-tight drop-shadow-md">
           {phase === "ROLLING" && "正在高速抽取本場對戰題目..."}
-          {phase === "LOCKED" && "✦ 題庫鎖定！本場題目已確認 ✦"}
+          {phase === "LOCKED" && "題庫鎖定！本場題目已確認"}
           {phase === "COUNTDOWN" && "各就各位 · 對戰即將展開！"}
         </h2>
         <div className="flex items-center justify-center gap-2 text-xs text-foreground-muted">
@@ -179,7 +179,7 @@ export default function QuestionDrawAnimation({
                     : "bg-white/[0.04] border-white/[0.08] text-foreground-muted scale-95 opacity-50"
                 }`}
               >
-                第 {idx + 1} 題 ✦
+                第 {idx + 1} 題
               </div>
             ))}
             {questions.length > 5 && (
@@ -210,7 +210,14 @@ export default function QuestionDrawAnimation({
             </div>
           </div>
           <p className="mt-8 text-sm font-game font-bold text-foreground-muted tracking-wider">
-            {countdownNum === "GO!" ? "🚀 戰鬥開始！全速衝刺！" : "即將開始作答..."}
+            {countdownNum === "GO!" ? (
+              <span className="inline-flex items-center gap-1.5 text-accent-bright font-black">
+                <Rocket className="w-4 h-4" />
+                戰鬥開始！全速衝刺！
+              </span>
+            ) : (
+              "即將開始作答..."
+            )}
           </p>
         </div>
       )}
@@ -220,9 +227,10 @@ export default function QuestionDrawAnimation({
         <button
           type="button"
           onClick={onComplete}
-          className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-semibold text-foreground-muted hover:text-foreground bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all touch-tactile"
+          className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-semibold text-foreground-muted hover:text-foreground bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all touch-tactile inline-flex items-center gap-1.5"
         >
-          跳過動畫，直接進入作答 ➔
+          <span>跳過動畫，直接進入作答</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

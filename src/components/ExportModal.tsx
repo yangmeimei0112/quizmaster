@@ -498,9 +498,9 @@ export default function ExportModal({
       <body>
         <div class="no-print">
           <div>
-            <strong>💡 列印提示：</strong>在即將彈出的列印視窗中，請將「目的地」選擇為 <strong>「另存為 PDF (Save as PDF)」</strong> 即可下載為高品質 PDF 試卷。
+            <strong>列印提示：</strong>在即將彈出的列印視窗中，請將「目的地」選擇為 <strong>「另存為 PDF (Save as PDF)」</strong> 即可下載為高品質 PDF 試卷。
           </div>
-          <button class="btn-print" onclick="window.print()">🖨️ 點此列印 / 另存為 PDF</button>
+          <button class="btn-print" onclick="window.print()">點此列印 / 另存為 PDF</button>
         </div>
 
         <div class="exam-header">
@@ -735,8 +735,9 @@ export default function ExportModal({
                   {exportMode === "RANDOM_50" && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                 </div>
                 <div>
-                  <div className="font-bold font-game text-xs text-foreground flex items-center gap-1">
-                    <span>🎲 隨機抓 50 題考卷</span>
+                  <div className="font-bold font-game text-xs text-foreground flex items-center gap-1.5">
+                    <Dice5 className="w-3.5 h-3.5 text-accent-bright" />
+                    <span>隨機抓 50 題考卷</span>
                   </div>
                   <div className="text-[11px] text-foreground-muted leading-tight mt-0.5">
                     系統隨機混合單選與複選題抽出 50 題。
@@ -747,8 +748,9 @@ export default function ExportModal({
 
             {exportMode === "RANDOM_50" && (
               <div className="mt-2 p-2.5 rounded-xl bg-accent/10 border border-accent/25 text-[11px] text-[#C5CCFF] flex items-center justify-between">
-                <span>
-                  ✓ 已隨機抽選 <strong>{activeQuestions.length}</strong> 道題目（單選 {singleCount} 題 · 複選 {multipleCount} 題）
+                <span className="inline-flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>已隨機抽選 <strong>{activeQuestions.length}</strong> 道題目（單選 {singleCount} 題 · 複選 {multipleCount} 題）</span>
                 </span>
                 <span className="text-[10px] text-[#9AA5FF] font-mono">滿分100分</span>
               </div>

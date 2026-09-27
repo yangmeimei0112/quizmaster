@@ -20,6 +20,7 @@ import {
   Trophy,
   X,
   BookOpen,
+  Swords,
 } from "lucide-react";
 import BattleReviewPanel from "./BattleReviewPanel";
 
@@ -370,8 +371,9 @@ export default function BattlePlayView({
       {/* Top Bar: Progress, Room Info, Mute Toggle, Mobile Board Trigger */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <span className="font-game font-bold text-sm px-3 py-1 rounded-xl bg-accent/20 text-[#9AA5FF] border border-accent/40">
-            ⚔️ 對戰中 · 房號 {room.code}
+          <span className="font-game font-bold text-sm px-3 py-1 rounded-xl bg-accent/20 text-[#9AA5FF] border border-accent/40 inline-flex items-center gap-1.5">
+            <Swords className="w-3.5 h-3.5 text-accent" />
+            <span>對戰中 · 房號 {room.code}</span>
           </span>
           <span className="text-xs text-foreground-muted hidden sm:inline">
             題目順序：{room.settings.orderMode === "RANDOM" ? "隨機亂序" : "全員同序"}
@@ -566,7 +568,7 @@ export default function BattlePlayView({
                   <Sparkles className="w-8 h-8" />
                 </div>
                 <h3 className="text-2xl font-black font-game text-foreground">
-                  🎉 你已完成所有題目！
+                  你已完成所有題目！
                 </h3>
                 <p className="text-sm text-foreground-muted max-w-md mx-auto leading-relaxed">
                   最終得分：<strong className="text-amber-400 font-game text-lg">{stats.score} 分</strong>
@@ -578,9 +580,10 @@ export default function BattlePlayView({
                   <button
                     type="button"
                     onClick={onFinishBattle}
-                    className="min-h-[46px] px-6 py-2.5 rounded-xl font-game font-bold text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-lg hover:brightness-110 transition-all touch-tactile"
+                    className="min-h-[46px] px-6 py-2.5 rounded-xl font-game font-bold text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-lg hover:brightness-110 transition-all touch-tactile inline-flex items-center justify-center gap-2"
                   >
-                    提前前往結算頒獎台 🏆
+                    <span>提前前往結算頒獎台</span>
+                    <Trophy className="w-4 h-4 text-black" />
                   </button>
                 </div>
               </div>
@@ -591,7 +594,7 @@ export default function BattlePlayView({
                 userAnswers={Object.keys(localAnswers).length > 0 ? localAnswers : userAnswers}
                 collapsible={true}
                 defaultExpanded={true}
-                title="📝 本局考題覆盤與解析"
+                title="本局考題覆盤與解析"
               />
             </div>
           )}

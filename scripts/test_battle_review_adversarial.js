@@ -341,7 +341,7 @@ async function runAdversarialHarness() {
     const htmlWrong = ReactDOMServer.renderToStaticMarkup(elementWrong);
     assert.equal(countRenderedCards(htmlWrong), 0, "WRONG 應渲染 0 張卡片");
     assert.ok(
-      htmlWrong.includes("太厲害了！本局全數答對，無任何錯題！🎉"),
+      htmlWrong.includes("太厲害了！本局全數答對，無任何錯題！"),
       "必須呈現全對慶祝空狀態"
     );
     assert.ok(htmlWrong.includes("可切換至「全部題目」或「僅看答對」查看考題解析"));
@@ -393,7 +393,7 @@ async function runAdversarialHarness() {
     const htmlCorrect = ReactDOMServer.renderToStaticMarkup(elementCorrect);
     assert.equal(countRenderedCards(htmlCorrect), 0, "CORRECT 應渲染 0 張卡片");
     assert.ok(
-      htmlCorrect.includes("本局暫無答對題目，再接再厲！💪"),
+      htmlCorrect.includes("本局暫無答對題目，再接再厲！"),
       "必須呈現零答對勉勵空狀態"
     );
     assert.ok(htmlCorrect.includes("可切換至「全部題目」或「僅看錯題」"));

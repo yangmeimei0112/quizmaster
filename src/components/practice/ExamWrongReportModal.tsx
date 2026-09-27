@@ -188,7 +188,7 @@ export default function ExamWrongReportModal({
     if (targetItems.length === 0) {
       html += `
         <div style="text-align: center; padding: 30px; background-color: #ecfdf5; border-radius: 8px; border: 1px solid #a7f3d0; margin: 20px 0;">
-          <h2 style="color: #047857; margin-bottom: 8px;">🎉 恭喜！本次測驗全數答對！</h2>
+          <h2 style="color: #047857; margin-bottom: 8px;">恭喜！本次測驗全數答對！</h2>
           <p style="color: #065f46; font-size: 11pt;">您在 50 題模擬考中取得 100 分滿分，沒有任何答錯的題目需檢討。</p>
         </div>
       `;
@@ -202,7 +202,7 @@ export default function ExamWrongReportModal({
       targetItems.forEach((item) => {
         const q = item.question;
         const typeLabel = q.type === "SINGLE" ? "單選題" : "複選題";
-        const statusText = item.isCorrect ? "(正確 ✓)" : item.isUnanswered ? "(未填答 ✗)" : "(答錯 ✗)";
+        const statusText = item.isCorrect ? "(正確)" : item.isUnanswered ? "(未填答)" : "(答錯)";
 
         html += `
           <div style="margin-bottom: 20px; padding: 12px 14px; border: 1px solid ${
@@ -502,9 +502,9 @@ export default function ExamWrongReportModal({
       <body>
         <div class="no-print">
           <div>
-            <strong>💡 列印提示：</strong>在列印視窗中將目的地選擇為 <strong>「另存為 PDF (Save as PDF)」</strong> 即可將錯題報告存為高品質 PDF 檔案。
+            <strong>列印提示：</strong>在列印視窗中將目的地選擇為 <strong>「另存為 PDF (Save as PDF)」</strong> 即可將錯題報告存為高品質 PDF 檔案。
           </div>
-          <button class="btn-print" onclick="window.print()">🖨️ 點此列印 / 另存為 PDF</button>
+          <button class="btn-print" onclick="window.print()">點此列印 / 另存為 PDF</button>
         </div>
 
         <div class="report-header">
@@ -541,7 +541,7 @@ export default function ExamWrongReportModal({
             const q = item.question;
             const typeLabel = q.type === "SINGLE" ? "單選題" : "複選題";
             const isCorrect = item.isCorrect;
-            const userStatus = isCorrect ? "(正確 ✓)" : item.isUnanswered ? "(未填答 ✗)" : "(答錯 ✗)";
+            const userStatus = isCorrect ? "(正確)" : item.isUnanswered ? "(未填答)" : "(答錯)";
             const statusColor = isCorrect ? "#047857" : "#dc2626";
 
             let itemHtml = `
@@ -653,7 +653,7 @@ export default function ExamWrongReportModal({
             const q = item.question;
             const typeLabel = q.type === "SINGLE" ? "單選題" : "複選題";
             const exp = q.explanation && q.explanation.trim() ? q.explanation : "（無解析）";
-            const statusText = item.isCorrect ? "(正確 ✓)" : item.isUnanswered ? "(未填答 ✗)" : "(答錯 ✗)";
+            const statusText = item.isCorrect ? "(正確)" : item.isUnanswered ? "(未填答)" : "(答錯)";
             return (
               `第 ${item.originalIndex} 題. 【${typeLabel}】 ${q.stem}\n` +
               (q.imageUrl ? `【附圖】：${q.imageUrl}\n` : "") +
@@ -913,8 +913,9 @@ export default function ExamWrongReportModal({
             </div>
 
             {targetItems.length === 0 ? (
-              <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-emerald-300 text-center text-xs">
-                🎉 太厲害了！本次 50 題模擬考全部答對，沒有任何錯題！您可切換為「匯出完整 50 題」保留作答成就。
+              <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-emerald-300 text-center text-xs flex items-center justify-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>太厲害了！本次 50 題模擬考全部答對，沒有任何錯題！您可切換為「匯出完整 50 題」保留作答成就。</span>
               </div>
             ) : (
               <div className="max-h-48 overflow-y-auto space-y-2 pr-1 border border-white/[0.06] rounded-xl p-2.5 bg-white/[0.01]">

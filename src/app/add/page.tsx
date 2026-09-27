@@ -152,7 +152,7 @@ export default function AddQuestionPage() {
     setCorrectAnswers(data.correctAnswers);
     setExplanation(data.explanation || "");
     setErrorMsg("");
-    setSuccessMsg("✨ 已成功帶入智慧解析題目！請核對題目內容與即時防重複提示，確認無誤後點擊「儲存題目至題庫」。");
+    setSuccessMsg("已成功帶入智慧解析題目！請核對題目內容與即時防重複提示，確認無誤後點擊「儲存題目至題庫」。");
     setTimeout(() => setSuccessMsg(""), 5000);
   }, []);
 
@@ -204,7 +204,7 @@ export default function AddQuestionPage() {
         throw new Error(resData.error || "儲存題目失敗");
       }
 
-      setSuccessMsg("🎉 題目快速新增成功！");
+      setSuccessMsg("題目快速新增成功！");
       setTimeout(() => setSuccessMsg(""), 3500);
 
       // 清空表單
@@ -228,7 +228,7 @@ export default function AddQuestionPage() {
 
   // 智慧快速新增：批次新增多題完成通知
   const handleBatchSaved = useCallback((data: { createdCount: number; skippedCount: number }) => {
-    let msg = `🎉 成功批次新增 ${data.createdCount} 道題目！`;
+    let msg = `成功批次新增 ${data.createdCount} 道題目！`;
     if (data.skippedCount > 0) {
       msg += `（已自動略過 ${data.skippedCount} 題重複題目）`;
     }
@@ -298,7 +298,7 @@ export default function AddQuestionPage() {
         return;
       }
 
-      setSuccessMsg("🎉 題目新增成功！");
+      setSuccessMsg("題目新增成功！");
       setShowConfirmModal(false);
       invalidateQuestionsCache();
 
@@ -500,7 +500,7 @@ export default function AddQuestionPage() {
             <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-xs space-y-3 shadow-[0_0_24px_rgba(244,63,94,0.15)] animate-fade-in-down">
               <div className="flex items-center gap-2 font-bold text-sm text-rose-300 font-game">
                 <AlertTriangle className="w-4.5 h-4.5 text-rose-400" />
-                <span>⚠️ 題庫中已有完全相同 (100%) 的題目！</span>
+                <span>題庫中已有完全相同 (100%) 的題目！</span>
               </div>
               <p className="text-rose-200/90 leading-relaxed">
                 系統已偵測到完全吻合的題幹，系統已禁止送出以防止重複收錄：

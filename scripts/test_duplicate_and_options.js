@@ -316,8 +316,8 @@ async function runTests() {
   });
 
   it("對照視窗提供雙向判斷按鈕與「確認完成，關閉對照視窗」按鈕", () => {
-    assert.ok(quickAddContent.includes("⚠️ 是，本題為重複題目"), "需包含「⚠️ 是，本題為重複題目」按鈕");
-    assert.ok(quickAddContent.includes("✓ 否，本題未與題庫重複"), "需包含「✓ 否，本題未與題庫重複」按鈕");
+    assert.ok(quickAddContent.includes("是，本題為重複題目"), "需包含「是，本題為重複題目」按鈕");
+    assert.ok(quickAddContent.includes("否，本題未與題庫重複"), "需包含「否，本題未與題庫重複」按鈕");
     assert.ok(quickAddContent.includes("確認完成，關閉對照視窗"), "需包含「確認完成，關閉對照視窗」按鈕");
   });
 
@@ -385,13 +385,13 @@ async function runTests() {
     );
   });
 
-  it("QuickAddModal: 膠囊與預覽卡片提供放行狀態 (✓已放行) 與開啟對照按鈕", () => {
+  it("QuickAddModal: 膠囊與預覽卡片提供放行狀態 (已放行) 與開啟對照按鈕", () => {
     assert.ok(
-      quickAddContent.includes("(✓已放行)"),
-      "膠囊列表需在 NOT_DUPLICATE 時顯示 (✓已放行)"
+      quickAddContent.includes("已放行"),
+      "膠囊列表需在 NOT_DUPLICATE 時顯示 已放行"
     );
     assert.ok(
-      quickAddContent.includes("✓ 已查證放行：此題確認未與題庫重複"),
+      quickAddContent.includes("已查證放行：此題確認未與題庫重複"),
       "預覽卡片需在 NOT_DUPLICATE 時展示綠色放行提示"
     );
   });

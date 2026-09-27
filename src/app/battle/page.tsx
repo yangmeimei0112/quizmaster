@@ -13,6 +13,9 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
+  Gamepad2,
+  BarChart3,
+  Dog,
 } from "lucide-react";
 import AnimalAvatarPicker from "@/components/battle/AnimalAvatarPicker";
 import { battleAudio } from "@/lib/battleAudio";
@@ -232,7 +235,10 @@ export default function BattlePortalPage() {
             </div>
             <div>
               <div className="font-game font-bold text-sm text-foreground flex items-center gap-2">
-                <span>🎮 偵測到進行中的對戰場次</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Gamepad2 className="w-4 h-4 text-accent-bright" />
+                  <span>偵測到進行中的對戰場次</span>
+                </span>
                 <span className="px-2.5 py-0.5 rounded-full text-xs bg-accent/30 text-[#9AA5FF] font-mono border border-accent/40 font-bold">
                   房號 {activeBattle.code}
                 </span>
@@ -258,7 +264,8 @@ export default function BattlePortalPage() {
               onClick={() => router.push(`/battle/${activeBattle.code}`)}
               className="flex-1 sm:flex-none min-h-[44px] px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white font-game font-bold text-xs shadow-glow transition-all flex items-center justify-center gap-2 touch-tactile"
             >
-              <span>🎮 重新回到對戰房間</span>
+              <Gamepad2 className="w-4 h-4" />
+              <span>重新回到對戰房間</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
@@ -569,8 +576,9 @@ export default function BattlePortalPage() {
       {/* Switch Style Game Rules & Features Section */}
       <div className="pt-8 border-t border-white/[0.06] space-y-6">
         <div className="text-center space-y-1">
-          <h3 className="font-game font-bold text-xl text-foreground">
-            🎮 多人對戰競技特色介紹
+          <h3 className="font-game font-bold text-xl text-foreground flex items-center justify-center gap-2">
+            <Gamepad2 className="w-5 h-5 text-indigo-400" />
+            多人對戰競技特色介紹
           </h3>
           <p className="text-xs text-foreground-muted">
             專為團隊模擬檢定、班級競賽、考前衝刺打造的全功能遊戲化系統
@@ -580,7 +588,7 @@ export default function BattlePortalPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-2">
             <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center">
-              🐕
+              <Dog className="w-5 h-5" />
             </div>
             <h4 className="font-game font-bold text-sm text-foreground">12 款動物頭像</h4>
             <p className="text-xs text-foreground-muted leading-relaxed">
@@ -590,7 +598,7 @@ export default function BattlePortalPage() {
 
           <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-2">
             <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center">
-              🎰
+              <Dices className="w-5 h-5" />
             </div>
             <h4 className="font-game font-bold text-sm text-foreground">街機抽題過場</h4>
             <p className="text-xs text-foreground-muted leading-relaxed">
@@ -600,7 +608,7 @@ export default function BattlePortalPage() {
 
           <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-2">
             <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center">
-              📊
+              <BarChart3 className="w-5 h-5" />
             </div>
             <h4 className="font-game font-bold text-sm text-foreground">即時動態看板</h4>
             <p className="text-xs text-foreground-muted leading-relaxed">
@@ -610,7 +618,7 @@ export default function BattlePortalPage() {
 
           <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-2">
             <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center">
-              🏆
+              <Trophy className="w-5 h-5" />
             </div>
             <h4 className="font-game font-bold text-sm text-foreground">三層頒獎典禮</h4>
             <p className="text-xs text-foreground-muted leading-relaxed">

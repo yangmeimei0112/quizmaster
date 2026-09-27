@@ -24,10 +24,10 @@ export default function BattleRoomPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
 
-  // 🛡️ Client-side idempotency replay barrier for arcade drawing animation
+  // Client-side idempotency replay barrier for arcade drawing animation
   const completedDrawingSessionsRef = useRef<Set<number>>(new Set());
 
-  // 📝 Player battle answer history: questionId -> array of selected option keys
+  // Player battle answer history: questionId -> array of selected option keys
   const [userAnswers, setUserAnswers] = useState<Record<string, string[]>>({});
 
   // Need to Join Modal (if user accessed /battle/CODE directly without join form)
@@ -55,7 +55,7 @@ export default function BattleRoomPage() {
       const data = await res.json();
       let updatedRoom: BattleRoom = data.room;
 
-      // 🛡️ Clean slate on LOBBY: When room transitions to LOBBY (e.g. host resets battle),
+      // Clean slate on LOBBY: When room transitions to LOBBY (e.g. host resets battle),
       // ensure all players (including non-host guests) purge previous match answers and barrier
       if (updatedRoom && updatedRoom.stage === "LOBBY") {
         completedDrawingSessionsRef.current.clear();
@@ -95,7 +95,7 @@ export default function BattleRoomPage() {
         }
       }
 
-      // 🛡️ Client-side Idempotency Replay Barrier:
+      // Client-side Idempotency Replay Barrier:
       // If drawing animation for this session timestamp has already finished,
       // never let a stale server DRAWING stage drag the client backwards.
       if (
@@ -611,7 +611,7 @@ export default function BattleRoomPage() {
     );
   }
 
-  // 🛡️ Replay Barrier Check for View Router
+  // Replay Barrier Check for View Router
   const isDrawingCompleted = room?.drawingStartTime
     ? completedDrawingSessionsRef.current.has(room.drawingStartTime)
     : false;

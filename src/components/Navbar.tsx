@@ -32,7 +32,7 @@ export default function Navbar() {
     { href: "/add", label: "新增題目", icon: PlusCircle },
     { href: "/questions", label: "題目查詢", icon: Search },
     { href: "/practice", label: "刷題練習", icon: GraduationCap },
-    { href: "/battle", label: "⚔️ 多人對戰", icon: Swords },
+    { href: "/battle", label: "多人對戰", icon: Swords },
   ];
 
   return (

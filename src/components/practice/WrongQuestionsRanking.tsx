@@ -10,6 +10,7 @@ import {
   ChevronUp,
   RotateCcw,
   Trophy,
+  Check,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { Question } from "@/types/question";
@@ -420,8 +421,8 @@ export default function WrongQuestionsRanking({
                             }`}
                           >
                             {opt.isCorrect && (
-                              <span className="font-bold font-game text-[11px] text-emerald-300">
-                                ✓ 正解
+                              <span className="font-bold font-game text-[11px] text-emerald-300 inline-flex items-center gap-1">
+                                <Check className="w-3.5 h-3.5" /> 正解
                               </span>
                             )}
                             <span
@@ -769,8 +770,8 @@ export default function WrongQuestionsRanking({
                                 }`}
                               >
                                 {opt.isCorrect && (
-                                  <span className="font-bold font-game text-[11px] text-emerald-300">
-                                    ✓ 正解
+                                  <span className="font-bold font-game text-[11px] text-emerald-300 inline-flex items-center gap-1">
+                                    <Check className="w-3.5 h-3.5" /> 正解
                                   </span>
                                 )}
                                 <span
@@ -838,7 +839,8 @@ export default function WrongQuestionsRanking({
                       onClick={handleExpandBeyond10}
                       className="min-h-[44px] px-6 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.10] text-xs font-bold font-game text-[#9AA5FF] hover:text-white transition-all flex items-center justify-center gap-1.5 mx-auto active:scale-95 touch-tactile shadow-md"
                     >
-                      <span>查看排行榜以外的更多錯題 (共 {personalTotal} 題) ↓</span>
+                      <span>查看排行榜以外的更多錯題 (共 {personalTotal} 題)</span>
+                      <ChevronDown className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
@@ -1010,8 +1012,8 @@ export default function WrongQuestionsRanking({
                                 }`}
                               >
                                 {opt.isCorrect && (
-                                  <span className="font-bold font-game text-[11px] text-emerald-300">
-                                    ✓ 正解
+                                  <span className="font-bold font-game text-[11px] text-emerald-300 inline-flex items-center gap-1">
+                                    <Check className="w-3.5 h-3.5" /> 正解
                                   </span>
                                 )}
                                 <span
@@ -1073,7 +1075,8 @@ export default function WrongQuestionsRanking({
                       onClick={handleExpandBeyond10}
                       className="min-h-[44px] px-6 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.10] text-xs font-bold font-game text-[#9AA5FF] hover:text-white transition-all flex items-center justify-center gap-1.5 mx-auto active:scale-95 touch-tactile shadow-md"
                     >
-                      <span>查看排行榜以外的更多錯題 (共 {globalTotal} 題) ↓</span>
+                      <span>查看排行榜以外的更多錯題 (共 {globalTotal} 題)</span>
+                      <ChevronDown className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (

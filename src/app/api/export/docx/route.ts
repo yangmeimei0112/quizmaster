@@ -436,7 +436,7 @@ export async function POST(req: NextRequest) {
             spacing: { before: 200, after: 200 },
             children: [
               new TextRun({
-                text: "🎉 恭喜！本次模擬考試獲得滿分 100 分，全部 50 題全數答對，無任何錯題！",
+                text: "恭喜！本次模擬考試獲得滿分 100 分，全部 50 題全數答對，無任何錯題！",
                 bold: true,
                 size: 24,
                 color: "047857",
@@ -490,10 +490,10 @@ export async function POST(req: NextRequest) {
           const isUnanswered = !item.userAnswer || item.userAnswer === "未填答";
           const userAnsDisplay = isUnanswered ? "未填答" : item.userAnswer;
           const userStatusText = isItemCorrect
-            ? "(正確 ✓)"
+            ? "(正確)"
             : isUnanswered
-            ? "(未填答 ✗)"
-            : "(答錯 ✗)";
+            ? "(未填答)"
+            : "(答錯)";
           const userStatusColor = isItemCorrect ? "047857" : "DC2626";
 
           // 題幹

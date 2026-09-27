@@ -37,7 +37,7 @@ export default function BattleReviewPanel({
   defaultFilter = "ALL",
   collapsible = true,
   defaultExpanded = true,
-  title = "📝 本局考題覆盤與解析",
+  title = "本局考題覆盤與解析",
   className = "",
 }: BattleReviewPanelProps) {
   const [filter, setFilter] = useState<ReviewFilter>(defaultFilter);
@@ -180,7 +180,7 @@ export default function BattleReviewPanel({
                 }`}
               >
                 <XCircle className="w-3.5 h-3.5 text-rose-400" />
-                <span>❌ 僅看錯題</span>
+                <span>僅看錯題</span>
                 <span
                   className={`px-1.5 py-0.5 rounded-md text-[10px] ${
                     wrongCount > 0
@@ -203,7 +203,7 @@ export default function BattleReviewPanel({
                 }`}
               >
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>✓ 僅看答對</span>
+                <span>僅看答對</span>
                 <span
                   className={`px-1.5 py-0.5 rounded-md text-[10px] ${
                     filter === "CORRECT" ? "bg-white/20 text-white" : "bg-white/[0.08] text-foreground-muted"
@@ -229,7 +229,7 @@ export default function BattleReviewPanel({
                     <Sparkles className="w-6 h-6" />
                   </div>
                   <h4 className="text-base font-bold font-game text-emerald-300">
-                    太厲害了！本局全數答對，無任何錯題！🎉
+                    太厲害了！本局全數答對，無任何錯題！
                   </h4>
                   <p className="text-xs text-foreground-muted">可切換至「全部題目」或「僅看答對」查看考題解析。</p>
                 </>
@@ -237,7 +237,7 @@ export default function BattleReviewPanel({
                 <>
                   <HelpCircle className="w-10 h-10 mx-auto text-foreground-muted opacity-40" />
                   <h4 className="text-base font-bold font-game text-foreground-muted">
-                    本局暫無答對題目，再接再厲！💪
+                    本局暫無答對題目，再接再厲！
                   </h4>
                   <p className="text-xs text-foreground-muted">可切換至「全部題目」或「僅看錯題」查看每題詳解與考點分析。</p>
                 </>

@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  Search,
 } from "lucide-react";
 import { QuestionType, QuestionDuplicateStatus, SimilarMatch } from "@/types/question";
 import { parseMultipleQuestions, ParsedQuestionResult } from "@/lib/questionParser";
@@ -373,7 +374,7 @@ export default function QuickAddModal({
       } catch (err: any) {
         if (err.name !== "AbortError") {
           console.error("Duplicate check error:", err);
-          setFormError("⚠️ 題庫防重複比對伺服器回應異常，請檢查網路連線或稍後再試");
+          setFormError("題庫防重複比對伺服器回應異常，請檢查網路連線或稍後再試");
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -566,7 +567,7 @@ export default function QuickAddModal({
 
     // 單題或多題當前題目若完全重複且未查證放行，阻擋帶入
     if (currentDup?.isExactMatch && verifiedStatuses[activeIndex] !== 'NOT_DUPLICATE') {
-      setFormError("⚠️ 題庫中已有完全相同 (100%) 的題目，禁止帶入表單！請先修改題幹內容。");
+      setFormError("題庫中已有完全相同 (100%) 的題目，禁止帶入表單！請先修改題幹內容。");
       return;
     }
 
@@ -632,7 +633,7 @@ export default function QuickAddModal({
 
     // 單題若完全重複，嚴格阻擋直接新增（若經查證確認非重複則允許新增）
     if (currentDup?.isExactMatch && verifiedStatuses[0] !== 'NOT_DUPLICATE') {
-      setFormError("⚠️ 題庫中已有完全相同 (100%) 的題目，禁止直接新增！請先修改題幹至不重複方能解鎖。");
+      setFormError("題庫中已有完全相同 (100%) 的題目，禁止直接新增！請先修改題幹至不重複方能解鎖。");
       return;
     }
 
@@ -643,7 +644,7 @@ export default function QuickAddModal({
         return;
       }
       if (verifiedStatuses[0] === 'IS_DUPLICATE') {
-        setFormError("⚠️ 您已確認此題為重複題目，禁止新增！請修改題幹或取消重複標記。");
+        setFormError("您已確認此題為重複題目，禁止新增！請修改題幹或取消重複標記。");
         return;
       }
     }
@@ -777,7 +778,7 @@ export default function QuickAddModal({
 
       invalidateQuestionsCache();
 
-      let notice = `🎉 成功新增 ${data.createdCount} 道題目！`;
+      let notice = `成功新增 ${data.createdCount} 道題目！`;
       if (data.skippedCount > 0) {
         notice += `（已自動略過 ${data.skippedCount} 題重複題目）`;
       }
@@ -813,7 +814,7 @@ export default function QuickAddModal({
     }
 
     if (nonDuplicateItems.length === 0) {
-      setFormError("⚠️ 全部題目皆已重複，無可新增之題目！請先修改題幹內容。");
+      setFormError("全部題目皆已重複，無可新增之題目！請先修改題幹內容。");
       return;
     }
 
@@ -889,7 +890,7 @@ export default function QuickAddModal({
       invalidateQuestionsCache();
 
       const totalExcluded = exactDuplicateCount + (data.skippedCount || 0);
-      let notice = `🎉 成功新增 ${data.createdCount} 道題目！`;
+      let notice = `成功新增 ${data.createdCount} 道題目！`;
       if (totalExcluded > 0) {
         notice += `（已自動排除 ${totalExcluded} 題重複題目）`;
       }
@@ -941,7 +942,7 @@ export default function QuickAddModal({
         e.preventDefault();
         if (parsedList.length > 1) {
           if (allAreDuplicates) {
-            setFormError("⚠️ 本批次全部題目皆為已重複題目，無法新增！請修改題幹至不重複方能送出。");
+            setFormError("本批次全部題目皆為已重複題目，無法新增！請修改題幹至不重複方能送出。");
             return;
           }
           if (exactDuplicateCount > 0) {
@@ -951,7 +952,7 @@ export default function QuickAddModal({
           }
         } else if (parsedList.length === 1) {
           if (duplicateStatuses[0]?.isExactMatch && verifiedStatuses[0] !== 'NOT_DUPLICATE') {
-            setFormError("⚠️ 題庫中已有完全相同 (100%) 的題目，已嚴格阻擋新增！請在編輯框修改題幹至不重複方能解鎖。");
+            setFormError("題庫中已有完全相同 (100%) 的題目，已嚴格阻擋新增！請在編輯框修改題幹至不重複方能解鎖。");
             return;
           }
           if (onDirectSave) {
@@ -1150,7 +1151,7 @@ export default function QuickAddModal({
                   <div className="flex items-center justify-between">
                     <span className="font-game font-bold text-foreground text-xs flex items-center gap-1.5">
                       <ListPlus className="w-4 h-4 text-purple-400" />
-                      <span>✨ 成功偵測到 {parsedList.length} 道題目（點擊或按 ← / → 切換）：</span>
+                      <span>成功偵測到 {parsedList.length} 道題目（點擊或按 ← / → 切換）：</span>
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {isCheckingDuplicates ? (
@@ -1272,7 +1273,8 @@ export default function QuickAddModal({
                                   : "bg-emerald-500/30 text-emerald-200 border border-emerald-500/50"
                               }`}
                             >
-                              (✓已放行)
+                              <Check className="w-2.5 h-2.5" />
+                              <span>已放行</span>
                             </span>
                           ) : isItemVerifiedDup ? (
                             <span
@@ -1282,7 +1284,8 @@ export default function QuickAddModal({
                                   : "bg-rose-500/30 text-rose-200 border border-rose-500/50"
                               }`}
                             >
-                              (⚠️已確認重複)
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              <span>已確認重複</span>
                             </span>
                           ) : dup?.isExactMatch ? (
                             <span
@@ -1292,7 +1295,8 @@ export default function QuickAddModal({
                                   : "bg-rose-500/30 text-rose-200 border border-rose-500/50"
                               }`}
                             >
-                              (⚠️已重複)
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              <span>已重複</span>
                             </span>
                           ) : dup?.isHighSimilarity ? (
                             <span
@@ -1417,22 +1421,23 @@ export default function QuickAddModal({
                         <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
                         <span>
                           {currentDup.duplicateSource === "BATCH"
-                            ? `⚠️ 與同批次第 ${currentDup.matchedBatchIndex} 題完全相同 (100%)`
-                            : "⚠️ 題庫中已有完全相同 (100%) 的題目"}
+                            ? `與同批次第 ${currentDup.matchedBatchIndex} 題完全相同 (100%)`
+                            : "題庫中已有完全相同 (100%) 的題目"}
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setShowComparisonModal(true)}
-                        className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[11px] font-bold border border-rose-500/40 transition-colors flex items-center gap-1 touch-tactile"
+                        className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[11px] font-bold border border-rose-500/40 transition-colors flex items-center gap-1.5 touch-tactile"
                       >
-                        <span>🔍 開啟高相似對照視窗</span>
+                        <Search className="w-3.5 h-3.5" />
+                        <span>開啟高相似對照視窗</span>
                       </button>
                     </div>
                     {verifiedStatuses[activeIndex] === 'NOT_DUPLICATE' && (
                       <div className="p-2.5 rounded-lg bg-emerald-950/60 border border-emerald-500/60 text-emerald-200 text-xs flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>✓ 已查證放行：此題確認未與題庫重複，送出時將 100% 完整保留並寫入題庫</span>
+                        <span>已查證放行：此題確認未與題庫重複，送出時將 100% 完整保留並寫入題庫</span>
                       </div>
                     )}
                     <div className="p-2.5 rounded-lg bg-black/40 border border-rose-500/30 text-rose-200 font-mono text-[11px] break-words">
@@ -1453,8 +1458,8 @@ export default function QuickAddModal({
                       <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                       <span>
                         {currentDup.duplicateSource === "BATCH"
-                          ? `⚠️ 與同批次第 ${currentDup.matchedBatchIndex} 題高度相似 (${currentDup.similarity}%)`
-                          : `⚠️ 發現高度相似題目 (${currentDup.similarity}%)`}
+                          ? `與同批次第 ${currentDup.matchedBatchIndex} 題高度相似 (${currentDup.similarity}%)`
+                          : `發現高度相似題目 (${currentDup.similarity}%)`}
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-amber-600/60 text-amber-100 text-[10px] font-bold border border-amber-500/50 shrink-0">
                         {currentDup.similarity}% 相似
@@ -1475,16 +1480,17 @@ export default function QuickAddModal({
                       <button
                         type="button"
                         onClick={() => setShowComparisonModal(true)}
-                        className="ml-auto px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[11px] font-bold border border-amber-500/40 transition-colors flex items-center gap-1 touch-tactile"
+                        className="ml-auto px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[11px] font-bold border border-amber-500/40 transition-colors flex items-center gap-1.5 touch-tactile"
                       >
-                        <span>🔍 開啟高相似對照視窗</span>
+                        <Search className="w-3.5 h-3.5" />
+                        <span>開啟高相似對照視窗</span>
                       </button>
                     </div>
 
                     {verifiedStatuses[activeIndex] === 'NOT_DUPLICATE' && (
                       <div className="p-2.5 rounded-lg bg-emerald-950/60 border border-emerald-500/60 text-emerald-200 text-xs flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>✓ 已查證放行：此題確認未與題庫重複，送出時將 100% 完整保留並寫入題庫</span>
+                        <span>已查證放行：此題確認未與題庫重複，送出時將 100% 完整保留並寫入題庫</span>
                       </div>
                     )}
 
@@ -1529,7 +1535,8 @@ export default function QuickAddModal({
                           }`}
                           title="確認此題為重複題目（將被排除）"
                         >
-                          <span>⚠️ 是，本題為重複題目</span>
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                          <span>是，本題為重複題目</span>
                         </button>
                         <button
                           type="button"
@@ -1546,7 +1553,8 @@ export default function QuickAddModal({
                           }`}
                           title="確認此題非重複，允許新增"
                         >
-                          <span>✓ 否，本題未與題庫重複</span>
+                          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>否，本題未與題庫重複</span>
                         </button>
                       </div>
                     </div>
@@ -1700,7 +1708,7 @@ export default function QuickAddModal({
           {allAreDuplicates && (
             <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-500/50 text-rose-200 text-xs flex items-center gap-2.5 animate-fade-in shadow-sm">
               <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>⚠️ 本批次全部 {parsedList.length} 題皆為已重複題目，無法新增！請在上方編輯框修改題幹以解除阻擋。</span>
+              <span>本批次全部 {parsedList.length} 題皆為已重複題目，無法新增！請在上方編輯框修改題幹以解除阻擋。</span>
             </div>
           )}
 
@@ -2162,12 +2170,12 @@ export default function QuickAddModal({
                           {isVerifiedNotDup ? (
                             <span className="text-emerald-300 font-bold flex items-center gap-1.5">
                               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                              <span>✓ 已確認不是重複題（送出時將 100% 完整保留並寫入題庫）</span>
+                              <span>已確認不是重複題（送出時將 100% 完整保留並寫入題庫）</span>
                             </span>
                           ) : isVerifiedDup ? (
                             <span className="text-rose-300 font-bold flex items-center gap-1.5">
                               <AlertTriangle className="w-4 h-4 text-rose-400" />
-                              <span>⚠️ 已確認為重複題目（送出時將自動排除）</span>
+                              <span>已確認為重複題目（送出時將自動排除）</span>
                             </span>
                           ) : (
                             <span className="text-amber-300/80 flex items-center gap-1.5">
@@ -2192,7 +2200,8 @@ export default function QuickAddModal({
                                 : "bg-rose-950/30 text-rose-300 border-rose-500/40 hover:bg-rose-900/40"
                             }`}
                           >
-                            <span>⚠️ 是，本題為重複題目</span>
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span>是，本題為重複題目</span>
                           </button>
                           <button
                             type="button"
@@ -2208,7 +2217,8 @@ export default function QuickAddModal({
                                 : "bg-emerald-950/30 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/40"
                             }`}
                           >
-                            <span>✓ 否，本題未與題庫重複</span>
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                            <span>否，本題未與題庫重複</span>
                           </button>
                         </div>
                       </div>

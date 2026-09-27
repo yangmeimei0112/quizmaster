@@ -18,6 +18,8 @@ import {
   FileDown,
   Maximize2,
   Lightbulb,
+  Lock,
+  X,
 } from "lucide-react";
 import { Question } from "@/types/question";
 import { getCachedQuestions, setCachedQuestions } from "@/lib/questionsCache";
@@ -615,13 +617,13 @@ export default function PracticePage() {
                   </div>
 
                   {isAnswerSubmitted && isCorrectAnswer && (
-                    <span className="font-game text-[11px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm animate-fade-in">
-                      ✓ 標準答案
+                    <span className="font-game text-[11px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm animate-fade-in inline-flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" /> 標準答案
                     </span>
                   )}
                   {isAnswerSubmitted && isSelected && !isCorrectAnswer && (
-                    <span className="font-game text-[11px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm animate-fade-in">
-                      ✗ 您的回答
+                    <span className="font-game text-[11px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm animate-fade-in inline-flex items-center gap-1">
+                      <X className="w-3.5 h-3.5" /> 您的回答
                     </span>
                   )}
                 </button>
@@ -655,7 +657,7 @@ export default function PracticePage() {
               currentQ.correctAnswers.split(",").sort().join(",") ? (
                 <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs sm:text-sm font-bold font-game flex items-center gap-2.5 shadow-[0_0_24px_rgba(16,185,129,0.15)] animate-fade-in-up">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-                  <span>🎉 太棒了，完全答對！得分 +1</span>
+                  <span>太棒了，完全答對！得分 +1</span>
                 </div>
               ) : (
                 <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-xs sm:text-sm font-bold font-game flex items-center gap-2.5 shadow-[0_0_24px_rgba(244,63,94,0.15)] animate-fade-in-up">
@@ -669,7 +671,7 @@ export default function PracticePage() {
                 </div>
               )}
 
-              {/* 【💡 這題我會了】掌握度標記按鈕 (位於選項與解析中間) */}
+              {/* 【這題我會了】掌握度標記按鈕 (位於選項與解析中間) */}
               {(() => {
                 const isMastered = !!userMastery[currentQ.id]?.isMastered;
                 return (
@@ -697,7 +699,7 @@ export default function PracticePage() {
                       {isMastered ? (
                         <>
                           <CheckCircle2 className="w-4 h-4 text-emerald-400 animate-scale-in" />
-                          <span className="text-emerald-300 font-bold">✓ 已掌握（這題我會了）</span>
+                          <span className="text-emerald-300 font-bold">已掌握（這題我會了）</span>
                           <span className="text-[11px] text-emerald-400/70 font-normal ml-1 hidden sm:inline">
                             (再次點擊可取消標記)
                           </span>
@@ -706,7 +708,7 @@ export default function PracticePage() {
                         <>
                           <Lightbulb className="w-4 h-4 text-amber-400 animate-pulse" />
                           <span className={user ? "text-foreground font-semibold" : "text-foreground-muted"}>
-                            💡 標記為「這題我會了」
+                            標記為「這題我會了」
                           </span>
                           {!user && (
                             <span className="text-[10px] bg-white/[0.08] text-foreground-muted px-2 py-0.5 rounded-full ml-1">
@@ -717,8 +719,9 @@ export default function PracticePage() {
                       )}
                     </button>
                     {!user && (
-                      <p className="text-[11px] text-center text-amber-300/90 font-medium mt-1.5 animate-fade-in">
-                        🔒 {authNotice || "登入後即可標記個人掌握狀態，精準複習弱項"}
+                      <p className="text-[11px] text-center text-amber-300/90 font-medium mt-1.5 animate-fade-in flex items-center justify-center gap-1">
+                        <Lock className="w-3 h-3 text-amber-400/80" />
+                        <span>{authNotice || "登入後即可標記個人掌握狀態，精準複習弱項"}</span>
                       </p>
                     )}
                   </div>
@@ -887,12 +890,13 @@ export default function PracticePage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
-                    { key: "ALL", label: "全部題目" },
-                    { key: "UNTESTED", label: "未曾測驗的題目" },
-                    { key: "UNMASTERED", label: "測驗我不會的題目" },
+                    { key: "ALL", label: "全部題目", icon: Sparkles },
+                    { key: "UNTESTED", label: "未曾測驗的題目", icon: Clock },
+                    { key: "UNMASTERED", label: "測驗我不會的題目", icon: AlertTriangle },
                   ].map((s) => {
                     const isSelected = selectedScope === s.key;
                     const isLocked = s.key !== "ALL" && !user;
+                    const ScopeIcon = s.icon;
                     return (
                       <button
                         key={s.key}
@@ -907,8 +911,9 @@ export default function PracticePage() {
                         }`}
                         title={isLocked ? "此模式需登入使用，紀錄您的專屬作答軌跡" : undefined}
                       >
+                        <ScopeIcon className="w-3.5 h-3.5 shrink-0" />
                         <span>{s.label}</span>
-                        {isLocked && <span className="text-[11px]">🔒</span>}
+                        {isLocked && <Lock className="w-3 h-3 text-amber-400/80 shrink-0" />}
                       </button>
                     );
                   })}
@@ -962,12 +967,15 @@ export default function PracticePage() {
               </div>
 
               {filteredQuestions.length === 0 && (
-                <div className="p-3 rounded-xl bg-accent/10 border border-accent/25 text-[#9AA5FF] text-xs leading-relaxed animate-fade-in">
-                  {selectedScope === "UNMASTERED"
-                    ? "🎉 太棒了！您目前沒有未掌握的題目，可選擇「未曾測驗」或「全部題目」繼續挑戰！"
-                    : selectedScope === "UNTESTED"
-                    ? "🎉 厲害！題庫中的題目您皆已測驗過，可切換至「測驗我不會的題目」進行弱項精準複習！"
-                    : "目前暫無符合條件的題目，請嘗試調整篩選偏好。"}
+                <div className="p-3 rounded-xl bg-accent/10 border border-accent/25 text-[#9AA5FF] text-xs leading-relaxed animate-fade-in flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    {selectedScope === "UNMASTERED"
+                      ? "太棒了！您目前沒有未掌握的題目，可選擇「未曾測驗」或「全部題目」繼續挑戰！"
+                      : selectedScope === "UNTESTED"
+                      ? "厲害！題庫中的題目您皆已測驗過，可切換至「測驗我不會的題目」進行弱項精準複習！"
+                      : "目前暫無符合條件的題目，請嘗試調整篩選偏好。"}
+                  </span>
                 </div>
               )}
             </div>

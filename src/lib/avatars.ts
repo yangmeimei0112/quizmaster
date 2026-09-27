@@ -14,7 +14,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "shiba",
     name: "元氣柴柴",
-    emoji: "🐕",
+    emoji: "",
     title: "元氣麻糬包",
     primaryColor: "#F59E0B",
     secondaryColor: "#D97706",
@@ -25,7 +25,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "panda",
     name: "呆萌胖達",
-    emoji: "🐼",
+    emoji: "",
     title: "竹林小食神",
     primaryColor: "#10B981",
     secondaryColor: "#059669",
@@ -36,7 +36,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "fox",
     name: "機靈赤狐",
-    emoji: "🦊",
+    emoji: "",
     title: "靈動小仙狐",
     primaryColor: "#F97316",
     secondaryColor: "#EA580C",
@@ -47,7 +47,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "lion",
     name: "王者小獅",
-    emoji: "🦁",
+    emoji: "",
     title: "太陽花萌王",
     primaryColor: "#EAB308",
     secondaryColor: "#CA8A04",
@@ -58,7 +58,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "tiger",
     name: "閃電小虎",
-    emoji: "🐯",
+    emoji: "",
     title: "奶凶小萌虎",
     primaryColor: "#FB923C",
     secondaryColor: "#C2410C",
@@ -69,7 +69,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "koala",
     name: "悠哉無尾熊",
-    emoji: "🐨",
+    emoji: "",
     title: "棉花糖考霸",
     primaryColor: "#64748B",
     secondaryColor: "#475569",
@@ -80,7 +80,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "penguin",
     name: "滑雪企鵝",
-    emoji: "🐧",
+    emoji: "",
     title: "冰原小湯圓",
     primaryColor: "#06B6D4",
     secondaryColor: "#0891B2",
@@ -91,7 +91,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "rabbit",
     name: "活力兔兔",
-    emoji: "🐰",
+    emoji: "",
     title: "草莓折耳兔",
     primaryColor: "#EC4899",
     secondaryColor: "#DB2777",
@@ -102,7 +102,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "cat",
     name: "喵星守衛",
-    emoji: "🐱",
+    emoji: "",
     title: "星光琉璃喵",
     primaryColor: "#8B5CF6",
     secondaryColor: "#7C3AED",
@@ -113,7 +113,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "owl",
     name: "智者貓頭鷹",
-    emoji: "🦉",
+    emoji: "",
     title: "圓鏡小博士",
     primaryColor: "#14B8A6",
     secondaryColor: "#0D9488",
@@ -124,7 +124,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "deer",
     name: "森之小鹿",
-    emoji: "🦌",
+    emoji: "",
     title: "嫩芽小仙鹿",
     primaryColor: "#FB7185",
     secondaryColor: "#E11D48",
@@ -135,7 +135,7 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
   {
     id: "monkey",
     name: "敏捷小猴",
-    emoji: "🐵",
+    emoji: "",
     title: "眨眼小頑童",
     primaryColor: "#D97706",
     secondaryColor: "#B45309",

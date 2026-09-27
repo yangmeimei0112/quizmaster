@@ -18,6 +18,8 @@ import {
   ArrowLeft,
   FileText,
   Maximize2,
+  Check,
+  X,
 } from "lucide-react";
 import { Question } from "@/types/question";
 import { useAuth } from "@/lib/AuthContext";
@@ -527,8 +529,8 @@ export default function MockExamView({
                   </div>
 
                   {isSelected && (
-                    <span className="font-game text-[11px] font-bold text-[#9AA5FF] bg-accent/25 border border-accent/40 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm animate-fade-in">
-                      ✓ 已選取
+                    <span className="font-game text-[11px] font-bold text-[#9AA5FF] bg-accent/25 border border-accent/40 px-2.5 py-0.5 rounded-lg flex-shrink-0 shadow-sm animate-fade-in inline-flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" /> 已選取
                     </span>
                   )}
                 </button>
@@ -688,12 +690,12 @@ export default function MockExamView({
         <div className="space-y-2 relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold font-game border">
             {isPassed ? (
-              <span className="text-emerald-300 bg-emerald-500/10 border-emerald-500/30">
-                🎉 本次測驗：合格通過 (PASS)
+              <span className="text-emerald-300 bg-emerald-500/10 border-emerald-500/30 inline-flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 本次測驗：合格通過 (PASS)
               </span>
             ) : (
-              <span className="text-rose-300 bg-rose-500/10 border-rose-500/30">
-                ⚠️ 本次測驗：未達合格標準 (FAIL)
+              <span className="text-rose-300 bg-rose-500/10 border-rose-500/30 inline-flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" /> 本次測驗：未達合格標準 (FAIL)
               </span>
             )}
           </div>
@@ -967,10 +969,14 @@ export default function MockExamView({
                         </div>
                         <div className="flex items-center gap-1 shrink-0 text-[10px]">
                           {isStandardCorrect && (
-                            <span className="text-emerald-400 font-bold">✓ 正解</span>
+                            <span className="text-emerald-400 font-bold inline-flex items-center gap-1">
+                              <Check className="w-3 h-3" /> 正解
+                            </span>
                           )}
                           {isUserChosen && !isStandardCorrect && (
-                            <span className="text-rose-400 font-bold">✗ 您的選擇</span>
+                            <span className="text-rose-400 font-bold inline-flex items-center gap-1">
+                              <X className="w-3 h-3" /> 您的選擇
+                            </span>
                           )}
                         </div>
                       </div>

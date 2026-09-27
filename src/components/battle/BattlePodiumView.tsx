@@ -103,8 +103,9 @@ export default function BattlePodiumView({
           <Trophy className="w-4 h-4 text-amber-300" />
           <span>對戰結算 · 榮耀頒獎台</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black font-game text-foreground tracking-tight drop-shadow-md">
-          🏆 優勝榮耀頒獎典禮
+        <h1 className="text-3xl sm:text-4xl font-black font-game text-foreground tracking-tight drop-shadow-md flex items-center justify-center gap-2">
+          <Trophy className="w-8 h-8 sm:w-9 sm:h-9 text-amber-400" />
+          <span>優勝榮耀頒獎典禮</span>
         </h1>
         <p className="text-xs sm:text-sm text-foreground-muted">
           本場共進行 {room.questions.length} 題對決 · 恭喜所有堅持奮戰到底的答題大師！
@@ -138,7 +139,9 @@ export default function BattlePodiumView({
               {/* Silver Pillar */}
               <div className="w-full h-32 rounded-t-2xl bg-gradient-to-b from-slate-400/30 to-slate-700/50 border-t-2 border-x-2 border-slate-300/40 flex flex-col items-center justify-start pt-3 shadow-[0_10px_30px_rgba(148,163,184,0.15)]">
                 <span className="font-game font-black text-3xl text-slate-200 drop-shadow">2</span>
-                <span className="text-[10px] font-game font-bold text-slate-300 mt-1">SILVER 🥈</span>
+                <span className="text-[10px] font-game font-bold text-slate-300 mt-1 inline-flex items-center gap-1">
+                  SILVER <Medal className="w-3.5 h-3.5 text-slate-300" />
+                </span>
               </div>
             </div>
           ) : (
@@ -162,8 +165,9 @@ export default function BattlePodiumView({
                 <span className="mt-2 text-sm font-black text-amber-300 truncate max-w-[150px]">
                   {first.name}
                 </span>
-                <span className="font-game font-black text-sm text-amber-400 shadow-glow">
-                  {first.score} 分 👑
+                <span className="font-game font-black text-sm text-amber-400 shadow-glow flex items-center justify-center gap-1">
+                  <span>{first.score} 分</span>
+                  <Crown className="w-4 h-4 text-amber-400 fill-amber-400" />
                 </span>
               </div>
               {/* Gold Pillar */}
@@ -171,8 +175,8 @@ export default function BattlePodiumView({
                 <span className="font-game font-black text-5xl text-amber-300 drop-shadow-[0_2px_10px_rgba(245,158,11,0.8)]">
                   1
                 </span>
-                <span className="text-xs font-game font-black text-amber-200 mt-1 tracking-wider">
-                  CHAMPION 🥇
+                <span className="text-xs font-game font-black text-amber-200 mt-1 tracking-wider inline-flex items-center gap-1">
+                  CHAMPION <Medal className="w-3.5 h-3.5 text-amber-300" />
                 </span>
               </div>
             </div>
@@ -192,7 +196,9 @@ export default function BattlePodiumView({
               {/* Bronze Pillar */}
               <div className="w-full h-24 rounded-t-2xl bg-gradient-to-b from-amber-700/30 to-amber-950/50 border-t-2 border-x-2 border-amber-700/40 flex flex-col items-center justify-start pt-3 shadow-[0_10px_30px_rgba(180,83,9,0.15)]">
                 <span className="font-game font-black text-2xl text-amber-500 drop-shadow">3</span>
-                <span className="text-[10px] font-game font-bold text-amber-400 mt-1">BRONZE 🥉</span>
+                <span className="text-[10px] font-game font-bold text-amber-400 mt-1 inline-flex items-center gap-1">
+                  BRONZE <Medal className="w-3.5 h-3.5 text-amber-500" />
+                </span>
               </div>
             </div>
           ) : (
@@ -237,7 +243,21 @@ export default function BattlePodiumView({
                     }`}
                   >
                     <td className="py-3 pl-3 font-game font-bold">
-                      {idx === 0 ? "🥇 1" : idx === 1 ? "🥈 2" : idx === 2 ? "🥉 3" : `#${idx + 1}`}
+                      {idx === 0 ? (
+                        <span className="inline-flex items-center gap-1 text-amber-300">
+                          <Medal className="w-4 h-4 text-amber-300" /> 1
+                        </span>
+                      ) : idx === 1 ? (
+                        <span className="inline-flex items-center gap-1 text-slate-300">
+                          <Medal className="w-4 h-4 text-slate-300" /> 2
+                        </span>
+                      ) : idx === 2 ? (
+                        <span className="inline-flex items-center gap-1 text-amber-600">
+                          <Medal className="w-4 h-4 text-amber-600" /> 3
+                        </span>
+                      ) : (
+                        `#${idx + 1}`
+                      )}
                     </td>
                     <td className="py-3">
                       <div className="flex items-center gap-2.5">
@@ -271,7 +291,7 @@ export default function BattlePodiumView({
         userAnswers={effectiveUserAnswers}
         collapsible={true}
         defaultExpanded={true}
-        title="📝 本局考題覆盤與解析"
+        title="本局考題覆盤與解析"
       />
 
       {/* Action Buttons: Play Again & Return */}
