@@ -246,14 +246,14 @@ export default function WrongQuestionsRanking({
       <div className="pt-4 border-t border-white/10 space-y-4 animate-fade-in-down">
         {/* Header with Question Type Filter Tabs */}
         <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-rose-400" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <Flame className="w-4 h-4 text-rose-400 shrink-0" />
             <span className="text-sm font-bold font-game text-foreground">
               {activeTab === "personal"
                 ? "個人專屬錯題本 · 排行榜以外錯題"
                 : "全站高頻錯題 · 排行榜以外錯題"}
             </span>
-            <span className="text-xs text-foreground-muted">
+            <span className="text-xs text-foreground-muted whitespace-nowrap">
               (第 11 題起，共 {remainingCount} 題)
             </span>
           </div>

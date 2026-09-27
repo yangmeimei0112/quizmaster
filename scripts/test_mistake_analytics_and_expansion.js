@@ -143,25 +143,16 @@ function getBadgeStyling(optKey, correctAnswersStr, optStats) {
 
 /**
  * Expansion & Filter Oracle (R1 / F16 / F17 / F18)
+ * Filters remaining questions (#11+) by Question Type (ALL / SINGLE / MULTIPLE)
  */
-function filterQuestions(questions, searchQuery, typeFilter) {
+function filterQuestions(questions, typeFilterOrSearch, typeFilter) {
+  // Support both filterQuestions(questions, typeFilter) and legacy filterQuestions(questions, searchQuery, typeFilter)
+  const actualTypeFilter = typeFilter !== undefined ? typeFilter : typeFilterOrSearch;
+
   return questions.filter((q) => {
     // Type filter: 全部, 單選題 (SINGLE), 複選題 (MULTIPLE)
-    if (typeFilter === "SINGLE" && q.type !== "SINGLE") return false;
-    if (typeFilter === "MULTIPLE" && q.type !== "MULTIPLE") return false;
-
-    // Search query filter: stem, options, explanation, category
-    if (searchQuery && searchQuery.trim()) {
-      const qLower = searchQuery.trim().toLowerCase();
-      const matchStem = q.stem && q.stem.toLowerCase().includes(qLower);
-      const matchA = q.optionA && q.optionA.toLowerCase().includes(qLower);
-      const matchB = q.optionB && q.optionB.toLowerCase().includes(qLower);
-      const matchC = q.optionC && q.optionC.toLowerCase().includes(qLower);
-      const matchD = q.optionD && q.optionD.toLowerCase().includes(qLower);
-      const matchExp = q.explanation && q.explanation.toLowerCase().includes(qLower);
-      const matchCat = q.category && q.category.toLowerCase().includes(qLower);
-      return matchStem || matchA || matchB || matchC || matchD || matchExp || matchCat;
-    }
+    if (actualTypeFilter === "SINGLE" && q.type !== "SINGLE") return false;
+    if (actualTypeFilter === "MULTIPLE" && q.type !== "MULTIPLE") return false;
 
     return true;
   });
@@ -666,35 +657,42 @@ async function runAllTests() {
     }
   });
 
-  // --- Feature 17: Search & Type Filter in Expansion ---
-  console.log("\n  [F17: Search & Type Filter in Expansion]");
-  runTest("tier1", "F17.1: Search query filters questions by keyword matching stem", () => {
-    const filtered = filterQuestions(sample25Questions, "第 15 題", "ALL");
-    assert.equal(filtered.length, 1);
-    assert.equal(filtered[0].id, "q-15");
+  // --- Feature 17: Question Type Filter in Expansion (Search Bar Removed) ---
+  console.log("\n  [F17: Question Type Filter in Expansion (Search Bar Removed)]");
+  runTest("tier1", "F17.1: UI contract check: Search input and searchQuery state removed from WrongQuestionsRanking", () => {
+    if (isM2Active) {
+      const uiContent = fs.readFileSync(rankingUiPath, "utf8");
+      assert.ok(!uiContent.includes("searchQuery"), "searchQuery state should be completely removed");
+      assert.ok(!uiContent.includes("<Search"), "Search icon should be completely removed");
+      assert.ok(!uiContent.includes("搜尋錯題題幹關鍵字"), "Search input placeholder should be completely removed");
+    } else {
+      assert.ok(true, "M2 component check pending");
+    }
   });
   runTest("tier1", "F17.2: Type filter 'SINGLE' filters only single choice questions", () => {
-    const filtered = filterQuestions(sample25Questions, "", "SINGLE");
+    const filtered = filterQuestions(sample25Questions, "SINGLE");
     assert.ok(filtered.every((q) => q.type === "SINGLE"));
     assert.ok(filtered.length > 0);
   });
   runTest("tier1", "F17.3: Type filter 'MULTIPLE' filters only multiple choice questions", () => {
-    const filtered = filterQuestions(sample25Questions, "", "MULTIPLE");
+    const filtered = filterQuestions(sample25Questions, "MULTIPLE");
     assert.ok(filtered.every((q) => q.type === "MULTIPLE"));
     assert.ok(filtered.length > 0);
   });
-  runTest("tier1", "F17.4: Composite filtering matches both type filter AND keyword search query", () => {
-    const filtered = filterQuestions(sample25Questions, "第", "MULTIPLE");
-    assert.ok(filtered.every((q) => q.type === "MULTIPLE" && q.stem.includes("第")));
+  runTest("tier1", "F17.4: Type filter 'ALL' retains all questions regardless of type", () => {
+    const filtered = filterQuestions(sample25Questions, "ALL");
+    assert.equal(filtered.length, sample25Questions.length);
   });
-  runTest("tier1", "F17.5: Search query handles case-insensitive English keywords and trim whitespace", () => {
-    const testList = [
-      { id: "1", stem: "TypeScript interface test", type: "SINGLE" },
-      { id: "2", stem: "JavaScript function test", type: "SINGLE" },
-    ];
-    const filtered = filterQuestions(testList, "  TYPESCRIPT  ", "ALL");
-    assert.equal(filtered.length, 1);
-    assert.equal(filtered[0].id, "1");
+  runTest("tier1", "F17.5: UI contract check: Type filter buttons ('全部', '單選題', '複選題') preserved with tactile touch targets", () => {
+    if (isM2Active) {
+      const uiContent = fs.readFileSync(rankingUiPath, "utf8");
+      assert.match(uiContent, /setTypeFilter\(t\.value\)/);
+      assert.match(uiContent, /全部/);
+      assert.match(uiContent, /單選題/);
+      assert.match(uiContent, /複選題/);
+    } else {
+      assert.ok(true, "M2 component check pending");
+    }
   });
 
   // --- Feature 18: Bottom Collapse with Scroll ---
@@ -989,25 +987,27 @@ async function runAllTests() {
     assert.equal(stats.options.A.isHighest, true);
   });
 
-  runTest("tier3", "C4: Pairwise State Matrix: (Expanded: True/False) × (Type Filter) × (Search Query)", () => {
+  runTest("tier3", "C4: Pairwise State Matrix: (Expanded: True/False) × (Type Filter: ALL / SINGLE / MULTIPLE)", () => {
     const questions = [
       { id: "1", stem: "專案經理的角色定義", type: "SINGLE", category: "管理" },
       { id: "2", stem: "敏捷開發核心價值", type: "MULTIPLE", category: "方法論" },
       { id: "3", stem: "甘特圖繪製原則", type: "SINGLE", category: "工具" },
     ];
 
-    // Combination 1: Collapsed + ALL + Empty
-    const c1 = filterQuestions(questions, "", "ALL");
+    // Combination 1: ALL filter retains all 3 questions
+    const c1 = filterQuestions(questions, "ALL");
     assert.equal(c1.length, 3);
 
-    // Combination 2: Expanded + SINGLE + "專案"
-    const c2 = filterQuestions(questions, "專案", "SINGLE");
-    assert.equal(c2.length, 1);
+    // Combination 2: SINGLE filter retains only 2 single choice questions
+    const c2 = filterQuestions(questions, "SINGLE");
+    assert.equal(c2.length, 2);
     assert.equal(c2[0].id, "1");
+    assert.equal(c2[1].id, "3");
 
-    // Combination 3: Expanded + MULTIPLE + "甘特圖"
-    const c3 = filterQuestions(questions, "甘特圖", "MULTIPLE");
-    assert.equal(c3.length, 0); // Type mismatch
+    // Combination 3: MULTIPLE filter retains only 1 multiple choice question
+    const c3 = filterQuestions(questions, "MULTIPLE");
+    assert.equal(c3.length, 1);
+    assert.equal(c3[0].id, "2");
   });
 
   runTest("tier3", "C5: Concurrency Simulation on Atomic Counters", () => {
@@ -1091,7 +1091,7 @@ async function runAllTests() {
   });
 
   // Scenario 4: Long Leaderboard In-Place Expansion
-  runTest("tier4", "Scenario 4: Long Leaderboard In-Place Expansion (25 questions, keyword filter, collapse)", () => {
+  runTest("tier4", "Scenario 4: Long Leaderboard In-Place Expansion (25 questions, type filter, collapse)", () => {
     const questions25 = Array.from({ length: 25 }, (_, i) => ({
       id: `q-${i + 1}`,
       stem: `專案管理流程第 ${i + 1} 題：範疇與成本控制`,
@@ -1112,16 +1112,21 @@ async function runAllTests() {
     assert.equal(expanded.top10.length, 10);
     assert.equal(expanded.remaining.length, 15);
 
-    // 3. Search for keyword "第 15 題"
-    const searchResult = filterQuestions(expanded.remaining, "第 15 題", "ALL");
-    assert.equal(searchResult.length, 1);
-    assert.equal(searchResult[0].id, "q-15");
-
-    // 4. Filter by SINGLE
-    const singleFiltered = filterQuestions(expanded.remaining, "", "SINGLE");
+    // 3. Filter by SINGLE
+    const singleFiltered = filterQuestions(expanded.remaining, "SINGLE");
     assert.ok(singleFiltered.every((q) => q.type === "SINGLE"));
+    assert.ok(singleFiltered.length > 0);
 
-    // 5. Collapse
+    // 4. Filter by MULTIPLE
+    const multipleFiltered = filterQuestions(expanded.remaining, "MULTIPLE");
+    assert.ok(multipleFiltered.every((q) => q.type === "MULTIPLE"));
+    assert.ok(multipleFiltered.length > 0);
+
+    // 5. Filter by ALL
+    const allFiltered = filterQuestions(expanded.remaining, "ALL");
+    assert.equal(allFiltered.length, 15);
+
+    // 6. Collapse
     const collapsed = partitionExpansion(questions25, false);
     assert.equal(collapsed.remaining.length, 0);
   });
