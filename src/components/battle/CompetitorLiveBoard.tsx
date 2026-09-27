@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { BattlePlayer } from "@/lib/battleStore";
 import AnimalAvatar from "./AnimalAvatar";
-import { Trophy, ChevronUp, ChevronDown, Check, X, Crown, Users, Flag } from "lucide-react";
+import { Trophy, ChevronUp, ChevronDown, Check, X, Crown, Users, Flag, ArrowUp, ArrowDown } from "lucide-react";
 
 interface CompetitorLiveBoardProps {
   players: BattlePlayer[];
@@ -123,13 +123,15 @@ export default function CompetitorLiveBoard({
                     <span className="text-[11px] font-bold text-foreground-muted">{rank}</span>
                   )}
                   {delta > 0 && (
-                    <span className="text-[9px] font-black text-emerald-400 leading-none mt-0.5 animate-pulse">
-                      ↑{delta}
+                    <span className="text-[9px] font-black text-emerald-400 leading-none mt-0.5 animate-pulse inline-flex items-center">
+                      <ArrowUp className="w-2.5 h-2.5 inline" />
+                      {delta}
                     </span>
                   )}
                   {delta < 0 && (
-                    <span className="text-[9px] font-black text-rose-400 leading-none mt-0.5">
-                      ↓{Math.abs(delta)}
+                    <span className="text-[9px] font-black text-rose-400 leading-none mt-0.5 inline-flex items-center">
+                      <ArrowDown className="w-2.5 h-2.5 inline" />
+                      {Math.abs(delta)}
                     </span>
                   )}
                 </div>
