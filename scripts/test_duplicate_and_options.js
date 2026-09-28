@@ -396,6 +396,17 @@ async function runTests() {
     );
   });
 
+  it("QuickAddModal: 偵測多題導航提示文字簡潔化 (無切換指示括號與冒號)", () => {
+    assert.ok(
+      quickAddContent.includes("成功偵測到 {parsedList.length} 道題目"),
+      "QuickAddModal 標題需包含簡潔的題目偵測數量"
+    );
+    assert.ok(
+      !quickAddContent.includes("成功偵測到 {parsedList.length} 道題目（點擊或按 ← / → 切換）："),
+      "QuickAddModal 標題應移除括號內的切換指示與冒號"
+    );
+  });
+
   it("questions API 支援 verifiedNotDuplicate 放行防重複檢查", () => {
     assert.ok(
       questionsRouteContent.includes("shouldForceCreate"),

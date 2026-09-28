@@ -1151,7 +1151,7 @@ export default function QuickAddModal({
                   <div className="flex items-center justify-between">
                     <span className="font-game font-bold text-foreground text-xs flex items-center gap-1.5">
                       <ListPlus className="w-4 h-4 text-purple-400" />
-                      <span>成功偵測到 {parsedList.length} 道題目（點擊或按 ← / → 切換）：</span>
+                      <span>成功偵測到 {parsedList.length} 道題目</span>
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {isCheckingDuplicates ? (
