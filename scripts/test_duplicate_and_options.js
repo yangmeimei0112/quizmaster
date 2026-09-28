@@ -396,7 +396,7 @@ async function runTests() {
     );
   });
 
-  it("QuickAddModal: 偵測多題導航提示文字簡潔化 (無切換指示括號與冒號)", () => {
+  it("QuickAddModal: 偵測多題導航提示文字簡潔化 (無切換指示括號與冒號，具備響應式折行)", () => {
     assert.ok(
       quickAddContent.includes("成功偵測到 {parsedList.length} 道題目"),
       "QuickAddModal 標題需包含簡潔的題目偵測數量"
@@ -404,6 +404,14 @@ async function runTests() {
     assert.ok(
       !quickAddContent.includes("成功偵測到 {parsedList.length} 道題目（點擊或按 ← / → 切換）："),
       "QuickAddModal 標題應移除括號內的切換指示與冒號"
+    );
+    assert.ok(
+      !quickAddContent.includes("點擊或按"),
+      "QuickAddModal 標題應徹底移除「點擊或按」切換提示"
+    );
+    assert.ok(
+      quickAddContent.includes("flex items-center justify-between gap-2 flex-wrap"),
+      "多題導航頂部需具備 gap-2 flex-wrap 防禦窄螢幕溢出"
     );
   });
 

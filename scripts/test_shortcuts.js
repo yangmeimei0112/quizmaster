@@ -70,6 +70,7 @@ test('QuickAddModal: 介面具備切換指示與 Ctrl+Enter 快捷鍵提示', ()
   assert(quickAddContent.includes('ChevronLeft') && quickAddContent.includes('ChevronRight'), '缺少左右按鈕輔助切換');
   assert(quickAddContent.includes('成功偵測到 {parsedList.length} 道題目'), '標題應包含簡潔的題目偵測數量');
   assert(!quickAddContent.includes('成功偵測到 {parsedList.length} 道題目（點擊或按 ← / → 切換）：'), '標題應移除括號內的切換指示與冒號');
+  assert(!quickAddContent.includes('點擊或按'), '不應再包含「點擊或按」冗餘提示');
 });
 
 test('QuickAddModal: 具備 isComposing 與 keyCode === 229 輸入法防護 (防止注音/拼音 Esc 關閉彈窗丟失輸入)', () => {

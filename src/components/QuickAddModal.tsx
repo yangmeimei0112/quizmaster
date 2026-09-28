@@ -1148,9 +1148,9 @@ export default function QuickAddModal({
               {/* 多題導航分頁膠囊 (當偵測到 >= 2 道題目時顯示) */}
               {isMultiMode && (
                 <div className="space-y-2 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-purple-950/30 via-accent/10 to-transparent border border-purple-500/25">
-                  <div className="flex items-center justify-between">
-                    <span className="font-game font-bold text-foreground text-xs flex items-center gap-1.5">
-                      <ListPlus className="w-4 h-4 text-purple-400" />
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-game font-bold text-foreground text-xs flex items-center gap-1.5 shrink-0">
+                      <ListPlus className="w-4 h-4 text-purple-400 shrink-0" />
                       <span>成功偵測到 {parsedList.length} 道題目</span>
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap">
