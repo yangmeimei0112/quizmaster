@@ -224,7 +224,7 @@ async function runAdversarialReview() {
   const initialQuestionsCount = await prisma.question.count();
   assert.ok(initialQuestionsCount > 0, "題庫必須具備基礎題目");
 
-  // 建立 3 位測試使用者與 5 筆錯題記錄
+  // 建立測試使用者與錯題/作答進度記錄
   const testUser = await prisma.user.upsert({
     where: { username: "adversarial_tester" },
     update: {},
@@ -263,15 +263,36 @@ async function runAdversarialReview() {
         lastUserAnswer: "C",
       },
     });
+
+    await prisma.userQuestionProgress.upsert({
+      where: {
+        userId_questionId: {
+          userId: testUser.id,
+          questionId: q.id,
+        },
+      },
+      update: { attemptCount: 150, correctCount: 51, isMastered: true },
+      create: {
+        userId: testUser.id,
+        questionId: q.id,
+        attemptCount: 150,
+        correctCount: 51,
+        isMastered: true,
+        lastAnswer: "C",
+      },
+    });
   }
 
   const preWrongCount = await prisma.wrongQuestionRecord.count();
   assert.ok(preWrongCount >= 3, "錯題本成功寫入污染測試數據");
+  const preProgressCount = await prisma.userQuestionProgress.count();
+  assert.ok(preProgressCount >= 3, "作答進度成功寫入污染測試數據");
 
   // 第一次執行重置
   const r1 = await resetMistakeRecordsAndStats(prisma);
   assert.equal(r1.success, true);
   assert.equal(r1.finalWrongRecordCount, 0, "WrongQuestionRecord 必須為 0");
+  assert.equal(r1.finalUserProgressCount, 0, "UserQuestionProgress 必須為 0");
   assert.equal(r1.nonZeroStatsCount, 0, "非零統計 Question 必須為 0");
   assert.equal(r1.finalQuestionCount, initialQuestionsCount, "題庫筆數絕對不變");
 
@@ -279,9 +300,11 @@ async function runAdversarialReview() {
   const r2 = await resetMistakeRecordsAndStats(prisma);
   assert.equal(r2.success, true);
   assert.equal(r2.finalWrongRecordCount, 0, "冪等重置 WrongQuestionRecord 維持 0");
+  assert.equal(r2.finalUserProgressCount, 0, "冪等重置 UserQuestionProgress 維持 0");
   assert.equal(r2.nonZeroStatsCount, 0, "冪等重置 非零統計 Question 維持 0");
   assert.equal(r2.finalQuestionCount, initialQuestionsCount, "冪等重置 題庫筆數維持不變");
-  assert.equal(r2.deletedWrongRecords, 0, "二次執行無需重複刪除");
+  assert.equal(r2.deletedWrongRecords, 0, "二次執行無需重複刪除錯題");
+  assert.equal(r2.deletedUserProgress, 0, "二次執行無需重複刪除進度");
   console.log("  ✓ 重置腳本原子交易與冪等性 (Idempotency) 檢驗 100% 通過");
 
   // -------------------------------------------------------------
@@ -358,9 +381,11 @@ async function runAdversarialReview() {
   // -------------------------------------------------------------
   console.log("\n[Attack 6] 清理測試數據並確認資料庫維持 100% 潔淨歸零狀態...");
   await prisma.wrongQuestionRecord.deleteMany({ where: { userId: testUser.id } });
+  await prisma.userQuestionProgress.deleteMany({ where: { userId: testUser.id } }).catch(() => {});
   await prisma.user.delete({ where: { id: testUser.id } }).catch(() => {});
   const finalReset = await resetMistakeRecordsAndStats(prisma);
   assert.equal(finalReset.finalWrongRecordCount, 0);
+  assert.equal(finalReset.finalUserProgressCount, 0);
   assert.equal(finalReset.nonZeroStatsCount, 0);
   assert.equal(finalReset.finalQuestionCount, initialQuestionsCount);
   console.log("  ✓ 資料庫已回歸徹底歸零與零錯題狀態");

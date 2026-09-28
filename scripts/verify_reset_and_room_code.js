@@ -2,7 +2,7 @@
  * scripts/verify_reset_and_room_code.js
  * 
  * 針對以下兩大核心需求的深度驗證套件：
- * 1. 全站錯題記錄與統計數據徹底清空歸零，且後續能從 1 正確重新累積
+ * 1. 全站錯題記錄、個人作答進度掌握度與統計數據徹底清空歸零，且後續能從 1 正確重新累積
  * 2. 對戰模式 4 碼房間代碼全面純數字化 (1000~9999)，前端輸入框與後端生成全面相容
  */
 
@@ -89,6 +89,7 @@ async function main() {
 
   assert.strictEqual(resetResult.success, true, "重置函式必須回傳 success: true");
   assert.strictEqual(resetResult.finalWrongRecordCount, 0, "WrongQuestionRecord 表筆數必須嚴格為 0");
+  assert.strictEqual(resetResult.finalUserProgressCount, 0, "UserQuestionProgress 表筆數必須嚴格為 0");
   assert.strictEqual(resetResult.nonZeroStatsCount, 0, "非零統計 Question 筆數必須嚴格為 0");
   assert.strictEqual(
     resetResult.finalQuestionCount,
@@ -99,6 +100,9 @@ async function main() {
   // 再次直接查庫以確保物理資料庫狀態
   const totalWrongRecords = await prisma.wrongQuestionRecord.count();
   assert.strictEqual(totalWrongRecords, 0, "物理資料庫 WrongQuestionRecord 筆數確認為 0");
+
+  const totalUserProgress = await prisma.userQuestionProgress.count();
+  assert.strictEqual(totalUserProgress, 0, "物理資料庫 UserQuestionProgress 筆數確認為 0");
 
   const nonZeroQuestions = await prisma.question.findMany({
     where: {
@@ -115,6 +119,7 @@ async function main() {
   });
   assert.strictEqual(nonZeroQuestions.length, 0, "題庫所有題目作答統計值嚴格為 0");
   console.log(`  ✓ 成功清空 WrongQuestionRecord (筆數: ${totalWrongRecords})`);
+  console.log(`  ✓ 成功清空 UserQuestionProgress (筆數: ${totalUserProgress})`);
   console.log(`  ✓ 題庫全數 ${resetResult.finalQuestionCount} 筆題目統計值全數歸零`);
 
   // -------------------------------------------------------------
@@ -163,7 +168,19 @@ async function main() {
     },
   });
 
-  // 3. 查驗累積值
+  // 3. 寫入個人進度掌握度 (UserQuestionProgress)
+  await prisma.userQuestionProgress.create({
+    data: {
+      userId: testUser.id,
+      questionId: sampleQ.id,
+      attemptCount: 1,
+      correctCount: 0,
+      isMastered: false,
+      lastAnswer: testWrongAnswer,
+    },
+  });
+
+  // 4. 查驗累積值
   const updatedQ = await prisma.question.findUnique({ where: { id: sampleQ.id } });
   assert.strictEqual(updatedQ.totalAttempts, 1, "Question totalAttempts 應從 0 累加至 1");
   assert.strictEqual(updatedQ.wrongCount, 1, "Question wrongCount 應從 0 累加至 1");
@@ -188,13 +205,27 @@ async function main() {
   assert.strictEqual(userRecord.correctCount, 0, "個人答對次數初始為 0");
   assert.strictEqual(userRecord.lastUserAnswer, testWrongAnswer, "記錄最後一次作答答案");
 
-  console.log("  ✓ 作答一題錯題後，該題全站統計與個人錯題記錄成功從 1 開始累積！");
+  const userProgress = await prisma.userQuestionProgress.findUnique({
+    where: {
+      userId_questionId: {
+        userId: testUser.id,
+        questionId: sampleQ.id,
+      },
+    },
+  });
+  assert.ok(userProgress, "個人進度記錄成功建立");
+  assert.strictEqual(userProgress.attemptCount, 1, "個人進度作答次數初始為 1");
+  assert.strictEqual(userProgress.isMastered, false, "個人進度掌握狀態初始為 false");
+  assert.strictEqual(userProgress.lastAnswer, testWrongAnswer, "個人進度最後作答答案記錄");
 
-  // 4. 清理測試資料，恢復乾淨歸零狀態
+  console.log("  ✓ 作答一題錯題後，該題全站統計、個人錯題記錄與個人進度成功從 1 開始累積！");
+
+  // 5. 清理測試資料，恢復乾淨歸零狀態
   console.log("\n[Part 5] 恢復全站徹底清空歸零狀態...");
   await prisma.user.delete({ where: { id: testUser.id } }).catch(() => {});
   const cleanFinal = await resetMistakeRecordsAndStats(prisma);
   assert.strictEqual(cleanFinal.finalWrongRecordCount, 0);
+  assert.strictEqual(cleanFinal.finalUserProgressCount, 0);
   assert.strictEqual(cleanFinal.nonZeroStatsCount, 0);
   console.log("  ✓ 資料庫已回歸完全歸零與無錯題狀態");
 
