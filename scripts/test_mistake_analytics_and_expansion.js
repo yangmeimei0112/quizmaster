@@ -142,22 +142,9 @@ function getBadgeStyling(optKey, correctAnswersStr, optStats) {
 }
 
 /**
- * Expansion & Filter Oracle (R1 / F16 / F17 / F18)
- * Filters remaining questions (#11+) by Question Type (ALL / SINGLE / MULTIPLE)
+ * Direct Expansion Specification Oracle (R1 / F16 / F17 / F18)
+ * Directly partitions remaining questions (#11+) without type filtering
  */
-function filterQuestions(questions, typeFilterOrSearch, typeFilter) {
-  // Support both filterQuestions(questions, typeFilter) and legacy filterQuestions(questions, searchQuery, typeFilter)
-  const actualTypeFilter = typeFilter !== undefined ? typeFilter : typeFilterOrSearch;
-
-  return questions.filter((q) => {
-    // Type filter: 全部, 單選題 (SINGLE), 複選題 (MULTIPLE)
-    if (actualTypeFilter === "SINGLE" && q.type !== "SINGLE") return false;
-    if (actualTypeFilter === "MULTIPLE" && q.type !== "MULTIPLE") return false;
-
-    return true;
-  });
-}
-
 function partitionExpansion(questions, isExpanded) {
   const top10 = questions.slice(0, 10);
   const remaining = isExpanded ? questions.slice(10) : [];
@@ -683,6 +670,8 @@ async function runAllTests() {
       const uiContent = fs.readFileSync(rankingUiPath, "utf8");
       assert.ok(!uiContent.includes("排行榜以外錯題"), "Top banner header text should be removed");
       assert.ok(!uiContent.includes("(第 11 題起"), "Top banner question count indicator should be removed");
+      assert.ok(!uiContent.includes("個人專屬錯題本 · 排行榜以外錯題"), "Personal expanded banner should be removed");
+      assert.ok(!uiContent.includes("全站高頻錯題 · 排行榜以外錯題"), "Global expanded banner should be removed");
     } else {
       assert.ok(true, "M2 component check pending");
     }
@@ -698,6 +687,7 @@ async function runAllTests() {
       const uiContent = fs.readFileSync(rankingUiPath, "utf8");
       assert.match(uiContent, /slice\(10\)/);
       assert.ok(!uiContent.includes("全部"), "Pill filter '全部' button should be removed from WrongQuestionsRanking");
+      assert.ok(!uiContent.includes("filteredRemaining"), "filteredRemaining state/memo should be removed");
       assert.match(uiContent, /remainingItems/);
     } else {
       assert.ok(true, "M2 component check pending");
@@ -996,27 +986,42 @@ async function runAllTests() {
     assert.equal(stats.options.A.isHighest, true);
   });
 
-  runTest("tier3", "C4: Pairwise State Matrix: (Expanded: True/False) × (Type Filter: ALL / SINGLE / MULTIPLE)", () => {
-    const questions = [
+  runTest("tier3", "C4: Pairwise State Matrix: (Expanded: True/False) × (Dataset Size: <= 10 items / > 10 items) without Type Filtering", () => {
+    const smallList = [
       { id: "1", stem: "專案經理的角色定義", type: "SINGLE", category: "管理" },
       { id: "2", stem: "敏捷開發核心價值", type: "MULTIPLE", category: "方法論" },
       { id: "3", stem: "甘特圖繪製原則", type: "SINGLE", category: "工具" },
     ];
+    const largeList = Array.from({ length: 15 }, (_, i) => ({
+      id: `q-${i + 1}`,
+      stem: `題目第 ${i + 1} 題`,
+      type: i % 2 === 0 ? "SINGLE" : "MULTIPLE",
+    }));
 
-    // Combination 1: ALL filter retains all 3 questions
-    const c1 = filterQuestions(questions, "ALL");
-    assert.equal(c1.length, 3);
+    // Combination 1: Size <= 10, Collapsed (Expanded: false)
+    const c1 = partitionExpansion(smallList, false);
+    assert.equal(c1.top10.length, 3);
+    assert.equal(c1.remaining.length, 0);
+    assert.equal(c1.hasMore, false, "Small dataset should not show expand trigger");
 
-    // Combination 2: SINGLE filter retains only 2 single choice questions
-    const c2 = filterQuestions(questions, "SINGLE");
-    assert.equal(c2.length, 2);
-    assert.equal(c2[0].id, "1");
-    assert.equal(c2[1].id, "3");
+    // Combination 2: Size <= 10, Expanded: true
+    const c2 = partitionExpansion(smallList, true);
+    assert.equal(c2.top10.length, 3);
+    assert.equal(c2.remaining.length, 0);
+    assert.equal(c2.hasMore, false);
 
-    // Combination 3: MULTIPLE filter retains only 1 multiple choice question
-    const c3 = filterQuestions(questions, "MULTIPLE");
-    assert.equal(c3.length, 1);
-    assert.equal(c3[0].id, "2");
+    // Combination 3: Size > 10, Collapsed (Expanded: false)
+    const c3 = partitionExpansion(largeList, false);
+    assert.equal(c3.top10.length, 10);
+    assert.equal(c3.remaining.length, 0);
+    assert.equal(c3.hasMore, true, "Large dataset should show expand trigger");
+
+    // Combination 4: Size > 10, Expanded: true (Direct seamless expansion without type filtering)
+    const c4 = partitionExpansion(largeList, true);
+    assert.equal(c4.top10.length, 10);
+    assert.equal(c4.remaining.length, 5, "Remaining 5 items (#11-#15) displayed seamlessly");
+    assert.equal(c4.remaining[0].id, "q-11");
+    assert.equal(c4.remaining[4].id, "q-15");
   });
 
   runTest("tier3", "C5: Concurrency Simulation on Atomic Counters", () => {
@@ -1099,8 +1104,8 @@ async function runAllTests() {
     assert.equal(syncedIds.size, 5);
   });
 
-  // Scenario 4: Long Leaderboard In-Place Expansion
-  runTest("tier4", "Scenario 4: Long Leaderboard In-Place Expansion (25 questions, type filter, collapse)", () => {
+  // Scenario 4: Long Leaderboard In-Place Expansion (Direct Seamless Expansion & Collapse)
+  runTest("tier4", "Scenario 4: Long Leaderboard In-Place Expansion (25 questions, direct seamless expansion without type filter, collapse)", () => {
     const questions25 = Array.from({ length: 25 }, (_, i) => ({
       id: `q-${i + 1}`,
       stem: `專案管理流程第 ${i + 1} 題：範疇與成本控制`,
@@ -1111,33 +1116,40 @@ async function runAllTests() {
       optionD: "縮減測試時程",
     }));
 
-    // 1. Initial collapsed view
+    // 1. Initial collapsed view: exactly top 10 displayed, remaining empty, expansion button available
     const initial = partitionExpansion(questions25, false);
     assert.equal(initial.top10.length, 10);
     assert.equal(initial.remaining.length, 0);
+    assert.equal(initial.hasMore, true);
 
-    // 2. Expand
+    // 2. Expand: In-place direct seamless expansion reveals all 15 remaining items (#11 to #25)
     const expanded = partitionExpansion(questions25, true);
     assert.equal(expanded.top10.length, 10);
     assert.equal(expanded.remaining.length, 15);
 
-    // 3. Filter by SINGLE
-    const singleFiltered = filterQuestions(expanded.remaining, "SINGLE");
-    assert.ok(singleFiltered.every((q) => q.type === "SINGLE"));
-    assert.ok(singleFiltered.length > 0);
+    // 3. Direct expansion renders items with consecutive ranks (#11 to #25) without toolbar banner
+    const remainingMapped = expanded.remaining.map((item, idx) => ({
+      item,
+      rank: idx + 11,
+    }));
+    assert.equal(remainingMapped[0].rank, 11);
+    assert.equal(remainingMapped[0].item.id, "q-11");
+    assert.equal(remainingMapped[14].rank, 25);
+    assert.equal(remainingMapped[14].item.id, "q-25");
 
-    // 4. Filter by MULTIPLE
-    const multipleFiltered = filterQuestions(expanded.remaining, "MULTIPLE");
-    assert.ok(multipleFiltered.every((q) => q.type === "MULTIPLE"));
-    assert.ok(multipleFiltered.length > 0);
+    // 4. Verify both SINGLE and MULTIPLE choice items seamlessly coexist without type filtering drops
+    const hasSingle = remainingMapped.some((r) => r.item.type === "SINGLE");
+    const hasMultiple = remainingMapped.some((r) => r.item.type === "MULTIPLE");
+    assert.ok(hasSingle, "Expanded list seamlessly preserves SINGLE choice questions");
+    assert.ok(hasMultiple, "Expanded list seamlessly preserves MULTIPLE choice questions");
 
-    // 5. Filter by ALL
-    const allFiltered = filterQuestions(expanded.remaining, "ALL");
-    assert.equal(allFiltered.length, 15);
+    // 5. Total items displayed in top10 + expanded exactly equal the original 25 items (zero data drop)
+    assert.equal(initial.top10.length + remainingMapped.length, 25);
 
-    // 6. Collapse
+    // 6. Collapse: Smoothly collapses back to top 10 items only
     const collapsed = partitionExpansion(questions25, false);
     assert.equal(collapsed.remaining.length, 0);
+    assert.equal(collapsed.top10.length, 10);
   });
 
   // Scenario 5: Cold Start & Backward Compatibility

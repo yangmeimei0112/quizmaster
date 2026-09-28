@@ -243,6 +243,7 @@ export default function WrongQuestionsRanking({
           <div className="grid gap-3">
             {remainingItems.map(({ item, rank }) => {
               const q: Question = activeTab === "personal" ? (item as WrongRecord).question : (item as Question);
+              if (!q) return null;
               const wrongCount = activeTab === "personal" ? (item as WrongRecord).wrongCount : q.wrongCount || 1;
               const lastUserAnswer = activeTab === "personal" ? (item as WrongRecord).lastUserAnswer : undefined;
               const isExpanded = !!expandedIds[q.id];
