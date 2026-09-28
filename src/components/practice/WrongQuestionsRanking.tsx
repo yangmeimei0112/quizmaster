@@ -620,20 +620,10 @@ export default function WrongQuestionsRanking({
           ) : (
             /* 已登入且有個人錯題 TOP 10 */
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs text-foreground-muted px-1">
+              <div className="text-xs text-foreground-muted px-1">
                 <span>
                   共記錄 <strong className="text-foreground">{personalTotal}</strong> 道個人錯題
                 </span>
-                {personalTotal > 10 && (
-                  <button
-                    type="button"
-                    onClick={handleExpandBeyond10}
-                    className="text-[#9AA5FF] hover:underline font-semibold flex items-center gap-1"
-                  >
-                    <span>查看排行榜以外的更多錯題 ({personalTotal} 題)</span>
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
-                )}
               </div>
 
               <div className="grid gap-3">
@@ -863,20 +853,10 @@ export default function WrongQuestionsRanking({
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs text-foreground-muted px-1">
+              <div className="text-xs text-foreground-muted px-1">
                 <span>
                   全站共 <strong className="text-foreground">{globalTotal}</strong> 道題目曾被答錯
                 </span>
-                {globalTotal > 10 && (
-                  <button
-                    type="button"
-                    onClick={handleExpandBeyond10}
-                    className="text-[#9AA5FF] hover:underline font-semibold flex items-center gap-1"
-                  >
-                    <span>查看排行榜以外的更多錯題 ({globalTotal} 題)</span>
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
-                )}
               </div>
 
               <div className="grid gap-3">
