@@ -89,6 +89,18 @@ export interface ExplanationCardProps {
   showCopyButton?: boolean;
 
   /**
+   * Whether to show the mode badge ("選項剖析" / "核心觀念") next to the title.
+   * Default: true. Can be set to false in practice mode to remove the "選項剖析" badge.
+   */
+  showModeBadge?: boolean;
+
+  /**
+   * Whether to hide the mode badge ("選項剖析" / "核心觀念") next to the title.
+   * Default: false.
+   */
+  hideModeBadge?: boolean;
+
+  /**
    * Custom CSS classes applied to root container.
    */
   className?: string;
@@ -153,6 +165,8 @@ export function ExplanationCard({
   defaultViewMode = "full",
   showControls = true,
   showCopyButton = true,
+  showModeBadge = true,
+  hideModeBadge = false,
   className = "",
   title = "題目詳解與考點",
 }: ExplanationCardProps) {
@@ -253,16 +267,18 @@ export function ExplanationCard({
           </div>
           <span className="font-bold font-game text-sm text-white tracking-wide">{title}</span>
 
-          {parsed.mode === "options" ? (
-            <span className="inline-flex items-center gap-1 text-[11px] font-game px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/25">
-              <Layers className="w-3 h-3" />
-              選項剖析
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-[11px] font-game px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25">
-              <Lightbulb className="w-3 h-3 text-amber-400" />
-              核心觀念
-            </span>
+          {showModeBadge && !hideModeBadge && (
+            parsed.mode === "options" ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-game px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/25">
+                <Layers className="w-3 h-3" />
+                選項剖析
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[11px] font-game px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25">
+                <Lightbulb className="w-3 h-3 text-amber-400" />
+                核心觀念
+              </span>
+            )
           )}
         </div>
 

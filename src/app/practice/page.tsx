@@ -402,14 +402,21 @@ export default function PracticePage() {
       // 2. A / B / C / D (及 1 / 2 / 3 / 4) 選擇選項
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         if (quizMode === "INSTANT" && !quizCompleted && !isAnswerSubmitted) {
-          const keyUpper = e.key.toUpperCase();
           const numMap: Record<string, string> = {
             "1": "A",
             "2": "B",
             "3": "C",
             "4": "D",
+            Digit1: "A",
+            Digit2: "B",
+            Digit3: "C",
+            Digit4: "D",
+            Numpad1: "A",
+            Numpad2: "B",
+            Numpad3: "C",
+            Numpad4: "D",
           };
-          const resolvedKey = numMap[e.key] || keyUpper;
+          const resolvedKey = numMap[e.key] || numMap[e.code] || e.key.toUpperCase();
 
           if (["A", "B", "C", "D"].includes(resolvedKey)) {
             e.preventDefault();
@@ -462,7 +469,7 @@ export default function PracticePage() {
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold font-game text-foreground flex items-center gap-2.5">
             <GraduationCap className="w-6 h-6 text-accent" />
-            個人自測刷題
+            刷題練習
           </h1>
 
           <button
@@ -507,7 +514,7 @@ export default function PracticePage() {
 
               <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-foreground-muted bg-white/[0.03] border border-white/[0.06] px-2.5 py-1 rounded-xl">
                 <span>快捷鍵：</span>
-                <span className="font-mono text-[#9AA5FF] font-bold">A / B / C / D</span>
+                <span className="font-mono text-[#9AA5FF] font-bold">1 / 2 / 3 / 4 或 A / B / C / D</span>
                 <span>選取 ·</span>
                 <kbd className="px-1.5 py-0.5 rounded bg-white/[0.08] border border-white/[0.12] text-foreground font-mono text-[10px]">
                   Enter
@@ -728,6 +735,24 @@ export default function PracticePage() {
                 );
               })()}
 
+              {/* 【前往下一題】按鈕 (移動至「這題我會了」按鈕下方、解析上方) */}
+              <div className="flex justify-end w-full pt-1 pb-1">
+                <button
+                  type="button"
+                  data-quiz-action="true"
+                  onClick={handleNextQuestion}
+                  className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200 touch-manipulation touch-tactile"
+                >
+                  <span>
+                    {currentIndex + 1 < quizQueue.length ? "前往下一題" : "查看測驗結算"}
+                  </span>
+                  <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 text-white rounded">
+                    Enter
+                  </kbd>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
               {currentQ.explanation && currentQ.explanation.trim() && (
                 <ExplanationCard
                   explanation={currentQ.explanation}
@@ -740,26 +765,10 @@ export default function PracticePage() {
                     D: currentQ.optionD,
                   }}
                   questionType={currentQ.type}
+                  showModeBadge={false}
                   className="animate-fade-in-up"
                 />
               )}
-
-              <div className="flex justify-end w-full">
-                <button
-                  type="button"
-                  data-quiz-action="true"
-                  onClick={handleNextQuestion}
-                  className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 sm:py-3 rounded-xl bg-accent hover:bg-accent-bright text-white text-sm font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200 touch-manipulation touch-tactile"
-                >
-                  <span>
-                    {currentIndex + 1 < quizQueue.length ? "下一題" : "查看測驗結算"}
-                  </span>
-                  <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white/20 text-white rounded">
-                    Enter
-                  </kbd>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           )}
         </div>
