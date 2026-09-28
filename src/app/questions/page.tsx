@@ -137,6 +137,7 @@ const QuestionCardItem = memo(function QuestionCardItem({
         tabIndex={0}
         onClick={() => onToggleCard(q.id)}
         onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             onToggleCard(q.id);
@@ -168,6 +169,9 @@ const QuestionCardItem = memo(function QuestionCardItem({
                 e.stopPropagation();
                 onToggleAnswer(q.id);
               }}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+              }}
               className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl border border-transparent transition-all duration-200 ease-expo-out touch-manipulation active:scale-95 ${
                 isAnswerShown
                   ? "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/30 hover:border-emerald-500/20"
@@ -188,6 +192,9 @@ const QuestionCardItem = memo(function QuestionCardItem({
                 e.stopPropagation();
                 handleOpenEdit(q);
               }}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+              }}
               className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-foreground-muted hover:text-[#8B96F8] hover:bg-white/[0.05] border border-transparent hover:border-white/[0.08] transition-all duration-200 ease-expo-out touch-manipulation active:scale-95"
               title="編輯題目"
               aria-label="編輯題目"
@@ -199,6 +206,9 @@ const QuestionCardItem = memo(function QuestionCardItem({
               onClick={(e) => {
                 e.stopPropagation();
                 handleDelete(q.id);
+              }}
+              onKeyDown={(e) => {
+                e.stopPropagation();
               }}
               disabled={isDeleting}
               className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-foreground-muted hover:text-rose-400 hover:bg-rose-950/30 border border-transparent hover:border-rose-500/20 transition-all duration-200 ease-expo-out touch-manipulation active:scale-95"
@@ -544,23 +554,25 @@ export default function QuestionsPage() {
     setCustomAnswerVisibility((prev) => {
       const current = prev[id] ?? showAnswersGlobal;
       const next = !current;
-      // 若是切換為顯示解答且該卡片處於收合狀態，自動展開卡片以便使用者立即檢視正解
-      if (next) {
-        setExpandedCardIds((expanded) => {
-          if (!expanded.has(id)) {
-            const nextExpanded = new Set(expanded);
-            nextExpanded.add(id);
-            return nextExpanded;
-          }
-          return expanded;
-        });
-      }
       return {
         ...prev,
         [id]: next,
       };
     });
-  }, [showAnswersGlobal]);
+    // 若是切換為顯示解答且該卡片處於收合狀態，自動展開卡片以便使用者立即檢視正解
+    const current = customAnswerVisibility[id] ?? showAnswersGlobal;
+    const next = !current;
+    if (next) {
+      setExpandedCardIds((expanded) => {
+        if (!expanded.has(id)) {
+          const nextExpanded = new Set(expanded);
+          nextExpanded.add(id);
+          return nextExpanded;
+        }
+        return expanded;
+      });
+    }
+  }, [customAnswerVisibility, showAnswersGlobal]);
 
   // 刪除題目
   const handleDelete = useCallback(async (id: string) => {
@@ -696,11 +708,8 @@ export default function QuestionsPage() {
           <button
             type="button"
             onClick={() => {
-              setShowAnswersGlobal((v) => {
-                const next = !v;
-                setCustomAnswerVisibility({});
-                return next;
-              });
+              setShowAnswersGlobal((v) => !v);
+              setCustomAnswerVisibility({});
             }}
             className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl border border-white/[0.10] text-xs font-semibold text-foreground bg-white/[0.04] hover:bg-white/[0.08] transition-all duration-200 ease-expo-out flex items-center justify-center gap-1.5 shadow-sm active:scale-95 touch-manipulation touch-tactile"
           >

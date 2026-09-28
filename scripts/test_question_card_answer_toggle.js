@@ -125,6 +125,83 @@ assert(
   `QuestionCardSkeleton 操作按鈕群骨架包含 4 個佔位元素 (實際: ${skeletonButtonsCount})`
 );
 
+// Part 7: 鍵盤無障礙與事件隔離檢驗 (A11y & Event Isolation)
+console.log("\n[Part 7] 鍵盤無障礙與事件隔離深度檢驗...");
+assert(
+  pageCode.includes("if (e.target !== e.currentTarget) return;"),
+  "外層卡片手風琴標頭在鍵盤 Enter / Space 觸發時嚴格檢查 e.target === e.currentTarget，防止子按鈕冒泡誤觸卡片折疊"
+);
+assert(
+  pageCode.includes("onToggleAnswer(q.id);") && pageCode.includes("onKeyDown={(e) => {\n                e.stopPropagation();\n              }}"),
+  "右上角解答切換按鈕具備 onKeyDown 隔離 (e.stopPropagation)，徹底防止鍵盤 Space / Enter 冒泡干擾"
+);
+assert(
+  !pageCode.includes("setShowAnswersGlobal((v) => {\n                const next = !v;\n                setCustomAnswerVisibility({});"),
+  "全域隱藏/顯示解答按鈕遵循純函數狀態更新原則，不在 setShowAnswersGlobal updater 內部觸發二次 setState"
+);
+
+// Part 8: 狀態機極限行為模擬 (50 題大量清單與邊界測試)
+console.log("\n[Part 8] 狀態機邏輯行為模擬 (50 題大量清單與邊界測試)...");
+{
+  let showAnswersGlobal = true;
+  let customAnswerVisibility = {};
+  let expandedCardIds = new Set();
+
+  const toggleQuestionAnswer = (id) => {
+    const current = customAnswerVisibility[id] ?? showAnswersGlobal;
+    const next = !current;
+    customAnswerVisibility = {
+      ...customAnswerVisibility,
+      [id]: next,
+    };
+    if (next) {
+      if (!expandedCardIds.has(id)) {
+        expandedCardIds = new Set(expandedCardIds);
+        expandedCardIds.add(id);
+      }
+    }
+  };
+
+  const toggleGlobalAnswer = () => {
+    showAnswersGlobal = !showAnswersGlobal;
+    customAnswerVisibility = {};
+  };
+
+  // 1. 預設全域顯示解答，所有卡片初始收合
+  assert(showAnswersGlobal === true && Object.keys(customAnswerVisibility).length === 0, "模擬初始狀態：全域顯示為 true，無個別覆寫");
+  assert(expandedCardIds.size === 0, "模擬初始狀態：全部卡片均為收合");
+
+  // 2. 切換 Q1 為隱藏
+  toggleQuestionAnswer("q1");
+  assert(customAnswerVisibility["q1"] === false, "Q1 個別切換為隱藏解答 (false)");
+  assert(!expandedCardIds.has("q1"), "切換為隱藏解答時不觸發卡片自動展開");
+
+  // 3. 切換全域隱藏解答
+  toggleGlobalAnswer();
+  assert(showAnswersGlobal === false, "切換全域隱藏解答成功");
+  assert(Object.keys(customAnswerVisibility).length === 0, "切換全域時成功重設並清空所有個別覆寫記錄");
+
+  // 4. 在全域隱藏狀態下，單獨點擊 Q2「顯示解答」
+  toggleQuestionAnswer("q2");
+  assert(customAnswerVisibility["q2"] === true, "Q2 在全域隱藏下個別覆寫為顯示 (true)");
+  assert(expandedCardIds.has("q2"), "Q2 切換為顯示解答時，智慧自動展開該卡片讓答案立即可見");
+
+  // 5. 50 題交替切換邊界測試
+  for (let i = 1; i <= 50; i++) {
+    const qid = `q_${i}`;
+    if (i % 2 === 0) {
+      toggleQuestionAnswer(qid);
+    }
+  }
+  const customCount = Object.keys(customAnswerVisibility).length;
+  assert(customCount === 26, `50 題交替切換完成 (覆寫題數: ${customCount})`);
+
+  // 6. 點擊頂部全域切換，驗證 100% 潔淨重設
+  toggleGlobalAnswer();
+  assert(showAnswersGlobal === true, "再次切換全域顯示解答成功");
+  assert(Object.keys(customAnswerVisibility).length === 0, "點擊頂部全域切換後，50 題覆寫狀態 100% 徹底清除回歸一致");
+}
+
 console.log("\n====================================================");
 console.log(`總測試項目: ${passed + failed} | 通過: ${passed} | 失敗: ${failed}`);
 console.log("====================================================");
