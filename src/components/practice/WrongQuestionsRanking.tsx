@@ -136,7 +136,6 @@ export default function WrongQuestionsRanking({
   // In-Place Downward Smooth Expansion State (#11+)
   const [isExpandedBeyond10, setIsExpandedBeyond10] = useState(false);
   const [isBeyond10Loading, setIsBeyond10Loading] = useState(false);
-  const [typeFilter, setTypeFilter] = useState<"ALL" | "SINGLE" | "MULTIPLE">("ALL");
   const question10Ref = useRef<HTMLDivElement>(null);
 
   const fetchTopRankings = useCallback(async () => {
@@ -186,7 +185,6 @@ export default function WrongQuestionsRanking({
   const handleTabChange = (tab: "personal" | "global") => {
     setActiveTab(tab);
     setIsExpandedBeyond10(false);
-    setTypeFilter("ALL");
   };
 
   // Expand beyond 10 handler
@@ -218,84 +216,32 @@ export default function WrongQuestionsRanking({
     }
   };
 
-  // Filtered remaining items (#11+)
-  const filteredRemaining = useMemo(() => {
+  // Remaining items (#11+)
+  const remainingItems = useMemo(() => {
     const list = (activeTab === "personal" ? personalRecords : globalQuestions).slice(10);
 
-    return list
-      .map((item, idx) => ({
-        item,
-        rank: idx + 11,
-      }))
-      .filter(({ item }) => {
-        const q: Question = activeTab === "personal" ? (item as WrongRecord).question : (item as Question);
-
-        // Type filter: 全部, 單選題 (SINGLE), 複選題 (MULTIPLE)
-        if (typeFilter === "SINGLE" && q.type !== "SINGLE") return false;
-        if (typeFilter === "MULTIPLE" && q.type !== "MULTIPLE") return false;
-
-        return true;
-      });
-  }, [activeTab, personalRecords, globalQuestions, typeFilter]);
+    return list.map((item, idx) => ({
+      item,
+      rank: idx + 11,
+    }));
+  }, [activeTab, personalRecords, globalQuestions]);
 
   // Render in-place downward smooth expansion section
   const renderExpandedSection = () => {
-    const totalCount = activeTab === "personal" ? personalTotal : globalTotal;
-    const remainingCount = Math.max(0, totalCount - 10);
-
     return (
       <div className="pt-4 border-t border-white/10 space-y-4 animate-fade-in-down">
-        {/* Header with Question Type Filter Tabs */}
-        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Flame className="w-4 h-4 text-rose-400 shrink-0" />
-            <span className="text-sm font-bold font-game text-foreground">
-              {activeTab === "personal"
-                ? "個人專屬錯題本 · 排行榜以外錯題"
-                : "全站高頻錯題 · 排行榜以外錯題"}
-            </span>
-            <span className="text-xs text-foreground-muted whitespace-nowrap">
-              (第 11 題起，共 {remainingCount} 題)
-            </span>
-          </div>
-
-          {/* Question Type Filter Tabs: 全部, 單選題, 複選題 */}
-          <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06] shrink-0 self-start sm:self-center">
-            {(
-              [
-                { label: "全部", value: "ALL" },
-                { label: "單選題", value: "SINGLE" },
-                { label: "複選題", value: "MULTIPLE" },
-              ] as const
-            ).map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => setTypeFilter(t.value)}
-                className={`min-h-[36px] sm:min-h-[32px] px-3 py-1 rounded-lg text-xs font-game font-bold transition-all touch-tactile ${
-                  typeFilter === t.value
-                    ? "bg-[#9AA5FF] text-slate-950 shadow-md font-black"
-                    : "text-foreground-muted hover:text-foreground"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Expanded Items List (#11 to #N) */}
         {isBeyond10Loading ? (
           <div className="py-12 text-center text-xs text-foreground-muted">
             載入排行榜以外的錯題中...
           </div>
-        ) : filteredRemaining.length === 0 ? (
+        ) : remainingItems.length === 0 ? (
           <div className="py-12 text-center text-xs text-foreground-muted">
-            無符合條件的錯題
+            無更多錯題
           </div>
         ) : (
           <div className="grid gap-3">
-            {filteredRemaining.map(({ item, rank }) => {
+            {remainingItems.map(({ item, rank }) => {
               const q: Question = activeTab === "personal" ? (item as WrongRecord).question : (item as Question);
               const wrongCount = activeTab === "personal" ? (item as WrongRecord).wrongCount : q.wrongCount || 1;
               const lastUserAnswer = activeTab === "personal" ? (item as WrongRecord).lastUserAnswer : undefined;

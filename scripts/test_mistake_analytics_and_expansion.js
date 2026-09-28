@@ -657,8 +657,8 @@ async function runAllTests() {
     }
   });
 
-  // --- Feature 17: Question Type Filter in Expansion (Search Bar Removed) ---
-  console.log("\n  [F17: Question Type Filter in Expansion (Search Bar Removed)]");
+  // --- Feature 17: Direct Seamless Expansion (#11+) & Banner/Type-Filter Removal ---
+  console.log("\n  [F17: Direct Seamless Expansion (#11+) & Banner/Type-Filter Removal]");
   runTest("tier1", "F17.1: UI contract check: Search input and searchQuery state removed from WrongQuestionsRanking", () => {
     if (isM2Active) {
       const uiContent = fs.readFileSync(rankingUiPath, "utf8");
@@ -669,27 +669,36 @@ async function runAllTests() {
       assert.ok(true, "M2 component check pending");
     }
   });
-  runTest("tier1", "F17.2: Type filter 'SINGLE' filters only single choice questions", () => {
-    const filtered = filterQuestions(sample25Questions, "SINGLE");
-    assert.ok(filtered.every((q) => q.type === "SINGLE"));
-    assert.ok(filtered.length > 0);
-  });
-  runTest("tier1", "F17.3: Type filter 'MULTIPLE' filters only multiple choice questions", () => {
-    const filtered = filterQuestions(sample25Questions, "MULTIPLE");
-    assert.ok(filtered.every((q) => q.type === "MULTIPLE"));
-    assert.ok(filtered.length > 0);
-  });
-  runTest("tier1", "F17.4: Type filter 'ALL' retains all questions regardless of type", () => {
-    const filtered = filterQuestions(sample25Questions, "ALL");
-    assert.equal(filtered.length, sample25Questions.length);
-  });
-  runTest("tier1", "F17.5: UI contract check: Type filter buttons ('全部', '單選題', '複選題') preserved with tactile touch targets", () => {
+  runTest("tier1", "F17.2: UI contract check: typeFilter state and setTypeFilter handler completely removed from WrongQuestionsRanking", () => {
     if (isM2Active) {
       const uiContent = fs.readFileSync(rankingUiPath, "utf8");
-      assert.match(uiContent, /setTypeFilter\(t\.value\)/);
-      assert.match(uiContent, /全部/);
-      assert.match(uiContent, /單選題/);
-      assert.match(uiContent, /複選題/);
+      assert.ok(!uiContent.includes("typeFilter"), "typeFilter state should be completely removed");
+      assert.ok(!uiContent.includes("setTypeFilter"), "setTypeFilter handler should be completely removed");
+    } else {
+      assert.ok(true, "M2 component check pending");
+    }
+  });
+  runTest("tier1", "F17.3: UI contract check: Top toolbar banner completely removed from renderExpandedSection", () => {
+    if (isM2Active) {
+      const uiContent = fs.readFileSync(rankingUiPath, "utf8");
+      assert.ok(!uiContent.includes("排行榜以外錯題"), "Top banner header text should be removed");
+      assert.ok(!uiContent.includes("(第 11 題起"), "Top banner question count indicator should be removed");
+    } else {
+      assert.ok(true, "M2 component check pending");
+    }
+  });
+  runTest("tier1", "F17.4: Direct expansion list specification: Partitioning preserves 100% of items from #11 onwards without drop", () => {
+    const remaining = sample25Questions.slice(10);
+    assert.equal(remaining.length, 15);
+    assert.equal(remaining[0].id, "q-11");
+    assert.equal(remaining[14].id, "q-25");
+  });
+  runTest("tier1", "F17.5: UI contract check: Direct expansion cleanly renders items starting from #11 without type filter pill buttons", () => {
+    if (isM2Active) {
+      const uiContent = fs.readFileSync(rankingUiPath, "utf8");
+      assert.match(uiContent, /slice\(10\)/);
+      assert.ok(!uiContent.includes("全部"), "Pill filter '全部' button should be removed from WrongQuestionsRanking");
+      assert.match(uiContent, /remainingItems/);
     } else {
       assert.ok(true, "M2 component check pending");
     }
