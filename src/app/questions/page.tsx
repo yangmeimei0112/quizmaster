@@ -52,6 +52,7 @@ function QuestionCardSkeleton({ index }: { index: number }) {
           <div className="w-11 h-11 rounded-xl bg-white/[0.03] animate-pulse" />
           <div className="w-11 h-11 rounded-xl bg-white/[0.03] animate-pulse" />
           <div className="w-11 h-11 rounded-xl bg-white/[0.03] animate-pulse" />
+          <div className="w-11 h-11 rounded-xl bg-white/[0.03] animate-pulse" />
         </div>
       </div>
 
@@ -74,11 +75,13 @@ interface QuestionCardItemProps {
   index: number;
   isExpanded: boolean;
   isExplanationOpen: boolean;
-  showAnswersGlobal: boolean;
+  isAnswerShown: boolean;
+  showAnswersGlobal?: boolean;
   isDeleting: boolean;
   isDeferred: boolean;
   onToggleCard: (id: string) => void;
   onToggleExplanation: (id: string) => void;
+  onToggleAnswer: (id: string) => void;
   handleOpenEdit: (q: Question) => void;
   handleDelete: (id: string) => void;
   onOpenImage?: (url: string) => void;
@@ -89,11 +92,13 @@ const QuestionCardItem = memo(function QuestionCardItem({
   index: idx,
   isExpanded,
   isExplanationOpen,
+  isAnswerShown,
   showAnswersGlobal,
   isDeleting,
   isDeferred,
   onToggleCard,
   onToggleExplanation,
+  onToggleAnswer,
   handleOpenEdit,
   handleDelete,
   onOpenImage,
@@ -157,6 +162,26 @@ const QuestionCardItem = memo(function QuestionCardItem({
 
           {/* 操作按鈕 (隔離點擊事件) + 旋轉指示箭頭 */}
           <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleAnswer(q.id);
+              }}
+              className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl border border-transparent transition-all duration-200 ease-expo-out touch-manipulation active:scale-95 ${
+                isAnswerShown
+                  ? "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/30 hover:border-emerald-500/20"
+                  : "text-foreground-muted hover:text-accent hover:bg-white/[0.05] hover:border-white/[0.08]"
+              }`}
+              title={isAnswerShown ? "隱藏解答" : "顯示解答"}
+              aria-label={isAnswerShown ? "隱藏解答" : "顯示解答"}
+            >
+              {isAnswerShown ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
             <button
               type="button"
               onClick={(e) => {
@@ -246,7 +271,7 @@ const QuestionCardItem = memo(function QuestionCardItem({
             <div className="grid sm:grid-cols-2 gap-3">
               {options.map((opt) => {
                 const isCorrect = correctSet.has(opt.key);
-                const shouldHighlight = showAnswersGlobal && isCorrect;
+                const shouldHighlight = isAnswerShown && isCorrect;
 
                 return (
                   <div
@@ -286,7 +311,7 @@ const QuestionCardItem = memo(function QuestionCardItem({
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-foreground-muted">標準解答：</span>
                   <span className="font-bold text-emerald-400 font-game text-sm">
-                    {showAnswersGlobal ? q.correctAnswers : "•••• (已隱藏)"}
+                    {isAnswerShown ? q.correctAnswers : "•••• (已隱藏)"}
                   </span>
                 </div>
 
@@ -341,6 +366,8 @@ export default function QuestionsPage() {
 
   // 答案全域隱藏/顯示切換 (方便使用者自測)
   const [showAnswersGlobal, setShowAnswersGlobal] = useState(true);
+  // 個別題目解答顯示/隱藏覆寫狀態 (key: questionId, value: boolean)
+  const [customAnswerVisibility, setCustomAnswerVisibility] = useState<Record<string, boolean>>({});
   // 個別展開解析的題目 ID Set
   const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
 
@@ -512,6 +539,29 @@ export default function QuestionsPage() {
     });
   }, []);
 
+  // 切換個別題目的解答顯示/隱藏
+  const toggleQuestionAnswer = useCallback((id: string) => {
+    setCustomAnswerVisibility((prev) => {
+      const current = prev[id] ?? showAnswersGlobal;
+      const next = !current;
+      // 若是切換為顯示解答且該卡片處於收合狀態，自動展開卡片以便使用者立即檢視正解
+      if (next) {
+        setExpandedCardIds((expanded) => {
+          if (!expanded.has(id)) {
+            const nextExpanded = new Set(expanded);
+            nextExpanded.add(id);
+            return nextExpanded;
+          }
+          return expanded;
+        });
+      }
+      return {
+        ...prev,
+        [id]: next,
+      };
+    });
+  }, [showAnswersGlobal]);
+
   // 刪除題目
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm("確定要刪除這道題目嗎？刪除後無法還原。")) return;
@@ -527,6 +577,14 @@ export default function QuestionsPage() {
             invalidateQuestionsCache();
           }
           return next;
+        });
+        setCustomAnswerVisibility((prev) => {
+          if (id in prev) {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          }
+          return prev;
         });
       }
     } catch (err) {
@@ -637,7 +695,13 @@ export default function QuestionsPage() {
           {/* 按鈕 2: 隱藏/顯示解答 */}
           <button
             type="button"
-            onClick={() => setShowAnswersGlobal((v) => !v)}
+            onClick={() => {
+              setShowAnswersGlobal((v) => {
+                const next = !v;
+                setCustomAnswerVisibility({});
+                return next;
+              });
+            }}
             className="h-11 min-h-[44px] px-3 sm:px-4 rounded-xl border border-white/[0.10] text-xs font-semibold text-foreground bg-white/[0.04] hover:bg-white/[0.08] transition-all duration-200 ease-expo-out flex items-center justify-center gap-1.5 shadow-sm active:scale-95 touch-manipulation touch-tactile"
           >
             {showAnswersGlobal ? (
@@ -795,11 +859,13 @@ export default function QuestionsPage() {
               index={idx}
               isExpanded={expandedCardIds.has(q.id)}
               isExplanationOpen={expandedExplanations.has(q.id)}
+              isAnswerShown={customAnswerVisibility[q.id] ?? showAnswersGlobal}
               showAnswersGlobal={showAnswersGlobal}
               isDeleting={deletingId === q.id}
               isDeferred={idx > 10}
               onToggleCard={toggleCard}
               onToggleExplanation={toggleExplanation}
+              onToggleAnswer={toggleQuestionAnswer}
               handleOpenEdit={handleOpenEdit}
               handleDelete={handleDelete}
               onOpenImage={setLightboxImageUrl}
