@@ -9,7 +9,6 @@ import {
   Dices,
   Trophy,
   Users,
-  Sparkles,
   ArrowRight,
   ShieldCheck,
   Zap,
@@ -197,32 +196,16 @@ export default function BattlePortalPage() {
         <div className="relative z-10 max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold font-game bg-accent/20 text-[#9AA5FF] border border-accent/30 shadow-[0_0_20px_rgba(94,106,210,0.3)]">
             <Swords className="w-4 h-4 text-accent-bright" />
-            <span>多人連線競技模式 · 4碼代碼極速開戰</span>
+            <span>多人連線競技模式</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight font-game text-foreground">
-            QuizMaster 多人即時對戰競技場
+            多人即時對戰競技場
           </h1>
 
           <p className="text-xs sm:text-sm text-foreground-muted leading-relaxed">
-            與朋友或同學們同台競技！自訂人數創建專屬 4 碼房間，全員答題即時同步、右上角實況看板即時超車，搭配街機風抽題滾輪與任天堂三層冠軍頒獎台，帶來最熱血的刷題體驗。
+            與朋友或同學們同台競技！自訂人數創建專屬房間，全員答題即時同步，帶來最熱血的刷題體驗。
           </p>
-
-          {/* Quick Stats Highlights */}
-          <div className="pt-2 flex flex-wrap items-center gap-3 text-xs">
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-foreground font-game font-bold">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              12 款日系可愛動物頭像
-            </span>
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-foreground font-game font-bold">
-              <Dices className="w-3.5 h-3.5 text-cyan-400" />
-              街機老虎機抽卡過場
-            </span>
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-foreground font-game font-bold">
-              <Trophy className="w-3.5 h-3.5 text-amber-300" />
-              3 級榮耀結算頒獎台
-            </span>
-          </div>
         </div>
       </div>
 

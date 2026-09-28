@@ -376,16 +376,29 @@ async function runTests() {
     "多人即時對戰",
     "創建對戰房間",
     "輸入 4 碼",
-    "12 款日系可愛動物頭像",
-    "街機老虎機抽卡過場",
-    "3 級榮耀結算頒獎台",
+    "多人連線競技模式",
+    "多人即時對戰競技場",
+    "自訂人數創建專屬房間，全員答題即時同步，帶來最熱血的刷題體驗。",
   ];
   for (const kw of requiredKeywords) {
     if (!battleContent.includes(kw)) {
       throw new Error(`Battle 頁面未包含核心關鍵字: ${kw}`);
     }
   }
-  console.log("  ✓ src/app/battle/page.tsx 成功包含多人對戰房間創建、加入與核心功能說明");
+  const forbiddenKeywords = [
+    "12 款日系可愛動物頭像",
+    "街機老虎機抽卡過場",
+    "3 級榮耀結算頒獎台",
+    "多人連線競技模式 · 4碼代碼極速開戰",
+    "QuizMaster 多人即時對戰競技場",
+    "自訂人數創建專屬 4 碼房間",
+  ];
+  for (const kw of forbiddenKeywords) {
+    if (battleContent.includes(kw)) {
+      throw new Error(`Battle 頁面不應包含已移除關鍵字: ${kw}`);
+    }
+  }
+  console.log("  ✓ src/app/battle/page.tsx 成功包含多人對戰房間創建、加入與核心功能說明（已驗證移除廢棄文字）");
 
   console.log("\n==================================================");
   console.log("🎉 所有三大新功能自動化測試全數通過！(0 錯誤)");
