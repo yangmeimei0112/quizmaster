@@ -136,17 +136,11 @@ export default async function HomePage() {
 
         {/* Bento Item 2: Quick Status & Practice Shortcut */}
         <div className="bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.14] rounded-3xl p-4 sm:p-8 shadow-linear-card hover:shadow-linear-hover hover:-translate-y-0.5 transition-all duration-200 ease-expo-out flex flex-col justify-between group animate-fade-in-up stagger-3">
-          <div className="flex items-center mb-4">
-            <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-[0_0_16px_rgba(245,158,11,0.25)]">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-[0_0_16px_rgba(245,158,11,0.25)] shrink-0">
               <BarChart3 className="w-5 h-5" />
             </div>
-          </div>
-
-          <div>
-            <h3 className="font-game font-bold text-foreground text-base mb-1">隨機自測就緒</h3>
-            <p className="text-xs text-foreground-muted leading-relaxed">
-              所有題目皆已建立標準答案與索引，隨時可啟動隨機抽題測驗強化記憶。
-            </p>
+            <h3 className="font-game font-bold text-foreground text-lg sm:text-xl">刷題練習</h3>
           </div>
 
           <div className="pt-4 mt-4 border-t border-white/[0.06]">
