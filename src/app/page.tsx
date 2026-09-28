@@ -94,16 +94,13 @@ export default async function HomePage() {
         <div className="md:col-span-2 bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.14] rounded-3xl p-4 sm:p-8 shadow-linear-card hover:shadow-linear-hover hover:-translate-y-0.5 transition-all duration-200 ease-expo-out relative overflow-hidden flex flex-col justify-between group animate-fade-in-up stagger-2">
           <div className="absolute right-0 top-0 w-48 h-48 bg-accent/10 rounded-full blur-3xl pointer-events-none group-hover:bg-accent/20 transition-all duration-300" />
 
-          <div className="flex items-center justify-between relative z-10 mb-6">
+          <div className="flex items-center relative z-10 mb-6">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-accent/15 border border-accent/30 text-[#8B96F8] flex items-center justify-center shadow-[0_0_16px_rgba(94,106,210,0.3)] shrink-0">
                 <BookMarked className="w-5 h-5" />
               </div>
               <h3 className="font-game font-bold text-foreground text-lg sm:text-xl">題庫總量儀表板</h3>
             </div>
-            <span className="font-game text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.05] text-foreground-muted border border-white/[0.08]">
-              即時統計
-            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end relative z-10">
@@ -139,13 +136,10 @@ export default async function HomePage() {
 
         {/* Bento Item 2: Quick Status & Practice Shortcut */}
         <div className="bg-surface hover:bg-surface-hover border border-white/[0.06] hover:border-white/[0.14] rounded-3xl p-4 sm:p-8 shadow-linear-card hover:shadow-linear-hover hover:-translate-y-0.5 transition-all duration-200 ease-expo-out flex flex-col justify-between group animate-fade-in-up stagger-3">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center mb-4">
             <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-[0_0_16px_rgba(245,158,11,0.25)]">
               <BarChart3 className="w-5 h-5" />
             </div>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 animate-pulse-subtle">
-              系統良好
-            </span>
           </div>
 
           <div>
