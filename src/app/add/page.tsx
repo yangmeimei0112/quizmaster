@@ -360,10 +360,10 @@ export default function AddQuestionPage() {
           </Link>
           <h1 className="text-2xl font-bold font-game text-foreground flex items-center gap-2.5">
             <PlusCircle className="w-6 h-6 text-accent" />
-            單題手動錄入
+            新增題目
           </h1>
           <p className="text-xs text-foreground-muted mt-1">
-            支援 4 選項單選與複選題，打字時系統將以演算法即時偵測重複題目。
+            支援 4 選項單選與複選題，系統即時比對是否有與題庫重複的題目。
           </p>
         </div>
 
