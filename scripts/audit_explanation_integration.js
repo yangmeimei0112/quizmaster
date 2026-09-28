@@ -36,7 +36,7 @@ async function runIntegrationAudit() {
       requiresCompact: false,
     },
     {
-      name: "個人自測刷題 (/practice)",
+      name: "刷題練習 (/practice)",
       path: path.resolve(__dirname, "../src/app/practice/page.tsx"),
       minCallsites: 1,
       requiresCompact: false,

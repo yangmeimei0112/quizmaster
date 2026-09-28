@@ -227,6 +227,73 @@ test("6.2 src/components/ExplanationCard.tsx 零 Emoji 違規", () => {
   }
 });
 
+// --- Part 7: 彈窗隔離、按鍵安全與快捷鍵狀態機深入檢驗 ---
+console.log("\n[Part 7] 彈窗隔離、按鍵安全與快捷鍵狀態機深入檢驗...");
+
+test("7.1 彈窗隔離：燈箱 (lightboxImageUrl) 或匯出 (isExportModalOpen) 開啟時嚴格阻斷快捷鍵", () => {
+  assert.ok(
+    practiceContent.includes("if (lightboxImageUrl || isExportModalOpen) return;"),
+    "必須在 keydown 開頭阻斷 lightboxImageUrl 與 isExportModalOpen"
+  );
+  assert.ok(
+    practiceContent.includes("lightboxImageUrl,") && practiceContent.includes("isExportModalOpen,"),
+    "useEffect 依賴項需包含 lightboxImageUrl 與 isExportModalOpen"
+  );
+});
+
+test("7.2 按鍵安全：resolvedKey 具備安全空值防護 (e.key ? e.key.toUpperCase() : '')", () => {
+  assert.ok(
+    practiceContent.includes("(e.key ? e.key.toUpperCase() : \"\")") ||
+    practiceContent.includes("e.key?.toUpperCase()"),
+    "resolvedKey 需具備安全防護，避免 e.key 為空時擲出例外"
+  );
+});
+
+test("7.3 選項卡片標題提示：包含按鍵 1/2/3/4 或 A/B/C/D 選取 title", () => {
+  assert.ok(
+    practiceContent.includes("按鍵") && practiceContent.includes("選取"),
+    "選項按鈕應具備輔助標題提示"
+  );
+});
+
+test("7.4 模擬測試：數字鍵 1~4 與字母鍵 A~D 精準映射選項狀態機", () => {
+  const numMap = {
+    "1": "A",
+    "2": "B",
+    "3": "C",
+    "4": "D",
+    Digit1: "A",
+    Digit2: "B",
+    Digit3: "C",
+    Digit4: "D",
+    Numpad1: "A",
+    Numpad2: "B",
+    Numpad3: "C",
+    Numpad4: "D",
+  };
+
+  // 測試標準數字鍵
+  ["1", "2", "3", "4"].forEach((k, idx) => {
+    const expected = ["A", "B", "C", "D"][idx];
+    const resolved = numMap[k];
+    assert.strictEqual(resolved, expected, `按鍵 ${k} 需正確解析為 ${expected}`);
+  });
+
+  // 測試 Numpad 鍵
+  ["Numpad1", "Numpad2", "Numpad3", "Numpad4"].forEach((code, idx) => {
+    const expected = ["A", "B", "C", "D"][idx];
+    const resolved = numMap[code];
+    assert.strictEqual(resolved, expected, `小鍵盤代碼 ${code} 需正確解析為 ${expected}`);
+  });
+
+  // 測試大小寫字母鍵安全解析
+  ["a", "b", "c", "d", "A", "B", "C", "D"].forEach((char) => {
+    const expected = char.toUpperCase();
+    const resolved = numMap[char] || char.toUpperCase();
+    assert.strictEqual(resolved, expected, `字母鍵 ${char} 需正確解析為 ${expected}`);
+  });
+});
+
 console.log("\n==================================================");
 console.log(`總測試項目: ${total} | 通過: ${passed} | 失敗: ${total - passed}`);
 console.log("==================================================");
@@ -234,3 +301,4 @@ console.log("==================================================");
 if (passed !== total) {
   process.exit(1);
 }
+

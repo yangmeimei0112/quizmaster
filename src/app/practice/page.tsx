@@ -350,10 +350,12 @@ export default function PracticePage() {
     fetchMastery();
   }, [fetchMastery]);
 
-  // 鍵盤快捷鍵：自測刷題 A/B/C/D 選擇選項、Enter 送出作答或進入下一題
+  // 鍵盤快捷鍵：刷題練習 1/2/3/4 與 A/B/C/D 選擇選項、Enter 送出作答或進入下一題
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.isComposing || e.keyCode === 229) return;
+      // 若開啟燈箱或彈窗，隔離鍵盤事件，防止誤觸作答或翻頁
+      if (lightboxImageUrl || isExportModalOpen) return;
 
       const target = e.target as HTMLElement | null;
       const isTyping =
@@ -416,7 +418,8 @@ export default function PracticePage() {
             Numpad3: "C",
             Numpad4: "D",
           };
-          const resolvedKey = numMap[e.key] || numMap[e.code] || e.key.toUpperCase();
+          const resolvedKey =
+            numMap[e.key] || numMap[e.code] || (e.key ? e.key.toUpperCase() : "");
 
           if (["A", "B", "C", "D"].includes(resolvedKey)) {
             e.preventDefault();
@@ -434,6 +437,8 @@ export default function PracticePage() {
     isAnswerSubmitted,
     selectedAnswers.length,
     filteredQuestions.length,
+    lightboxImageUrl,
+    isExportModalOpen,
     handleSelectOption,
     handleSubmitAnswer,
     handleNextQuestion,
@@ -519,7 +524,13 @@ export default function PracticePage() {
                 <kbd className="px-1.5 py-0.5 rounded bg-white/[0.08] border border-white/[0.12] text-foreground font-mono text-[10px]">
                   Enter
                 </kbd>
-                <span>送出</span>
+                <span>
+                  {isAnswerSubmitted
+                    ? currentIndex + 1 < quizQueue.length
+                      ? "下一題"
+                      : "結算"
+                    : "送出"}
+                </span>
               </div>
 
               <div className="font-semibold text-foreground-muted flex items-center gap-1.5">
@@ -610,6 +621,13 @@ export default function PracticePage() {
                   data-quiz-action="true"
                   onClick={() => handleSelectOption(opt.key)}
                   disabled={isAnswerSubmitted}
+                  title={
+                    !isAnswerSubmitted
+                      ? `按鍵 ${
+                          { A: "1", B: "2", C: "3", D: "4" }[opt.key] || ""
+                        } 或 ${opt.key} 選取`
+                      : undefined
+                  }
                   className={`p-4 min-h-[52px] rounded-2xl border text-left text-xs sm:text-sm flex items-center justify-between gap-3.5 transition-all duration-200 touch-manipulation touch-tactile ${cardStyle}`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
