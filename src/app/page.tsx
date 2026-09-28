@@ -96,13 +96,10 @@ export default async function HomePage() {
 
           <div className="flex items-center justify-between relative z-10 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-accent/15 border border-accent/30 text-[#8B96F8] flex items-center justify-center shadow-[0_0_16px_rgba(94,106,210,0.3)]">
+              <div className="w-11 h-11 rounded-2xl bg-accent/15 border border-accent/30 text-[#8B96F8] flex items-center justify-center shadow-[0_0_16px_rgba(94,106,210,0.3)] shrink-0">
                 <BookMarked className="w-5 h-5" />
               </div>
-              <div>
-                <h3 className="font-game font-bold text-foreground text-base">題庫總量儀表板</h3>
-                <p className="text-xs text-foreground-muted">個人專屬題庫收錄規模</p>
-              </div>
+              <h3 className="font-game font-bold text-foreground text-lg sm:text-xl">題庫總量儀表板</h3>
             </div>
             <span className="font-game text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.05] text-foreground-muted border border-white/[0.08]">
               即時統計
