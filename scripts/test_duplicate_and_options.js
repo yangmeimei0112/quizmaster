@@ -415,6 +415,64 @@ async function runTests() {
     );
   });
 
+  it("QuickAddModal & add/page.tsx: 符合 6 項 UI 文字精簡調整規範", () => {
+    // 1. 移除 已自動解析（包含標籤或徽章文字）
+    assert.ok(
+      !quickAddContent.includes("已自動解析"),
+      "QuickAddModal 不應包含「已自動解析」"
+    );
+
+    // 2. 題目解析 / 詳解說明 (標準 4 區塊) 改為 題目解析 / 詳解說明
+    assert.ok(
+      !quickAddContent.includes("題目解析 / 詳解說明 (標準 4 區塊)"),
+      "QuickAddModal 不應包含「題目解析 / 詳解說明 (標準 4 區塊)」"
+    );
+    assert.ok(
+      quickAddContent.includes("題目解析 / 詳解說明"),
+      "QuickAddModal 需包含「題目解析 / 詳解說明」"
+    );
+
+    // 3. 四個選項 (A、B、C、D) 改為 選項
+    assert.ok(
+      !quickAddContent.includes("四個選項 (A、B、C、D)"),
+      "QuickAddModal 不應包含「四個選項 (A、B、C、D)」"
+    );
+    assert.ok(
+      !addPageContent.includes("四個選項 (A、B、C、D)"),
+      "add/page.tsx 不應包含「四個選項 (A、B、C、D)」"
+    );
+
+    // 4. 題幹內容（已自動去除非必要題號） 改為 題幹內容
+    assert.ok(
+      !quickAddContent.includes("題幹內容（已自動去除非必要題號）"),
+      "QuickAddModal 不應包含「題幹內容（已自動去除非必要題號）」"
+    );
+    assert.ok(
+      quickAddContent.includes("<span>題幹內容</span>"),
+      "QuickAddModal 題幹標籤需為「題幹內容」"
+    );
+
+    // 5. 請在此貼上題目原始文字（支援多題同時貼入）： 改為 請在此貼上題目（支援多題同時貼入）：
+    assert.ok(
+      !quickAddContent.includes("請在此貼上題目原始文字（支援多題同時貼入）："),
+      "QuickAddModal 不應包含「請在此貼上題目原始文字（支援多題同時貼入）：」"
+    );
+    assert.ok(
+      quickAddContent.includes("請在此貼上題目（支援多題同時貼入）："),
+      "QuickAddModal 需包含「請在此貼上題目（支援多題同時貼入）：」"
+    );
+
+    // 6. 貼上題目原始文本（支援多題同時新增），演算法自動分離題幹、選項與正解。 改為 自動分離題幹、選項與答案
+    assert.ok(
+      !quickAddContent.includes("貼上題目原始文本（支援多題同時新增），演算法自動分離題幹、選項與正解。"),
+      "QuickAddModal 不應包含舊長說明段落"
+    );
+    assert.ok(
+      quickAddContent.includes("自動分離題幹、選項與答案"),
+      "QuickAddModal 需包含「自動分離題幹、選項與答案」"
+    );
+  });
+
   it("questions API 支援 verifiedNotDuplicate 放行防重複檢查", () => {
     assert.ok(
       questionsRouteContent.includes("shouldForceCreate"),
