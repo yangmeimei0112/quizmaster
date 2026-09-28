@@ -622,7 +622,7 @@ export default function WrongQuestionsRanking({
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs text-foreground-muted px-1">
                 <span>
-                  共記錄 <strong className="text-foreground">{personalTotal}</strong> 道個人錯題，此處展示做錯頻率最高前 10 名：
+                  共記錄 <strong className="text-foreground">{personalTotal}</strong> 道個人錯題
                 </span>
                 {personalTotal > 10 && (
                   <button
@@ -865,7 +865,7 @@ export default function WrongQuestionsRanking({
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs text-foreground-muted px-1">
                 <span>
-                  全站共 <strong className="text-foreground">{globalTotal}</strong> 道題目曾被答錯，展示高頻陷阱題前 10 名：
+                  全站共 <strong className="text-foreground">{globalTotal}</strong> 道題目曾被答錯
                 </span>
                 {globalTotal > 10 && (
                   <button

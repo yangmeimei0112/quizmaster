@@ -854,9 +854,6 @@ export default function PracticePage() {
               <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)]">
                 <Sparkles className="w-6 h-6" />
               </div>
-              <span className="text-[11px] font-bold font-game px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
-                單題即時反饋
-              </span>
             </div>
 
             <div className="space-y-1.5">
@@ -1007,9 +1004,6 @@ export default function PracticePage() {
               <div className="w-12 h-12 rounded-2xl bg-accent/20 border border-accent/40 text-[#9AA5FF] flex items-center justify-center shadow-[0_0_20px_rgba(94,106,210,0.35)]">
                 <Clock className="w-6 h-6" />
               </div>
-              <span className="text-[11px] font-bold font-game px-3 py-1 rounded-full bg-accent/15 text-[#9AA5FF] border border-accent/30">
-                標準全真檢定
-              </span>
             </div>
 
             <div className="space-y-1.5">
