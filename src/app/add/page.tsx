@@ -583,7 +583,7 @@ export default function AddQuestionPage() {
         <div className="space-y-3.5 pt-2">
           <div className="flex items-center justify-between">
             <label className="text-sm font-bold font-game text-foreground flex items-center gap-1.5">
-              <span>四個選項 (A、B、C、D)</span>
+              <span>選項</span>
               <span className="text-rose-400">*</span>
             </label>
             <span className="text-xs text-foreground-muted">

@@ -1076,7 +1076,7 @@ export default function QuickAddModal({
                 </span>
               </h2>
               <p className="text-xs text-foreground-muted">
-                貼上題目原始文本（支援多題同時新增），演算法自動分離題幹、選項與正解。
+                自動分離題幹、選項與答案
               </p>
             </div>
           </div>
@@ -1097,7 +1097,7 @@ export default function QuickAddModal({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="font-bold font-game text-foreground flex items-center gap-1.5">
                 <ClipboardPaste className="w-4 h-4 text-accent" />
-                <span>請在此貼上題目原始文字（支援多題同時貼入）：</span>
+                <span>請在此貼上題目（支援多題同時貼入）：</span>
               </label>
 
               {/* 快捷操作按鈕組 */}
@@ -1359,9 +1359,6 @@ export default function QuickAddModal({
                   <span className="font-bold font-game text-foreground text-xs sm:text-sm">
                     {isMultiMode ? `第 ${activeIndex + 1} 題檢查與微調` : "結構化解析預覽與檢查"}
                   </span>
-                  <span className="text-[11px] text-emerald-300 bg-emerald-950/50 border border-emerald-500/30 px-2 py-0.5 rounded-md font-semibold">
-                    已自動解析
-                  </span>
                 </div>
 
                 {/* 題型快速切換 */}
@@ -1569,7 +1566,7 @@ export default function QuickAddModal({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="font-bold font-game text-foreground flex items-center gap-1.5">
-                      <span>題幹內容（已自動去除非必要題號）</span>
+                      <span>題幹內容</span>
                       <span className="text-rose-400">*</span>
                     </label>
                     <span className="text-[11px] text-foreground-muted">
@@ -1601,7 +1598,7 @@ export default function QuickAddModal({
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <label className="font-bold font-game text-foreground flex items-center gap-1.5">
-                      <span>四個選項 (A、B、C、D)</span>
+                      <span>選項</span>
                       <span className="text-rose-400">*</span>
                     </label>
                     <span className="text-[11px] text-foreground-muted">
@@ -1665,7 +1662,7 @@ export default function QuickAddModal({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <label className="font-bold font-game text-foreground flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                      <span>題目解析 / 詳解說明 (標準 4 區塊)</span>
+                      <span>題目解析 / 詳解說明</span>
                       <span className="text-[10px] text-foreground-muted px-2 py-0.2 rounded-full bg-white/[0.04]">
                         選填
                       </span>
