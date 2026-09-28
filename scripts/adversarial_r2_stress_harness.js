@@ -94,38 +94,62 @@ async function runAdversarialHarness() {
   });
 
   runCase("1.3 Micro-Boundary Condition 4999ms: At 4999ms, getRoom stage strictly remains DRAWING", () => {
-    room.stage = "DRAWING";
-    room.drawingStartTime = Date.now() - 4999;
-    const observed = getRoom(roomCode);
-    assert.equal(
-      observed.stage,
-      "DRAWING",
-      `Expected DRAWING at 4999ms elapsed, but got ${observed.stage}`
-    );
+    const origNow = Date.now;
+    const fixedNow = origNow();
+    try {
+      Date.now = () => fixedNow;
+      room.stage = "DRAWING";
+      room.drawingStartTime = fixedNow - 4999;
+      const observed = getRoom(roomCode);
+      assert.equal(
+        observed.stage,
+        "DRAWING",
+        `Expected DRAWING at 4999ms elapsed, but got ${observed.stage}`
+      );
+    } finally {
+      Date.now = origNow;
+      room.updatedAt = origNow();
+    }
   });
 
   runCase("1.4 Transition Threshold 5000ms: At exactly 5000ms, getRoom transitions to PLAYING", () => {
-    room.stage = "DRAWING";
-    room.drawingStartTime = Date.now() - 5000;
-    const observed = getRoom(roomCode);
-    assert.equal(
-      observed.stage,
-      "PLAYING",
-      `Expected transition to PLAYING at 5000ms elapsed, but got ${observed.stage}`
-    );
-    assert.ok(typeof observed.playingStartTime === "number");
-    assert.ok(observed.playingStartTime > 0);
+    const origNow = Date.now;
+    const fixedNow = origNow();
+    try {
+      Date.now = () => fixedNow;
+      room.stage = "DRAWING";
+      room.drawingStartTime = fixedNow - 5000;
+      const observed = getRoom(roomCode);
+      assert.equal(
+        observed.stage,
+        "PLAYING",
+        `Expected transition to PLAYING at 5000ms elapsed, but got ${observed.stage}`
+      );
+      assert.ok(typeof observed.playingStartTime === "number");
+      assert.ok(observed.playingStartTime > 0);
+    } finally {
+      Date.now = origNow;
+      room.updatedAt = origNow();
+    }
   });
 
   runCase("1.5 Micro-Boundary Condition 5001ms: At 5001ms, getRoom stage is PLAYING", () => {
-    room.stage = "DRAWING";
-    room.drawingStartTime = Date.now() - 5001;
-    const observed = getRoom(roomCode);
-    assert.equal(
-      observed.stage,
-      "PLAYING",
-      `Expected PLAYING at 5001ms elapsed, but got ${observed.stage}`
-    );
+    const origNow = Date.now;
+    const fixedNow = origNow();
+    try {
+      Date.now = () => fixedNow;
+      room.stage = "DRAWING";
+      room.drawingStartTime = fixedNow - 5001;
+      const observed = getRoom(roomCode);
+      assert.equal(
+        observed.stage,
+        "PLAYING",
+        `Expected PLAYING at 5001ms elapsed, but got ${observed.stage}`
+      );
+    } finally {
+      Date.now = origNow;
+      room.updatedAt = origNow();
+    }
   });
 
   runCase("1.6 Post-Transition Condition 6000ms: At 6000ms, getRoom stage is PLAYING", () => {
