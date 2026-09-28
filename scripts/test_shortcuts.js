@@ -46,6 +46,18 @@ test('QuickAddModal: 支援 ESC 鍵關閉彈窗', () => {
   assert(quickAddContent.includes('onClose()'), 'Escape 應呼叫 onClose()');
 });
 
+test('QuickAddModal: 點擊背景遮罩 (Backdrop) 不得直接關閉視窗，防止誤觸丟失內容', () => {
+  // 外層 dialog 容器不得綁定點擊關閉事件
+  assert(
+    !quickAddContent.includes('if (e.target === e.currentTarget) onClose()') &&
+    !quickAddContent.includes('if (e.target === e.currentTarget) onClose();'),
+    '外層背景遮罩不應綁定點擊 onClose 關閉視窗'
+  );
+  // 必須保留明確的「取消關閉」按鈕與右上角關閉叉叉按鈕
+  assert(quickAddContent.includes('取消關閉'), '必須保留明確的「取消關閉」按鈕');
+  assert(quickAddContent.includes('aria-label="關閉視窗"'), '必須保留右上角關閉叉叉按鈕');
+});
+
 test('QuickAddModal: 支援 Ctrl+Enter / Cmd+Enter 快速送出', () => {
   assert(quickAddContent.includes('(e.ctrlKey || e.metaKey) && e.key === "Enter"'), '缺少 Ctrl/Cmd+Enter 判定');
   assert(quickAddContent.includes('handleBatchSaveAll()'), '多題模式應呼叫 handleBatchSaveAll');

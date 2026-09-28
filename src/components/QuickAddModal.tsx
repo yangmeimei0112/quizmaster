@@ -1043,9 +1043,6 @@ export default function QuickAddModal({
   return (
     <div
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden sm:overflow-y-auto animate-fade-in"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="quick-add-modal-title"

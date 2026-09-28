@@ -264,6 +264,16 @@ async function runAllTests() {
     assert(quickAddContent.includes("全部題目皆已重複，無法新增"), "全數重複時按鈕文字需顯示「全部題目皆已重複，無法新增」");
   });
 
+  test("彈窗防誤觸規範: 點擊模糊背景遮罩不直接關閉彈窗，僅限取消關閉與右上角按鈕", () => {
+    assert(
+      !quickAddContent.includes('if (e.target === e.currentTarget) onClose()') &&
+      !quickAddContent.includes('if (e.target === e.currentTarget) onClose();'),
+      "外層背景遮罩不得綁定點擊 onClose 關閉視窗"
+    );
+    assert(quickAddContent.includes("取消關閉"), "需具備取消關閉按鈕");
+    assert(quickAddContent.includes('aria-label="關閉視窗"'), "需具備右上角關閉視窗按鈕");
+  });
+
   console.log("\n--- 5. 單題模式徹底阻擋驗證 ---");
 
   test("單題模式: 100% 完全重複時嚴格禁用「直接新增」與「帶入表單」", () => {
