@@ -1024,22 +1024,6 @@ export default function PracticePage() {
               </p>
             </div>
 
-            {/* 規則特色項目 */}
-            <div className="space-y-2 text-xs text-foreground-muted pt-1">
-              <div className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-accent shrink-0" />
-                <span>右上方配置 60:00 即時倒數計時器</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-accent shrink-0" />
-                <span>50 題答題卡切換矩陣，清晰掌握已答/未答題</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-accent shrink-0" />
-                <span>提前交卷防呆通知，考後結算與 50 題對錯覆盤詳解</span>
-              </div>
-            </div>
-
             {/* 門檻檢查提示 */}
             {!isMockExamAvailable && (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs flex items-center gap-2">
