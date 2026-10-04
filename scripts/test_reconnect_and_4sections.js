@@ -261,18 +261,42 @@ it("Battle /battle/page.tsx: 支援進行中對戰提示橫幅與重新進入房
   );
 });
 
-it("QuickAddModal: 支援一鍵整理成 4 區塊格式按鈕", () => {
+it("QuickAddModal: 移除手動一鍵整理按鈕，並於上傳新增時自動呼叫 normalizeExplanationToFourSections", () => {
   const modalFile = path.resolve("src/components/QuickAddModal.tsx");
   const content = fs.readFileSync(modalFile, "utf-8");
 
-  assert.ok(
+  assert.equal(
     content.includes("一鍵整理成 4 區塊格式"),
-    "應有一鍵整理成 4 區塊格式按鈕"
+    false,
+    "已完整移除「一鍵整理成 4 區塊格式」按鈕"
   );
   assert.ok(
     content.includes("normalizeExplanationToFourSections"),
-    "應呼叫 normalizeExplanationToFourSections 進行解析正規化"
+    "應自動呼叫 normalizeExplanationToFourSections 進行 4 區塊解析正規化"
   );
+});
+
+it("parseQuestionText: 傳統解析標籤 (解析：...) 自動正規化為標準 4 區塊結構", () => {
+  const raw = `1. 下列何者正確？
+(A) 選項A
+(B) 選項B
+(C) 選項C
+(D) 選項D
+答案：A
+解析：本題在考憲法平等權。
+A. 選項A正確。
+B. 選項B錯誤。
+C. 選項C錯誤。
+D. 選項D錯誤。
+觀念說明：平等權之核心在於實質平等。
+考試重點：禁止差別待遇。`;
+
+  const parsed = parseQuestionText(raw);
+  assert.equal(parsed.correctAnswers[0], "A");
+  assert.ok(parsed.explanation.includes("【考點導讀】\n本題在考憲法平等權。"), "解析應包含考點導讀");
+  assert.ok(parsed.explanation.includes("【各選項詳細解析】"), "解析應包含各選項詳細解析");
+  assert.ok(parsed.explanation.includes("【觀念說明】\n平等權之核心在於實質平等。"), "解析應包含觀念說明");
+  assert.ok(parsed.explanation.includes("【考試記憶重點】\n禁止差別待遇。"), "解析應包含考試記憶重點");
 });
 
 it("parseExplanation: 純觀念題型包含【考點導讀】時不遺失 intro", () => {

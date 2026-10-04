@@ -32,6 +32,7 @@ import ImageLightboxModal from "@/components/ImageLightboxModal";
 import ExplanationCard from "@/components/ExplanationCard";
 import { getCachedQuestions, setCachedQuestions, invalidateQuestionsCache } from "@/lib/questionsCache";
 import { normalizeAnswers } from "@/lib/answerUtils";
+import { normalizeExplanationToFourSections } from "@/lib/explanationParser";
 
 // 骨架屏載入卡片元件，保持卡片版面高度穩定，消除頁面切換瞬態白閃與抽動
 function QuestionCardSkeleton({ index }: { index: number }) {
@@ -646,6 +647,14 @@ export default function QuestionsPage() {
 
     setIsUpdating(true);
     try {
+      const normalizedExp = editExplanation?.trim()
+        ? normalizeExplanationToFourSections(
+            editExplanation,
+            { A: editOptA, B: editOptB, C: editOptC, D: editOptD },
+            editAnswers
+          )
+        : "";
+
       const res = await fetch(`/api/questions/${editingQuestion.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -658,7 +667,7 @@ export default function QuestionsPage() {
           optionC: editOptC,
           optionD: editOptD,
           correctAnswers: editAnswers,
-          explanation: editExplanation,
+          explanation: normalizedExp,
         }),
       });
 

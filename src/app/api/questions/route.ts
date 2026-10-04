@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { normalizeText, calculateSimilarity, compareQuestionOptions } from "@/lib/similarity";
+import { normalizeExplanationToFourSections } from "@/lib/explanationParser";
 
 export const dynamic = "force-dynamic";
 
@@ -292,7 +293,11 @@ export async function POST(req: NextRequest) {
         optionD: optionD.trim(),
         correctAnswers: answersStr,
         explanation: explanation && explanation.trim()
-          ? explanation.replace(/^\r?\n+|\s+$/g, "")
+          ? normalizeExplanationToFourSections(
+              explanation,
+              { A: optionA, B: optionB, C: optionC, D: optionD },
+              correctAnswers
+            )
           : null,
         category: category ? category.trim() : null,
         difficulty: difficulty || "MEDIUM",

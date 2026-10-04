@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeText } from "@/lib/similarity";
+import { normalizeExplanationToFourSections } from "@/lib/explanationParser";
 
 // GET: 單題詳情
 export async function GET(
@@ -71,7 +72,11 @@ export async function PUT(
         explanation:
           explanation !== undefined
             ? explanation && explanation.trim()
-              ? explanation.replace(/^\r?\n+|\s+$/g, "")
+              ? normalizeExplanationToFourSections(
+                  explanation,
+                  { optionA, optionB, optionC, optionD },
+                  answersStr || correctAnswers
+                )
               : null
             : undefined,
         category: category !== undefined ? category?.trim() || null : undefined,

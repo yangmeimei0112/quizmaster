@@ -589,6 +589,18 @@ export default function QuickAddModal({
       return;
     }
     setFormError("");
+    const finalExplanation = currentItem.explanation?.trim()
+      ? normalizeExplanationToFourSections(
+          currentItem.explanation,
+          {
+            A: currentItem.optionA,
+            B: currentItem.optionB,
+            C: currentItem.optionC,
+            D: currentItem.optionD,
+          },
+          currentItem.correctAnswers
+        )
+      : "";
     onApply({
       stem: currentItem.stem,
       type: currentItem.type,
@@ -598,29 +610,13 @@ export default function QuickAddModal({
       optionC: currentItem.optionC,
       optionD: currentItem.optionD,
       correctAnswers: currentItem.correctAnswers,
-      explanation: currentItem.explanation,
+      explanation: finalExplanation,
     });
     setRawText("");
     setParsedList([]);
     setDuplicateStatuses([]);
     onClose();
   }, [currentItem, isCurrentFormValid, currentDup, isCheckingDuplicates, onApply, onClose, verifiedStatuses, activeIndex]);
-
-  // 依 4 區塊標準格式重構解析
-  const handleFormatExplanation = useCallback(() => {
-    if (!currentItem || !currentItem.explanation) return;
-    const formatted = normalizeExplanationToFourSections(
-      currentItem.explanation,
-      {
-        A: currentItem.optionA,
-        B: currentItem.optionB,
-        C: currentItem.optionC,
-        D: currentItem.optionD,
-      },
-      currentItem.correctAnswers
-    );
-    updateCurrentItem((q) => ({ ...q, explanation: formatted }));
-  }, [currentItem, updateCurrentItem]);
 
   // 單題直接新增
   const handleConfirmAndDirectSave = useCallback(async () => {
@@ -677,6 +673,19 @@ export default function QuickAddModal({
 
     try {
       const isVerifiedNotDup = verifiedStatuses[0] === 'NOT_DUPLICATE';
+      const finalExplanation = currentItem.explanation?.trim()
+        ? normalizeExplanationToFourSections(
+            currentItem.explanation,
+            {
+              A: currentItem.optionA,
+              B: currentItem.optionB,
+              C: currentItem.optionC,
+              D: currentItem.optionD,
+            },
+            currentItem.correctAnswers
+          )
+        : "";
+
       const success = await onDirectSave({
         stem: currentItem.stem,
         type: currentItem.type,
@@ -686,7 +695,7 @@ export default function QuickAddModal({
         optionC: currentItem.optionC,
         optionD: currentItem.optionD,
         correctAnswers: currentItem.correctAnswers,
-        explanation: currentItem.explanation,
+        explanation: finalExplanation,
         forceCreate: isVerifiedNotDup,
       });
 
@@ -764,7 +773,13 @@ export default function QuickAddModal({
             optionC: item.optionC,
             optionD: item.optionD,
             correctAnswers: item.correctAnswers,
-            explanation: item.explanation,
+            explanation: item.explanation?.trim()
+              ? normalizeExplanationToFourSections(
+                  item.explanation,
+                  { A: item.optionA, B: item.optionB, C: item.optionC, D: item.optionD },
+                  item.correctAnswers
+                )
+              : null,
             verifiedNotDuplicate: verifiedStatuses[idx] === 'NOT_DUPLICATE',
             forceCreate: verifiedStatuses[idx] === 'NOT_DUPLICATE',
           })),
@@ -874,7 +889,13 @@ export default function QuickAddModal({
               optionC: item.optionC,
               optionD: item.optionD,
               correctAnswers: item.correctAnswers,
-              explanation: item.explanation,
+              explanation: item.explanation?.trim()
+                ? normalizeExplanationToFourSections(
+                    item.explanation,
+                    { A: item.optionA, B: item.optionB, C: item.optionC, D: item.optionD },
+                    item.correctAnswers
+                  )
+                : null,
               verifiedNotDuplicate: isVerifiedNotDup,
               forceCreate: isVerifiedNotDup,
             };
@@ -1664,17 +1685,6 @@ export default function QuickAddModal({
                         選填
                       </span>
                     </label>
-                    {currentItem.explanation && (
-                      <button
-                        type="button"
-                        onClick={handleFormatExplanation}
-                        className="text-[11px] font-game text-indigo-400 hover:text-indigo-300 px-2.5 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors flex items-center gap-1 touch-tactile"
-                        title="依【考點導讀】【各選項詳細解析】【觀念說明】【考試記憶重點】自動排版"
-                      >
-                        <Sparkles className="w-3 h-3 text-amber-400" />
-                        <span>一鍵整理成 4 區塊格式</span>
-                      </button>
-                    )}
                   </div>
                   <textarea
                     value={currentItem.explanation}

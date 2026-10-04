@@ -82,7 +82,7 @@ export function formatExplanationIntoFourSections(rawExp: string): string {
   }
 
   introText = introText
-    .replace(/^\s*【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?\s*/i, "")
+    .replace(/^\s*(?:【\s*(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】\s*[:：]?|(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*[:：])\s*/i, "")
     .trim();
 
   // Normalize options A. B. C. D. format
@@ -392,6 +392,11 @@ export function parseQuestionText(rawText: string): ParsedQuestionResult {
   if (!result.optionB) result.warnings.push("選項 B 內容為空");
   if (!result.optionC) result.warnings.push("選項 C 內容為空");
   if (!result.optionD) result.warnings.push("選項 D 內容為空");
+
+  // 自動將解析正規化為標準 4 區塊結構
+  if (result.explanation && result.explanation.trim()) {
+    result.explanation = formatExplanationIntoFourSections(result.explanation);
+  }
 
   return result;
 }

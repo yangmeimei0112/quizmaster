@@ -21,6 +21,7 @@ import { SimilarMatch, QuestionType } from "@/types/question";
 import QuickAddModal from "@/components/QuickAddModal";
 import ImageAttachmentField from "@/components/ImageAttachmentField";
 import { invalidateQuestionsCache } from "@/lib/questionsCache";
+import { normalizeExplanationToFourSections } from "@/lib/explanationParser";
 
 export default function AddQuestionPage() {
   const router = useRouter();
@@ -146,7 +147,14 @@ export default function AddQuestionPage() {
     setOptionC(data.optionC);
     setOptionD(data.optionD);
     setCorrectAnswers(data.correctAnswers);
-    setExplanation(data.explanation || "");
+    const normalizedExp = data.explanation?.trim()
+      ? normalizeExplanationToFourSections(
+          data.explanation,
+          { A: data.optionA, B: data.optionB, C: data.optionC, D: data.optionD },
+          data.correctAnswers
+        )
+      : "";
+    setExplanation(normalizedExp);
     setErrorMsg("");
     setSuccessMsg("已成功帶入智慧解析題目！請核對題目內容與即時防重複提示，確認無誤後點擊「儲存題目至題庫」。");
     setTimeout(() => setSuccessMsg(""), 5000);
@@ -166,6 +174,14 @@ export default function AddQuestionPage() {
     forceCreate?: boolean;
   }): Promise<boolean> => {
     try {
+      const normalizedExp = data.explanation?.trim()
+        ? normalizeExplanationToFourSections(
+            data.explanation,
+            { A: data.optionA, B: data.optionB, C: data.optionC, D: data.optionD },
+            data.correctAnswers
+          )
+        : "";
+
       const res = await fetch("/api/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -178,7 +194,7 @@ export default function AddQuestionPage() {
           optionC: data.optionC,
           optionD: data.optionD,
           correctAnswers: data.correctAnswers,
-          explanation: data.explanation,
+          explanation: normalizedExp,
           forceCreate: data.forceCreate ?? false,
         }),
       });
@@ -265,6 +281,14 @@ export default function AddQuestionPage() {
     setIsSubmitting(true);
 
     try {
+      const normalizedExp = explanation?.trim()
+        ? normalizeExplanationToFourSections(
+            explanation,
+            { A: optionA, B: optionB, C: optionC, D: optionD },
+            correctAnswers
+          )
+        : "";
+
       const res = await fetch("/api/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -277,7 +301,7 @@ export default function AddQuestionPage() {
           optionC,
           optionD,
           correctAnswers,
-          explanation,
+          explanation: normalizedExp,
           forceCreate: force,
         }),
       });

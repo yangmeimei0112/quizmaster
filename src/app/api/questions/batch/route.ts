@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeText, calculateSimilarity, compareQuestionOptions } from "@/lib/similarity";
+import { normalizeExplanationToFourSections } from "@/lib/explanationParser";
 
 export async function POST(req: NextRequest) {
   try {
@@ -161,7 +162,11 @@ export async function POST(req: NextRequest) {
             optionD,
             correctAnswers: answersStr,
             explanation: explanation
-              ? explanation.replace(/^\r?\n+|\s+$/g, "")
+              ? normalizeExplanationToFourSections(
+                  explanation,
+                  { optionA, optionB, optionC, optionD },
+                  q.correctAnswers
+                )
               : null,
             category,
             difficulty: q.difficulty || "MEDIUM",

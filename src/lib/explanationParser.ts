@@ -53,7 +53,7 @@ export function formatStandardExplanation(sections: StandardExplanationSections)
     let cleanIntro = sections.intro.trim();
     cleanIntro = cleanIntro
       .replace(
-        /^\s*(?:【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?|(?:考點導讀|考點說明|題目導讀|導讀)\s*[:：])\s*/i,
+        /^\s*(?:【\s*(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】\s*[:：]?|(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*[:：])\s*/i,
         ""
       )
       .trim();
@@ -268,7 +268,7 @@ export function parseExplanation(
   if (optHeaderMatch && optHeaderMatch.index !== undefined) {
     const rawIntro = textBeforeSection3.substring(0, optHeaderMatch.index).trim();
     if (rawIntro) {
-      explicitIntro = rawIntro.replace(/^\s*【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?\s*/i, "").trim();
+      explicitIntro = rawIntro.replace(/^\s*(?:【\s*(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】\s*[:：]?|(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*[:：])\s*/i, "").trim();
     }
     optionsTargetText = textBeforeSection3.substring(optHeaderMatch.index + optHeaderMatch[0].length).trim();
   } else {
@@ -371,7 +371,7 @@ export function parseExplanation(
   if (!intro && markers[0].index > 0) {
     const rawIntro = optionsTargetText.substring(0, markers[0].index).trim();
     if (rawIntro) {
-      intro = rawIntro.replace(/^\s*【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?\s*/i, "").trim();
+      intro = rawIntro.replace(/^\s*(?:【\s*(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】\s*[:：]?|(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*[:：])\s*/i, "").trim();
     }
   }
 
