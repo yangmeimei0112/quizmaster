@@ -19,6 +19,7 @@ import {
   ChevronRight,
   RefreshCw,
   Search,
+  FileCheck,
 } from "lucide-react";
 import { QuestionType, QuestionDuplicateStatus, SimilarMatch } from "@/types/question";
 import { parseMultipleQuestions, ParsedQuestionResult } from "@/lib/questionParser";
@@ -83,6 +84,7 @@ export default function QuickAddModal({
 
   const [isDirectSubmitting, setIsDirectSubmitting] = useState(false);
   const [isBatchSubmitting, setIsBatchSubmitting] = useState(false);
+  const [isOnlyExplanationSubmitting, setIsOnlyExplanationSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [clipboardNotice, setClipboardNotice] = useState("");
   const [batchNotice, setBatchNotice] = useState("");
@@ -92,6 +94,7 @@ export default function QuickAddModal({
   const [verifiedStatuses, setVerifiedStatuses] = useState<Record<number, 'IS_DUPLICATE' | 'NOT_DUPLICATE' | null>>({});
   const [showComparisonModal, setShowComparisonModal] = useState(false);
   const lastCheckedKeyRef = useRef<string>("");
+  const isProgrammaticUpdateRef = useRef<boolean>(false);
 
   // 題目切換膠囊橫向容器與當前選中膠囊之 ref (用於方向鍵切換時自動平滑滾動跟隨)
   const tabsContainerRef = useRef<HTMLDivElement | null>(null);
@@ -167,7 +170,11 @@ export default function QuickAddModal({
         setParsedList(mapped);
         setActiveIndex(0);
         setFormError("");
-        setBatchNotice("");
+        if (isProgrammaticUpdateRef.current) {
+          isProgrammaticUpdateRef.current = false;
+        } else {
+          setBatchNotice("");
+        }
         setDuplicateStatuses([]);
         setVerifiedStatuses({});
         setShowComparisonModal(false);
@@ -430,6 +437,27 @@ export default function QuickAddModal({
 
   const remainingCount = nonDuplicateItems.length;
   const allAreDuplicates = parsedList.length > 0 && !isCheckingDuplicates && remainingCount === 0;
+
+  // 有解析題目統計與篩選 (僅挑選 explanation 有實質內容且未重複/已放行之題目)
+  const hasExplanationCount = useMemo(() => {
+    return parsedList.filter(
+      (q) => Boolean(q.explanation && q.explanation.trim().length > 0)
+    ).length;
+  }, [parsedList]);
+
+  const nonDuplicateExplanationItems = useMemo(() => {
+    if (isCheckingDuplicates) return [];
+    return parsedList.filter((item, idx) => {
+      const hasExp = Boolean(item.explanation && item.explanation.trim().length > 0);
+      if (!hasExp) return false;
+      if (verifiedStatuses[idx] === 'NOT_DUPLICATE') return true;
+      if (duplicateStatuses[idx]?.isExactMatch) return false;
+      if (verifiedStatuses[idx] === 'IS_DUPLICATE') return false;
+      return true;
+    });
+  }, [parsedList, duplicateStatuses, verifiedStatuses, isCheckingDuplicates]);
+
+  const nonDuplicateExplanationCount = nonDuplicateExplanationItems.length;
 
   // 所有高相似度題目集合 (用於專屬對照彈窗)
   const highSimilarityItems = useMemo(() => {
@@ -937,6 +965,189 @@ export default function QuickAddModal({
     }
   }, [nonDuplicateItems, parsedList, duplicateStatuses, verifiedStatuses, isBatchSubmitting, isCheckingDuplicates, exactDuplicateCount, remainingCount, onClose, onBatchSaved]);
 
+  // 批次僅新增具備解析的題目 (其餘無解析題目自動保留供後續補充)
+  const handleBatchSaveOnlyWithExplanations = useCallback(async () => {
+    if (isBatchSubmitting || isDirectSubmitting) return;
+
+    if (isCheckingDuplicates) {
+      setFormError("正在比對題庫防重複，請稍候...");
+      return;
+    }
+
+    if (hasExplanationCount === 0) {
+      setFormError("貼入的題目中沒有任何題目具備解析，無法執行此操作");
+      return;
+    }
+
+    if (nonDuplicateExplanationItems.length === 0) {
+      setFormError("所有具備解析的題目皆為重複題目，無可新增之題目！請先修改題幹內容。");
+      return;
+    }
+
+    // 批次提交守衛：掃描所有具備解析且高相似度（非100%）之未查證題目
+    const firstUnverifiedHighSimIdx = parsedList.findIndex(
+      (item, idx) =>
+        Boolean(item.explanation && item.explanation.trim().length > 0) &&
+        duplicateStatuses[idx]?.isHighSimilarity &&
+        !duplicateStatuses[idx]?.isExactMatch &&
+        (verifiedStatuses[idx] === null || verifiedStatuses[idx] === undefined)
+    );
+    if (firstUnverifiedHighSimIdx !== -1) {
+      setActiveIndex(firstUnverifiedHighSimIdx);
+      setFormError(`第 ${firstUnverifiedHighSimIdx + 1} 題為相似題目且具備解析，請查證選擇是重複或未重複後再送出`);
+      return;
+    }
+
+    // 前置驗證各即將入庫之題目完整性，若有缺漏自動切換至該題
+    for (let i = 0; i < parsedList.length; i++) {
+      const item = parsedList[i];
+      if (!nonDuplicateExplanationItems.includes(item)) continue;
+
+      if (!item.stem.trim()) {
+        setActiveIndex(i);
+        setFormError(`第 ${i + 1} 題題幹不可為空，請核對後再送出`);
+        return;
+      }
+      if (!item.optionA.trim() || !item.optionB.trim() || !item.optionC.trim() || !item.optionD.trim()) {
+        setActiveIndex(i);
+        setFormError(`第 ${i + 1} 題的選項皆不可為空`);
+        return;
+      }
+      if (item.correctAnswers.length === 0) {
+        setActiveIndex(i);
+        setFormError(`第 ${i + 1} 題請至少指定一個正確解答`);
+        return;
+      }
+    }
+
+    setIsBatchSubmitting(true);
+    setIsOnlyExplanationSubmitting(true);
+    setFormError("");
+    setBatchNotice(`正在儲存 ${nonDuplicateExplanationItems.length} 道有解析題目至題庫中...`);
+
+    try {
+      const res = await fetch("/api/questions/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questions: nonDuplicateExplanationItems.map((item) => {
+            const origIdx = parsedList.indexOf(item);
+            const isVerifiedNotDup = origIdx !== -1 && verifiedStatuses[origIdx] === 'NOT_DUPLICATE';
+            return {
+              stem: item.stem,
+              type: item.type,
+              imageUrl: item.imageUrl || null,
+              optionA: item.optionA,
+              optionB: item.optionB,
+              optionC: item.optionC,
+              optionD: item.optionD,
+              correctAnswers: item.correctAnswers,
+              explanation: normalizeExplanationToFourSections(
+                item.explanation,
+                { A: item.optionA, B: item.optionB, C: item.optionC, D: item.optionD },
+                item.correctAnswers
+              ),
+              verifiedNotDuplicate: isVerifiedNotDup,
+              forceCreate: isVerifiedNotDup,
+            };
+          }),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "批次入庫有解析題目失敗");
+      }
+
+      invalidateQuestionsCache();
+
+      // 計算剩餘未上傳之題目（未具備解析或被排除之題目）
+      const remainingItems = parsedList.filter(
+        (item) => !nonDuplicateExplanationItems.includes(item)
+      );
+
+      const totalExcluded = data.skippedCount || 0;
+
+      if (remainingItems.length === 0) {
+        let notice = `成功入庫 ${data.createdCount} 道有解析的題目！`;
+        if (totalExcluded > 0) {
+          notice += `（已自動略過 ${totalExcluded} 題重複題目）`;
+        }
+        setBatchNotice(notice);
+
+        setTimeout(() => {
+          setRawText("");
+          setParsedList([]);
+          setDuplicateStatuses([]);
+          onClose();
+          if (onBatchSaved) {
+            onBatchSaved({
+              createdCount: data.createdCount,
+              skippedCount: totalExcluded,
+            });
+          }
+        }, 1400);
+      } else {
+        const remainingRawText = remainingItems
+          .map((q, i) => {
+            const parts = [
+              `${i + 1}. ${q.stem}`,
+              `(A) ${q.optionA}`,
+              `(B) ${q.optionB}`,
+              `(C) ${q.optionC}`,
+              `(D) ${q.optionD}`,
+              `正確解答：${q.correctAnswers.join("")}`,
+            ];
+            if (q.imageUrl && q.imageUrl.trim()) {
+              parts.push(`[圖片] ${q.imageUrl.trim()}`);
+            }
+            if (q.explanation && q.explanation.trim()) {
+              parts.push(`解析：${q.explanation.trim()}`);
+            }
+            return parts.join("\n");
+          })
+          .join("\n\n");
+
+        let notice = `成功入庫 ${data.createdCount} 道有解析的題目！已保留剩餘 ${remainingItems.length} 道未上傳題目供您繼續編輯或補充。`;
+        if (totalExcluded > 0) {
+          notice += `（已排除 ${totalExcluded} 題重複題目）`;
+        }
+        setBatchNotice(notice);
+        setTimeout(() => setBatchNotice(""), 6000);
+
+        isProgrammaticUpdateRef.current = true;
+        setRawText(remainingRawText);
+        setParsedList(remainingItems);
+        setActiveIndex(0);
+        setVerifiedStatuses({});
+
+        if (onBatchSaved) {
+          onBatchSaved({
+            createdCount: data.createdCount,
+            skippedCount: totalExcluded,
+          });
+        }
+      }
+    } catch (err: any) {
+      setFormError(err.message || "批次入庫有解析題目發生伺服器異常");
+      setBatchNotice("");
+    } finally {
+      setIsBatchSubmitting(false);
+      setIsOnlyExplanationSubmitting(false);
+    }
+  }, [
+    parsedList,
+    duplicateStatuses,
+    verifiedStatuses,
+    nonDuplicateExplanationItems,
+    hasExplanationCount,
+    isBatchSubmitting,
+    isDirectSubmitting,
+    isCheckingDuplicates,
+    onClose,
+    onBatchSaved,
+  ]);
+
   // 監聽快捷鍵：ESC 關閉、左右鍵切換題目 (ArrowLeft / ArrowRight)、Ctrl+Enter / Cmd+Enter 快速送出
   useEffect(() => {
     if (!isOpen) return;
@@ -1069,7 +1280,7 @@ export default function QuickAddModal({
       aria-labelledby="quick-add-modal-title"
     >
       <div
-        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground transform-gpu will-change-transform"
+        className="relative bg-[#0a0a0c]/95 border-t sm:border border-white/[0.10] w-full sm:max-w-2xl lg:max-w-3xl rounded-t-3xl sm:rounded-3xl shadow-2xl backdrop-blur-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col animate-sheet-up sm:animate-scale-in text-foreground transform-gpu will-change-transform"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. Mobile Drag Handle Indicator */}
@@ -1195,6 +1406,12 @@ export default function QuickAddModal({
                               <AlertTriangle className="w-3 h-3 text-amber-400" />
                               <span>{highSimilarityItems.length} 題相似 (開啟對照)</span>
                             </button>
+                          )}
+                          {hasExplanationCount > 0 && (
+                            <span className="text-[10px] text-indigo-300 bg-indigo-950/60 border border-indigo-500/40 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 animate-fade-in">
+                              <FileCheck className="w-3 h-3 text-indigo-400" />
+                              <span>{hasExplanationCount}/{parsedList.length} 題有解析</span>
+                            </span>
                           )}
                         </>
                       )}
@@ -1347,6 +1564,19 @@ export default function QuickAddModal({
                           >
                             正解 {item.correctAnswers.join("") || "?"}
                           </span>
+                          {item.explanation && item.explanation.trim().length > 0 && (
+                            <span
+                              className={`text-[9px] px-1.5 py-0.5 rounded font-sans font-medium flex items-center gap-0.5 ${
+                                isActive
+                                  ? "bg-indigo-400/40 text-white"
+                                  : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                              }`}
+                              title="此題具備解析"
+                            >
+                              <FileCheck className="w-2.5 h-2.5" />
+                              <span>有解析</span>
+                            </span>
+                          )}
                           {isItemValid && !dup?.isExactMatch && (
                             <Check
                               className={`w-3 h-3 ${
@@ -1728,6 +1958,18 @@ export default function QuickAddModal({
             </div>
           )}
 
+          {/* 部分有解析提示 */}
+          {hasExplanationCount > 0 && hasExplanationCount < parsedList.length && (
+            <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/30 text-indigo-200 text-[11px] flex items-center justify-between gap-2 animate-fade-in">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span>
+                  本批次共有 <strong>{hasExplanationCount}</strong> 道題目具備解析。若僅想儲存有解析題目，可點擊下方「僅入庫有解析題目」按鈕，未具備解析之題目將完整保留供後續補充。
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* 錯誤訊息 */}
           {formError && (
             <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-fade-in">
@@ -1749,7 +1991,7 @@ export default function QuickAddModal({
             取消關閉
           </button>
 
-          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5 flex-wrap">
             {/* 多題模式專屬：一鍵批次新增全部題目 (Recommended Action) */}
             {isMultiMode ? (
               <>
@@ -1781,6 +2023,56 @@ export default function QuickAddModal({
                       : currentDup?.isExactMatch
                       ? `第 ${activeIndex + 1} 題已重複 (禁止帶入)`
                       : `帶入第 ${activeIndex + 1} 題至表單`}
+                  </span>
+                </button>
+
+                {/* 僅入庫有解析題目專用按鈕 */}
+                <button
+                  type="button"
+                  onClick={handleBatchSaveOnlyWithExplanations}
+                  disabled={
+                    isBatchSubmitting ||
+                    isCheckingDuplicates ||
+                    hasExplanationCount === 0 ||
+                    nonDuplicateExplanationCount === 0
+                  }
+                  className={`w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-bold font-game transition-all duration-180 flex items-center justify-center gap-2 touch-tactile border ${
+                    isBatchSubmitting ||
+                    isCheckingDuplicates ||
+                    hasExplanationCount === 0 ||
+                    nonDuplicateExplanationCount === 0
+                      ? isCheckingDuplicates
+                        ? "bg-blue-950/30 text-blue-300/50 border-blue-500/30 cursor-wait"
+                        : hasExplanationCount === 0
+                        ? "bg-white/[0.04] text-white/30 border-white/[0.06] cursor-not-allowed"
+                        : nonDuplicateExplanationCount === 0
+                        ? "bg-rose-950/30 text-rose-400/50 border-rose-500/30 cursor-not-allowed"
+                        : "bg-white/[0.04] text-white/30 border-white/[0.06] cursor-not-allowed"
+                      : isOnlyExplanationSubmitting
+                      ? "bg-indigo-800 text-white/70 cursor-wait border-indigo-400/40"
+                      : "bg-indigo-600/90 hover:bg-indigo-500 text-white border-indigo-400/40 shadow-[0_0_18px_rgba(99,102,241,0.3)]"
+                  }`}
+                  title={
+                    isCheckingDuplicates
+                      ? "正在比對題庫防重複與相似度..."
+                      : hasExplanationCount === 0
+                      ? "目前貼入的題目中沒有任何題目具備解析"
+                      : nonDuplicateExplanationCount === 0
+                      ? "具備解析之題目皆為重複題目，無法入庫"
+                      : `僅入庫有解析且未重複之題目 (${nonDuplicateExplanationCount} 題)`
+                  }
+                >
+                  <FileCheck className="w-4 h-4 text-indigo-200" />
+                  <span>
+                    {isOnlyExplanationSubmitting
+                      ? "入庫中..."
+                      : isCheckingDuplicates
+                      ? "比對中..."
+                      : hasExplanationCount === 0
+                      ? "僅入庫有解析題目 (0 題)"
+                      : nonDuplicateExplanationCount === 0
+                      ? "有解析題皆已重複 (0 題)"
+                      : `僅入庫有解析題目 (${nonDuplicateExplanationCount} 題)`}
                   </span>
                 </button>
 
