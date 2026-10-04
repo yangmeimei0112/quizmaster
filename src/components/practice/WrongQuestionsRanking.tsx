@@ -46,10 +46,16 @@ interface QuestionAnalyticsResult {
   options: OptionStat[];
 }
 
+const analyticsCache = new Map<string, QuestionAnalyticsResult>();
+
 function computeQuestionAnalytics(
   q: Question,
   personalRecord?: WrongRecord
 ): QuestionAnalyticsResult {
+  const cacheKey = `${q.id}_${q.totalAttempts || 0}_${q.wrongCount || 0}_${q.correctCount || 0}_${q.countA || 0}_${q.countB || 0}_${q.countC || 0}_${q.countD || 0}_${personalRecord ? `${personalRecord.id}_${personalRecord.wrongCount}_${personalRecord.totalAttempts || 0}_${personalRecord.correctCount || 0}` : "global"}`;
+  const cached = analyticsCache.get(cacheKey);
+  if (cached) return cached;
+
   const totalAttempts = personalRecord
     ? Math.max(0, personalRecord.totalAttempts ?? personalRecord.wrongCount ?? q.totalAttempts ?? 0)
     : Math.max(0, q.totalAttempts ?? 0);
@@ -69,7 +75,7 @@ function computeQuestionAnalytics(
 
   // Cold start fallback when 0 attempts
   if (totalAttempts === 0) {
-    return {
+    const fallbackRes: QuestionAnalyticsResult = {
       hasData: false,
       headerText: "尚未有作答數據",
       totalAttempts: 0,
@@ -81,6 +87,8 @@ function computeQuestionAnalytics(
         { key: "D", text: q.optionD, count: 0, percent: 0, percentText: "0.0%", isHighest: false, isCorrect: correctKeys.includes("D") },
       ],
     };
+    analyticsCache.set(cacheKey, fallbackRes);
+    return fallbackRes;
   }
 
   // Exact 1 decimal place percentage
@@ -103,7 +111,7 @@ function computeQuestionAnalytics(
   const isHighestC = maxCount > 0 && countC === maxCount;
   const isHighestD = maxCount > 0 && countD === maxCount;
 
-  return {
+  const result: QuestionAnalyticsResult = {
     hasData: true,
     headerText,
     totalAttempts,
@@ -115,6 +123,14 @@ function computeQuestionAnalytics(
       { key: "D", text: q.optionD, count: countD, percent: pctD, percentText: `${pctD.toFixed(1)}%`, isHighest: isHighestD, isCorrect: correctKeys.includes("D") },
     ],
   };
+
+  analyticsCache.set(cacheKey, result);
+  if (analyticsCache.size > 200) {
+    const firstKey = analyticsCache.keys().next().value;
+    if (firstKey) analyticsCache.delete(firstKey);
+  }
+
+  return result;
 }
 
 export default function WrongQuestionsRanking({
@@ -178,14 +194,14 @@ export default function WrongQuestionsRanking({
   }, [fetchTopRankings]);
 
   // Toggle explanation
-  const toggleExplanation = (id: string) => {
+  const toggleExplanation = useCallback((id: string) => {
     setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  }, []);
 
-  const handleTabChange = (tab: "personal" | "global") => {
+  const handleTabChange = useCallback((tab: "personal" | "global") => {
     setActiveTab(tab);
     setIsExpandedBeyond10(false);
-  };
+  }, []);
 
   // Expand beyond 10 handler
   const handleExpandBeyond10 = async () => {

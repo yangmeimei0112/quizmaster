@@ -381,6 +381,16 @@ export default function QuestionsPage() {
   // 個別展開解析的題目 ID Set
   const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
 
+  // 效能優化：以 Refs 保留最新全域狀態，使卡片回呼函式具備完全穩定的引用，避免高頻輸入與切換時導致整頁重渲染
+  const showAnswersGlobalRef = useRef(showAnswersGlobal);
+  showAnswersGlobalRef.current = showAnswersGlobal;
+  const customAnswerVisibilityRef = useRef(customAnswerVisibility);
+  customAnswerVisibilityRef.current = customAnswerVisibility;
+  const searchTermRef = useRef(searchTerm);
+  searchTermRef.current = searchTerm;
+  const selectedTypeRef = useRef(selectedType);
+  selectedTypeRef.current = selectedType;
+
   // 編輯 Modal 狀態
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [editStem, setEditStem] = useState("");
@@ -552,7 +562,7 @@ export default function QuestionsPage() {
   // 切換個別題目的解答顯示/隱藏
   const toggleQuestionAnswer = useCallback((id: string) => {
     setCustomAnswerVisibility((prev) => {
-      const current = prev[id] ?? showAnswersGlobal;
+      const current = prev[id] ?? showAnswersGlobalRef.current;
       const next = !current;
       return {
         ...prev,
@@ -560,7 +570,7 @@ export default function QuestionsPage() {
       };
     });
     // 若是切換為顯示解答且該卡片處於收合狀態，自動展開卡片以便使用者立即檢視正解
-    const current = customAnswerVisibility[id] ?? showAnswersGlobal;
+    const current = customAnswerVisibilityRef.current[id] ?? showAnswersGlobalRef.current;
     const next = !current;
     if (next) {
       setExpandedCardIds((expanded) => {
@@ -572,7 +582,7 @@ export default function QuestionsPage() {
         return expanded;
       });
     }
-  }, [customAnswerVisibility, showAnswersGlobal]);
+  }, []);
 
   // 刪除題目
   const handleDelete = useCallback(async (id: string) => {
@@ -583,7 +593,7 @@ export default function QuestionsPage() {
       if (res.ok) {
         setQuestions((prev) => {
           const next = prev.filter((q) => q.id !== id);
-          if (!searchTerm.trim() && selectedType === "ALL") {
+          if (!searchTermRef.current.trim() && selectedTypeRef.current === "ALL") {
             setCachedQuestions(next);
           } else {
             invalidateQuestionsCache();
@@ -604,7 +614,7 @@ export default function QuestionsPage() {
     } finally {
       setDeletingId(null);
     }
-  }, [searchTerm, selectedType]);
+  }, []);
 
   // 開啟編輯 Modal
   const handleOpenEdit = useCallback((q: Question) => {
@@ -669,7 +679,7 @@ export default function QuestionsPage() {
     }
   };
 
-  const toggleEditAnswer = (optKey: string) => {
+  const toggleEditAnswer = useCallback((optKey: string) => {
     if (editType === "SINGLE") {
       setEditAnswers([optKey]);
     } else {
@@ -677,7 +687,7 @@ export default function QuestionsPage() {
         prev.includes(optKey) ? prev.filter((k) => k !== optKey) : [...prev, optKey].sort()
       );
     }
-  };
+  }, [editType]);
 
   return (
     <div className="space-y-6">

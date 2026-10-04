@@ -220,10 +220,26 @@ export function ExplanationCard({
     }
   }, [explanation]);
 
+  // Stabilize options and answers keys so parent inline object literals don't cause redundant parsing
+  const optionsKey = useMemo(() => {
+    if (!options) return "";
+    try {
+      return JSON.stringify(options);
+    } catch {
+      return String(options);
+    }
+  }, [options]);
+
+  const correctAnswersKey = useMemo(() => {
+    if (!correctAnswers) return "";
+    return Array.isArray(correctAnswers) ? correctAnswers.join(",") : String(correctAnswers);
+  }, [correctAnswers]);
+
   // Parse structured explanation using deterministic engine
   const parsed = useMemo(
     () => parseExplanation(explanation, correctAnswers, options),
-    [explanation, correctAnswers, options]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [explanation, correctAnswersKey, optionsKey]
   );
 
   const userSelectedSet = useMemo(() => normalizeUserAnswerSet(userAnswer), [userAnswer]);
