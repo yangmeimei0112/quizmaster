@@ -199,6 +199,8 @@ interface DetectedMarker {
   key: string;
 }
 
+const explanationParseCache = new Map<string, ParsedExplanationResult>();
+
 /**
  * Pure, deterministic parser that parses question explanation strings into structured AST.
  * Supports dual-mode: Option Card Extraction Mode (>= 2 options detected) and Concept Mode.
@@ -223,6 +225,10 @@ export function parseExplanation(
   const optionsMap = normalizeOptionsMap(options);
   const normalizedCorrect = normalizeAnswers(correctAnswers);
   const correctSet = new Set(normalizedCorrect);
+
+  const cacheKey = `${trimmed}::${normalizedCorrect.join(",")}::${optionsMap.A || ""}::${optionsMap.B || ""}::${optionsMap.C || ""}::${optionsMap.D || ""}`;
+  const cached = explanationParseCache.get(cacheKey);
+  if (cached) return cached;
 
   // 1. Detect Section 4 (考試記憶重點 / 總結 Takeaway)
   let section4Text: string | undefined;
@@ -342,7 +348,7 @@ export function parseExplanation(
       }
     }
 
-    return {
+    const result: ParsedExplanationResult = {
       mode: "concept",
       intro: explicitIntro,
       conceptText,
@@ -352,6 +358,12 @@ export function parseExplanation(
       rawText,
       options: [],
     };
+    explanationParseCache.set(cacheKey, result);
+    if (explanationParseCache.size > 300) {
+      const firstKey = explanationParseCache.keys().next().value;
+      if (firstKey) explanationParseCache.delete(firstKey);
+    }
+    return result;
   }
 
   // Option Card Extraction Mode:
@@ -398,7 +410,7 @@ export function parseExplanation(
     });
   }
 
-  return {
+  const result: ParsedExplanationResult = {
     mode: "options",
     intro,
     options: parsedOptions,
@@ -407,6 +419,12 @@ export function parseExplanation(
     takeaway: takeaway || (section3Text ? `【觀念說明】\n${section3Text}` : undefined),
     rawText,
   };
+  explanationParseCache.set(cacheKey, result);
+  if (explanationParseCache.size > 300) {
+    const firstKey = explanationParseCache.keys().next().value;
+    if (firstKey) explanationParseCache.delete(firstKey);
+  }
+  return result;
 }
 
 /**

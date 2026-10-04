@@ -52,7 +52,8 @@ function computeQuestionAnalytics(
   q: Question,
   personalRecord?: WrongRecord
 ): QuestionAnalyticsResult {
-  const cacheKey = `${q.id}_${q.totalAttempts || 0}_${q.wrongCount || 0}_${q.correctCount || 0}_${q.countA || 0}_${q.countB || 0}_${q.countC || 0}_${q.countD || 0}_${personalRecord ? `${personalRecord.id}_${personalRecord.wrongCount}_${personalRecord.totalAttempts || 0}_${personalRecord.correctCount || 0}` : "global"}`;
+  const updatedTs = q.updatedAt ? new Date(q.updatedAt).getTime() : "";
+  const cacheKey = `${q.id}_${updatedTs}_${q.correctAnswers || ""}_${q.totalAttempts || 0}_${q.wrongCount || 0}_${q.correctCount || 0}_${q.countA || 0}_${q.countB || 0}_${q.countC || 0}_${q.countD || 0}_${personalRecord ? `${personalRecord.id}_${personalRecord.wrongCount}_${personalRecord.totalAttempts || 0}_${personalRecord.correctCount || 0}` : "global"}`;
   const cached = analyticsCache.get(cacheKey);
   if (cached) return cached;
 

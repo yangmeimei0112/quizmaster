@@ -65,7 +65,9 @@ export default function PracticePage() {
   // 載入題庫
   useEffect(() => {
     async function loadQuestions() {
-      setIsLoading(true);
+      if (!getCachedQuestions()) {
+        setIsLoading(true);
+      }
       try {
         const res = await fetch("/api/questions");
         if (res.ok) {

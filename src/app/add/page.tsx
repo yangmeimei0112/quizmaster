@@ -113,22 +113,18 @@ export default function AddQuestionPage() {
   }, []);
 
   // 切換選項正確性
-  const toggleAnswer = useCallback((optKey: string) => {
-    setType((currentType) => {
-      if (currentType === "SINGLE") {
+  const toggleAnswer = useCallback(
+    (optKey: string) => {
+      if (type === "SINGLE") {
         setCorrectAnswers([optKey]);
       } else {
-        setCorrectAnswers((prev) => {
-          if (prev.includes(optKey)) {
-            return prev.filter((k) => k !== optKey);
-          } else {
-            return [...prev, optKey].sort();
-          }
-        });
+        setCorrectAnswers((prev) =>
+          prev.includes(optKey) ? prev.filter((k) => k !== optKey) : [...prev, optKey].sort()
+        );
       }
-      return currentType;
-    });
-  }, []);
+    },
+    [type]
+  );
 
   // 智慧快速新增：帶入主表單檢查
   const handleQuickApply = useCallback((data: {

@@ -115,6 +115,16 @@ const QuestionCardItem = memo(function QuestionCardItem({
     [q.optionA, q.optionB, q.optionC, q.optionD]
   );
 
+  const optionsMap = useMemo(
+    () => ({
+      A: q.optionA,
+      B: q.optionB,
+      C: q.optionC,
+      D: q.optionD,
+    }),
+    [q.optionA, q.optionB, q.optionC, q.optionD]
+  );
+
   // 僅針對首屏可視範圍內卡片啟用交錯入場動態，避免視野外延遲渲染元素重排抖動
   const shouldAnimate = !isDeferred && idx < 8;
 
@@ -346,12 +356,7 @@ const QuestionCardItem = memo(function QuestionCardItem({
                 <ExplanationCard
                   explanation={q.explanation}
                   correctAnswers={q.correctAnswers}
-                  options={{
-                    A: q.optionA,
-                    B: q.optionB,
-                    C: q.optionC,
-                    D: q.optionD,
-                  }}
+                  options={optionsMap}
                   questionType={q.type}
                 />
               )}
