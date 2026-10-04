@@ -161,12 +161,12 @@ export async function POST(req: NextRequest) {
             optionC,
             optionD,
             correctAnswers: answersStr,
-            explanation: explanation
+            explanation: explanation && explanation.trim()
               ? normalizeExplanationToFourSections(
                   explanation,
                   { optionA, optionB, optionC, optionD },
                   q.correctAnswers
-                )
+                ) || null
               : null,
             category,
             difficulty: q.difficulty || "MEDIUM",

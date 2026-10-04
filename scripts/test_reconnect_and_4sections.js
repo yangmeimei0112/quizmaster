@@ -345,6 +345,40 @@ D. 選項四錯誤。
   assert.ok(parsed.explanation.includes("【考試記憶重點】\n口訣..."), "解析應包含【考試記憶重點】");
 });
 
+it("normalizeExplanationToFourSections: 帶有「解析：」前綴時選項 A 不會被誤吞入【考點導讀】且保留於選項解析", () => {
+  const input = "解析：A. 蘋果\nB. 香蕉\nC. 橘子\nD. 西瓜";
+  const normalized = normalizeExplanationToFourSections(input);
+  assert.ok(!normalized.includes("【考點導讀】"), "不應存在假考點導讀");
+  assert.ok(normalized.includes("【各選項詳細解析】\nA. 蘋果\nB. 香蕉\nC. 橘子\nD. 西瓜"), "選項 A 應完整保留於選項解析第一行");
+});
+
+it("normalizeExplanationToFourSections: 行內空格或標點分隔之選項均能正確結構化", () => {
+  const inlineInput = "解析: A. 蘋果 B. 香蕉 C. 橘子 D. 西瓜";
+  const normalized = normalizeExplanationToFourSections(inlineInput);
+  assert.ok(normalized.includes("【各選項詳細解析】\nA. 蘋果\nB. 香蕉\nC. 橘子\nD. 西瓜"), "行內選項應正確分行");
+
+  const commaInput = "【解析】A. 蘋果、B. 香蕉、C. 橘子、D. 西瓜";
+  const normalizedComma = normalizeExplanationToFourSections(commaInput);
+  assert.ok(normalizedComma.includes("【各選項詳細解析】\nA. 蘋果\nB. 香蕉\nC. 橘子\nD. 西瓜"), "頓號分隔選項應正確分行");
+});
+
+it("normalizeExplanationToFourSections: 純觀念解析自動剔除前綴字眼（解析：、詳解：等）", () => {
+  const conceptInput = "解析：TCP 是一個連線導向的傳輸層協定，具備三次交握機制。";
+  const normalized = normalizeExplanationToFourSections(conceptInput);
+  assert.ok(!normalized.includes("解析："), "觀念說明內不應殘留「解析：」前綴");
+  assert.ok(normalized.includes("【觀念說明】\nTCP 是一個連線導向的傳輸層協定，具備三次交握機制。"), "應乾淨包裝於觀念說明");
+});
+
+it("normalizeExplanationToFourSections: 具備 100% 冪等性（反覆執行格式穩定不變）", () => {
+  const standard = "【考點導讀】\n考點。\n\n【各選項詳細解析】\nA. 正確\nB. 錯誤\nC. 錯誤\nD. 錯誤\n\n【觀念說明】\n觀念。\n\n【考試記憶重點】\n重點。";
+  const run1 = normalizeExplanationToFourSections(standard);
+  const run2 = normalizeExplanationToFourSections(run1);
+  const run3 = normalizeExplanationToFourSections(run2);
+  assert.equal(run1, standard, "第一輪應維持原狀");
+  assert.equal(run2, standard, "第二輪應維持原狀");
+  assert.equal(run3, standard, "第三輪應維持原狀");
+});
+
 it("battleStore: 被系統退出或暫時脫離 room.players 的玩家在進行中場次可成功重連與恢復進度", () => {
   const { room, playerId: hostId } = createRoom("房主", "shiba", {
     maxPlayers: 3,

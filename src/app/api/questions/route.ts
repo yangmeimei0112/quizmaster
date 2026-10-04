@@ -297,7 +297,7 @@ export async function POST(req: NextRequest) {
               explanation,
               { A: optionA, B: optionB, C: optionC, D: optionD },
               correctAnswers
-            )
+            ) || null
           : null,
         category: category ? category.trim() : null,
         difficulty: difficulty || "MEDIUM",

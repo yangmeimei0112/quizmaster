@@ -27,17 +27,20 @@ export function formatExplanationIntoFourSections(rawExp: string): string {
   // 1. Detect Section 4 (考試記憶重點)
   let section4Text = "";
   const s4Regex =
-    /(?:[\r\n]+|\s{2,})(?:(?:【\s*(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論|記憶關鍵)\s*】)|(?:(?:總結|總結說明|結論|總之|核心考點|考點總結|解題關鍵|記憶關鍵|記憶重點|考試重點)[：:\s]))/i;
+    /(?:[\r\n]+|\s{2,})(?:(?:【\s*(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點分析|考點總結|解析總結|重點提示|解題關鍵|記憶關鍵|總結|結論)\s*】)|(?:(?:總結|總結說明|結論|總之|核心考點|考點分析|考點總結|故本題|因此本題|綜上所述|本題解答|答案解析|解題關鍵|記憶關鍵|記憶重點|考試重點)[：:\s])|(?:[💡📌★▼👉]\s*(?:總結|結論|核心考點|考點說明)?[:：\s]?))/i;
   const s4Match = trimmed.match(s4Regex);
   if (s4Match && s4Match.index !== undefined) {
-    section4Text = trimmed
-      .substring(s4Match.index)
-      .trim()
-      .replace(
-        /^\s*(?:【\s*(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論|記憶關鍵)\s*】|(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論|記憶關鍵))\s*[:：]?\s*/i,
-        ""
-      )
-      .trim();
+    section4Text = trimmed.substring(s4Match.index).trim();
+    let prev = "";
+    while (section4Text !== prev) {
+      prev = section4Text;
+      section4Text = section4Text
+        .replace(
+          /^\s*(?:【\s*(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論|記憶關鍵)\s*】\s*[:：]?|(?:考試記憶重點|記憶重點|考試重點|重點記憶|解題口訣|速記重點|破題速記|重點整理|核心考點|考點總結|解題關鍵|總結|結論|記憶關鍵)\s*[:：])\s*/i,
+          ""
+        )
+        .trim();
+    }
     trimmed = trimmed.substring(0, s4Match.index).trim();
   }
 
@@ -47,65 +50,146 @@ export function formatExplanationIntoFourSections(rawExp: string): string {
     /(?:[\r\n]+|\s{2,})(?:(?:【\s*(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念)\s*】\s*[:：]?\s*)|(?:(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念)\s*[:：]\s*))/i;
   const s3Match = trimmed.match(s3Regex);
   if (s3Match && s3Match.index !== undefined) {
-    section3Text = trimmed
-      .substring(s3Match.index)
-      .trim()
-      .replace(
-        /^\s*(?:【\s*(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念)\s*】|(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念))\s*[:：]?\s*/i,
-        ""
-      )
-      .trim();
+    section3Text = trimmed.substring(s3Match.index).trim();
+    let prev = "";
+    while (section3Text !== prev) {
+      prev = section3Text;
+      section3Text = section3Text
+        .replace(
+          /^\s*(?:【\s*(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】\s*[:：]?|(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*[:：])\s*/i,
+          ""
+        )
+        .trim();
+    }
     trimmed = trimmed.substring(0, s3Match.index).trim();
   }
 
   // 3. Detect Section 2 (各選項詳細解析) and Section 1 (考點導讀)
   let introText = "";
-  let optionsText = "";
+  let optionsTargetText = trimmed;
 
   const optHeaderMatch = trimmed.match(
     /(?:[\r\n]+|\s{2,}|^)\s*【\s*(?:各選項詳細解析|各選項解析|選項詳細解析|選項解析|詳細解析)\s*】\s*[:：]?\s*/i
   );
   if (optHeaderMatch && optHeaderMatch.index !== undefined) {
     introText = trimmed.substring(0, optHeaderMatch.index).trim();
-    optionsText = trimmed.substring(optHeaderMatch.index + optHeaderMatch[0].length).trim();
+    optionsTargetText = trimmed.substring(optHeaderMatch.index + optHeaderMatch[0].length).trim();
   } else {
-    const firstOptionIdx = trimmed.search(
-      /(?:^|[\r\n])\s*(?:(?:[A-Ha-h][\.．:：\、])|(?:\([A-Ha-h]\))|(?:（[A-Ha-h]）)|(?:\[[A-Ha-h]\])|(?:【[A-Ha-h]】))/
-    );
-    if (firstOptionIdx >= 0) {
-      introText = trimmed.substring(0, firstOptionIdx).trim();
-      optionsText = trimmed.substring(firstOptionIdx).trim();
-    } else {
-      introText = trimmed;
-      optionsText = "";
+    const introTagMatch = trimmed.match(/^\s*【\s*(?:考點導讀|考點說明|題目導讀|導讀)\s*】\s*[:：]?\s*/i);
+    if (introTagMatch) {
+      const rest = trimmed.substring(introTagMatch[0].length).trim();
+      const firstMarkerMatch = rest.match(/(?:^|[\r\n；;。!?！？:,：，、\s])\s*(?:[A-Ha-h][\.．:：\、]|\([A-Ha-h]\)|（[A-Ha-h]）|\[[A-Ha-h]\]|【[A-Ha-h]】)/);
+      if (firstMarkerMatch && firstMarkerMatch.index !== undefined) {
+        const markerPos = firstMarkerMatch[0].search(/[A-Ha-h\[【\(（]/i);
+        const markerStart = firstMarkerMatch.index + (markerPos >= 0 ? markerPos : 0);
+        introText = rest.substring(0, markerStart).trim();
+        optionsTargetText = rest.substring(markerStart).trim();
+      } else {
+        introText = rest;
+        optionsTargetText = "";
+      }
     }
   }
 
-  introText = introText
-    .replace(/^\s*(?:【\s*(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】\s*[:：]?|(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*[:：])\s*/i, "")
-    .trim();
+  // Option marker detection with boundary safety
+  const masked = optionsTargetText.replace(/```[\s\S]*?```/g, (m) => " ".repeat(m.length));
+  const markerRegex =
+    /(?:^|[\r\n；;。!?！？\s])(?:(?:選項\s*[\(（]([A-Ha-h])[\)）])|(?:選項\s*([A-Ha-h]))|(?:([A-Ha-h])\s*選項(?:\s*[:：])?))|(?<=^|[\r\n；;。!?！？:,：，、\s\]】\)])\s*(?:([A-Ha-h])\s*(?:\.(?![a-zA-Z0-9_])|[:：、]))|(?<=^|[\r\n；;。!?！？])\s*(?:[\[【]([A-Ha-h])[\]】])|(?<![a-zA-Z0-9_\u4e00-\u9fa5])\(([A-Ha-h])\)|（([A-Ha-h])）/g;
 
-  // Normalize options A. B. C. D. format
-  if (optionsText) {
-    const optLines = optionsText
-      .split(/\n+/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const match = line.match(/^\s*(?:([A-Ha-h])[\.．:：\、\s]|\(([A-Ha-h])\)|（([A-Ha-h])）|\[([A-Ha-h])\]|【([A-Ha-h])】)\s*(.*)$/);
-        if (match) {
-          const key = (match[1] || match[2] || match[3] || match[4] || match[5]).toUpperCase();
-          const rest = match[6].trim();
-          return `${key}. ${rest}`;
-        }
-        return line;
-      });
-    optionsText = optLines.join("\n");
+  const rawMarkers: Array<{ index: number; length: number; matchedText: string; key: string }> = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = markerRegex.exec(masked)) !== null) {
+    const letter = (
+      match[1] || match[2] || match[3] || match[4] || match[5] || match[6] || match[7]
+    ).toUpperCase();
+    const fullMatch = match[0];
+    const matchIndex = match.index;
+    const markerStartIndex = fullMatch.search(/(?:選項|[\[【\(（]|[A-Ha-h])/i);
+    const actualStart = matchIndex + (markerStartIndex >= 0 ? markerStartIndex : 0);
+    rawMarkers.push({
+      index: actualStart,
+      length: fullMatch.length - (actualStart - matchIndex),
+      matchedText: optionsTargetText.substring(actualStart, matchIndex + fullMatch.length),
+      key: letter,
+    });
+  }
+
+  const seenKeys = new Set<string>();
+  const markers: Array<{ index: number; length: number; matchedText: string; key: string }> = [];
+  for (const m of rawMarkers) {
+    if (!seenKeys.has(m.key)) {
+      seenKeys.add(m.key);
+      markers.push(m);
+    }
+  }
+
+  let formattedOptions = "";
+  if (markers.length >= 2) {
+    if (!introText && markers[0].index > 0) {
+      introText = optionsTargetText.substring(0, markers[0].index).trim();
+    }
+    const optionCards: string[] = [];
+    for (let i = 0; i < markers.length; i++) {
+      const m = markers[i];
+      const contentStart = m.index + m.matchedText.length;
+      const isLast = i === markers.length - 1;
+      const contentEnd = isLast ? optionsTargetText.length : markers[i + 1].index;
+      let blockContent = optionsTargetText.substring(contentStart, contentEnd).trim();
+      blockContent = blockContent.replace(/^[ :：、\.\)\）\]】]+/, "");
+      blockContent = blockContent.replace(/[\(（\[【]+$/, "");
+      blockContent = blockContent.replace(/[；;，,、\s]+$/, "").trim();
+      optionCards.push(`${m.key}. ${blockContent}`);
+    }
+    const hasEmptyOption = optionCards.some((c) => !c.replace(/^[A-Ha-h]\.\s*/, "").trim());
+    if (hasEmptyOption) {
+      formattedOptions = "";
+      if (!introText && !section3Text) {
+        section3Text = optionsTargetText;
+      }
+    } else {
+      formattedOptions = optionCards.join("\n");
+    }
+  } else {
+    // If fewer than 2 markers detected, keep optionsTargetText as concept if no explicit intro
+    if (!introText) {
+      if (!section3Text) {
+        section3Text = optionsTargetText;
+      }
+    }
+  }
+
+  // Clean intro text
+  if (introText) {
+    let prev = "";
+    while (introText !== prev) {
+      prev = introText;
+      introText = introText
+        .replace(
+          /^\s*(?:【\s*(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】\s*[:：]?|(?:考點導讀|考點說明|題目導讀|導讀|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*[:：])\s*/i,
+          ""
+        )
+        .trim();
+    }
+  }
+
+  // Clean concept text
+  if (section3Text) {
+    let prev = "";
+    while (section3Text !== prev) {
+      prev = section3Text;
+      section3Text = section3Text
+        .replace(
+          /^\s*(?:【\s*(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*】\s*[:：]?|(?:觀念說明|概念說明|觀念解析|概念解析|核心觀念|理論說明|觀念補充|相關觀念|相關概念|題目解析|試題解析|解題思路|參考解析|解析|詳解|解題說明|題目說明|說明)\s*[:：])\s*/i,
+          ""
+        )
+        .trim();
+    }
   }
 
   const parts: string[] = [];
   if (introText) parts.push(`【考點導讀】\n${introText}`);
-  if (optionsText) parts.push(`【各選項詳細解析】\n${optionsText}`);
+  if (formattedOptions) parts.push(`【各選項詳細解析】\n${formattedOptions}`);
   if (section3Text) parts.push(`【觀念說明】\n${section3Text}`);
   if (section4Text) parts.push(`【考試記憶重點】\n${section4Text}`);
 

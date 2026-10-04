@@ -76,7 +76,7 @@ export async function PUT(
                   explanation,
                   { optionA, optionB, optionC, optionD },
                   answersStr || correctAnswers
-                )
+                ) || null
               : null
             : undefined,
         category: category !== undefined ? category?.trim() || null : undefined,
