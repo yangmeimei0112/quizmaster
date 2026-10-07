@@ -23,6 +23,7 @@ export interface BattleSettings {
   questionCount: number; // 5, 10, 20, or custom number, or 50 if EXAM_50
   orderMode: "SAME" | "RANDOM"; // same order for all vs randomized order
   category?: string; // "ALL" or specific category
+  timeLimitPerQuestion?: number; // 0 or undefined for no limit, > 0 for per-question time limit in seconds
 }
 
 export interface BattleQuestion {
@@ -141,6 +142,7 @@ export function createRoom(
       settings.mode === "EXAM_50" ? 50 : Math.max(Number(settings.questionCount) || 10, 1),
     orderMode: settings.orderMode === "RANDOM" ? "RANDOM" : "SAME",
     category: settings.category || "ALL",
+    timeLimitPerQuestion: Math.max(0, Number(settings.timeLimitPerQuestion) || 0),
   };
 
   const hostPlayer: BattlePlayer = {
@@ -437,6 +439,9 @@ export function updateRoomSettings(
   }
   if (settings.category !== undefined) {
     room.settings.category = settings.category;
+  }
+  if (settings.timeLimitPerQuestion !== undefined) {
+    room.settings.timeLimitPerQuestion = Math.max(0, Number(settings.timeLimitPerQuestion) || 0);
   }
 
   room.updatedAt = Date.now();

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { getRoom, updateRoomSettings } from "@/lib/battleStore";
 
 interface RouteParams {
@@ -20,7 +21,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "查無此房間或房間已關閉" }, { status: 404 });
     }
 
-    return NextResponse.json({ room });
+    const totalQuestionsCount = await prisma.question.count();
+    return NextResponse.json({ room, totalQuestionsCount });
   } catch (error: any) {
     return NextResponse.json(
       { error: "查詢房間狀態失敗: " + error.message },
@@ -44,8 +46,28 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "缺少房主身份識別" }, { status: 400 });
     }
 
+    const totalQuestionsCount = await prisma.question.count();
+
+    if (settings && settings.questionCount !== undefined) {
+      const qCount = Number(settings.questionCount);
+      if (qCount < 1) {
+        return NextResponse.json({ error: "自訂題數必須至少為 1 題" }, { status: 400 });
+      }
+      if (totalQuestionsCount > 0 && qCount > totalQuestionsCount) {
+        return NextResponse.json(
+          { error: `自訂題數 (${qCount} 題) 不能超過題庫總題數 (${totalQuestionsCount} 題)` },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (settings && settings.timeLimitPerQuestion !== undefined) {
+      const tLimit = Number(settings.timeLimitPerQuestion);
+      settings.timeLimitPerQuestion = isNaN(tLimit) || tLimit < 0 ? 0 : Math.floor(tLimit);
+    }
+
     const updatedRoom = updateRoomSettings(code, hostId, settings || {});
-    return NextResponse.json({ room: updatedRoom });
+    return NextResponse.json({ room: updatedRoom, totalQuestionsCount });
   } catch (error: any) {
     const msg: string = error?.message || "更新房間設定失敗";
     let status = 500;

@@ -21,6 +21,7 @@ export default function BattleRoomPage() {
 
   const [room, setRoom] = useState<BattleRoom | null>(null);
   const [playerId, setPlayerId] = useState<string>("");
+  const [totalQuestionsCount, setTotalQuestionsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
 
@@ -54,6 +55,9 @@ export default function BattleRoomPage() {
       }
       const data = await res.json();
       let updatedRoom: BattleRoom = data.room;
+      if (typeof data.totalQuestionsCount === "number") {
+        setTotalQuestionsCount(data.totalQuestionsCount);
+      }
 
       // Clean slate on LOBBY: When room transitions to LOBBY (e.g. host resets battle),
       // ensure all players (including non-host guests) purge previous match answers and barrier
@@ -697,6 +701,7 @@ export default function BattleRoomPage() {
         <RoomLobbyView
           room={room}
           currentPlayerId={playerId}
+          totalQuestionsCount={totalQuestionsCount}
           onStartGame={handleStartGame}
           onToggleReady={handleToggleReady}
           onUpdateAvatar={handleUpdateAvatar}

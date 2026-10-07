@@ -18,12 +18,15 @@ import {
   Sparkles,
   Palette,
   X,
+  Timer,
+  Clock,
 } from "lucide-react";
 import { battleAudio } from "@/lib/battleAudio";
 
 interface RoomLobbyViewProps {
   room: BattleRoom;
   currentPlayerId: string;
+  totalQuestionsCount?: number;
   categories?: string[];
   onStartGame: () => Promise<void>;
   onToggleReady: () => Promise<void>;
@@ -35,6 +38,7 @@ interface RoomLobbyViewProps {
 export default function RoomLobbyView({
   room,
   currentPlayerId,
+  totalQuestionsCount = 0,
   categories = [],
   onStartGame,
   onToggleReady,
@@ -49,6 +53,10 @@ export default function RoomLobbyView({
   const [isTogglingReady, setIsTogglingReady] = useState(false);
   const [isCustomCount, setIsCustomCount] = useState(
     ![5, 10, 20].includes(room.settings.questionCount)
+  );
+  const [isCustomTimeLimit, setIsCustomTimeLimit] = useState(
+    room.settings.timeLimitPerQuestion !== undefined &&
+      ![0, 10, 15, 20, 30, 60].includes(room.settings.timeLimitPerQuestion)
   );
 
   const myPlayer = room.players.find((p) => p.id === currentPlayerId);
@@ -101,10 +109,29 @@ export default function RoomLobbyView({
       <div className="relative overflow-hidden p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-accent/15 via-white/[0.04] to-purple-500/10 border border-white/[0.12] shadow-2xl backdrop-blur-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold font-game bg-accent/20 text-[#9AA5FF] border border-accent/30 mb-2">
-              <Users className="w-3.5 h-3.5" />
-              <span>
-                房間等待中 · {room.players.length} / {room.settings.maxPlayers} 人
+            <div className="inline-flex flex-wrap items-center gap-2 px-3 py-1 rounded-full text-xs font-bold font-game bg-accent/20 text-[#9AA5FF] border border-accent/30 mb-2">
+              <span className="inline-flex items-center gap-1">
+                <Users className="w-3.5 h-3.5" />
+                <span>
+                  房間等待中 · {room.players.length} / {room.settings.maxPlayers} 人
+                </span>
+              </span>
+              <span className="opacity-40">·</span>
+              <span className="inline-flex items-center gap-1 text-foreground">
+                <span>
+                  {room.settings.mode === "EXAM_50"
+                    ? "50 題檢定"
+                    : `${room.settings.questionCount} 題`}
+                </span>
+              </span>
+              <span className="opacity-40">·</span>
+              <span className="inline-flex items-center gap-1 text-amber-300">
+                <Timer className="w-3.5 h-3.5" />
+                <span>
+                  {room.settings.timeLimitPerQuestion && room.settings.timeLimitPerQuestion > 0
+                    ? `每題限時 ${room.settings.timeLimitPerQuestion} 秒`
+                    : "答題不限時"}
+                </span>
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold font-game text-foreground tracking-tight flex items-center gap-3">
@@ -330,23 +357,114 @@ export default function RoomLobbyView({
                     <input
                       type="number"
                       min={1}
-                      max={100}
+                      max={totalQuestionsCount && totalQuestionsCount > 0 ? totalQuestionsCount : undefined}
                       value={room.settings.questionCount}
-                      onChange={(e) =>
-                        onUpdateSettings({
-                          questionCount: Math.max(1, Number(e.target.value) || 1),
-                        })
-                      }
+                      onChange={(e) => {
+                        const val = Number(e.target.value) || 1;
+                        const clamped =
+                          totalQuestionsCount && totalQuestionsCount > 0
+                            ? Math.min(Math.max(1, val), totalQuestionsCount)
+                            : Math.max(1, val);
+                        onUpdateSettings({ questionCount: clamped });
+                      }}
                       placeholder="輸入題數..."
                       className="w-28 min-h-[44px] px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.12] focus:border-accent text-base text-foreground font-game font-bold text-center"
                     />
                     <span className="text-xs text-foreground-muted font-game">
-                      題 (請輸入 1 ~ 100)
+                      {totalQuestionsCount && totalQuestionsCount > 0
+                        ? `題 (題庫上限 ${totalQuestionsCount} 題)`
+                        : "題 (請輸入有效題數)"}
                     </span>
                   </div>
                 )}
               </div>
             )}
+
+            {/* Time limit per question setting */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground-muted mb-1.5 flex items-center gap-1.5">
+                <Timer className="w-3.5 h-3.5 text-accent-bright" />
+                <span>每題答題限時</span>
+              </label>
+              {isHost ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                    {[
+                      { label: "不限時", sec: 0 },
+                      { label: "10s", sec: 10 },
+                      { label: "15s", sec: 15 },
+                      { label: "20s", sec: 20 },
+                      { label: "30s", sec: 30 },
+                      { label: "60s", sec: 60 },
+                    ].map(({ label, sec }) => (
+                      <button
+                        key={sec}
+                        type="button"
+                        onClick={() => {
+                          setIsCustomTimeLimit(false);
+                          onUpdateSettings({ timeLimitPerQuestion: sec });
+                        }}
+                        className={`min-h-[40px] py-1.5 px-1 rounded-xl text-xs font-game font-bold border transition-all touch-tactile ${
+                          !isCustomTimeLimit && (room.settings.timeLimitPerQuestion || 0) === sec
+                            ? "bg-accent/30 text-white border-accent shadow-sm"
+                            : "bg-white/[0.02] text-foreground-muted border-white/[0.04] hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomTimeLimit(true);
+                        if (!room.settings.timeLimitPerQuestion) {
+                          onUpdateSettings({ timeLimitPerQuestion: 25 });
+                        }
+                      }}
+                      className={`min-h-[40px] py-1.5 px-1 rounded-xl text-xs font-game font-bold border transition-all touch-tactile ${
+                        isCustomTimeLimit
+                          ? "bg-accent/30 text-white border-accent shadow-sm"
+                          : "bg-white/[0.02] text-foreground-muted border-white/[0.04] hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      自訂
+                    </button>
+                  </div>
+
+                  {isCustomTimeLimit && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="number"
+                        min={5}
+                        max={300}
+                        value={room.settings.timeLimitPerQuestion || 25}
+                        onChange={(e) =>
+                          onUpdateSettings({
+                            timeLimitPerQuestion: Math.max(
+                              5,
+                              Math.min(300, Number(e.target.value) || 5)
+                            ),
+                          })
+                        }
+                        className="w-24 min-h-[40px] px-3 py-1 rounded-xl bg-white/[0.04] border border-white/[0.12] focus:border-accent text-sm text-foreground font-game font-bold text-center"
+                      />
+                      <span className="text-xs text-foreground-muted font-game">
+                        秒 / 題 (5 ~ 300 秒)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-xs font-game font-bold text-foreground flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-accent-bright" />
+                  <span>
+                    {room.settings.timeLimitPerQuestion && room.settings.timeLimitPerQuestion > 0
+                      ? `每題限時 ${room.settings.timeLimitPerQuestion} 秒 (超時自動結算)`
+                      : "不限作答時間"}
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Order Mode (Same vs Random) */}
             <div>

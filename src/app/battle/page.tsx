@@ -15,6 +15,8 @@ import {
   Gamepad2,
   BarChart3,
   Dog,
+  Timer,
+  Clock,
 } from "lucide-react";
 import AnimalAvatarPicker from "@/components/battle/AnimalAvatarPicker";
 import { battleAudio } from "@/lib/battleAudio";
@@ -30,6 +32,9 @@ export default function BattlePortalPage() {
   const [mode, setMode] = useState<"CUSTOM" | "EXAM_50">("CUSTOM");
   const [questionCount, setQuestionCount] = useState(10);
   const [isCustomCount, setIsCustomCount] = useState(false);
+  const [totalQuestionsCount, setTotalQuestionsCount] = useState<number>(0);
+  const [timeLimitPerQuestion, setTimeLimitPerQuestion] = useState<number>(0); // 0 = 不限時
+  const [isCustomTimeLimit, setIsCustomTimeLimit] = useState(false);
   const [orderMode, setOrderMode] = useState<"SAME" | "RANDOM">("SAME");
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -84,6 +89,21 @@ export default function BattlePortalPage() {
     } catch {}
   }, []);
 
+  // Fetch total question count for dynamic upper bound
+  useEffect(() => {
+    fetch("/api/battle/create")
+      .then((res) => {
+        if (res.ok) return res.json();
+        return null;
+      })
+      .then((data) => {
+        if (data && typeof data.totalQuestionsCount === "number") {
+          setTotalQuestionsCount(data.totalQuestionsCount);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleDismissActiveBattle = () => {
     localStorage.removeItem("quizmaster_active_battle");
     setActiveBattle(null);
@@ -107,6 +127,9 @@ export default function BattlePortalPage() {
             mode,
             questionCount: mode === "EXAM_50" ? 50 : questionCount,
             orderMode,
+            timeLimitPerQuestion: isCustomTimeLimit
+              ? Math.max(0, Number(timeLimitPerQuestion) || 0)
+              : timeLimitPerQuestion,
           },
         }),
       });
@@ -408,19 +431,100 @@ export default function BattlePortalPage() {
                     <input
                       type="number"
                       min={1}
-                      max={100}
+                      max={totalQuestionsCount > 0 ? totalQuestionsCount : undefined}
                       value={questionCount}
-                      onChange={(e) => setQuestionCount(Math.max(1, Number(e.target.value) || 1))}
-                      placeholder="輸入題數..."
+                      onChange={(e) => {
+                        const val = Number(e.target.value) || 1;
+                        const clamped =
+                          totalQuestionsCount > 0
+                            ? Math.min(Math.max(1, val), totalQuestionsCount)
+                            : Math.max(1, val);
+                        setQuestionCount(clamped);
+                      }}
+                      placeholder={totalQuestionsCount > 0 ? `1 ~ ${totalQuestionsCount}` : "輸入題數..."}
                       className="w-32 min-h-[44px] px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.12] focus:border-accent text-base text-foreground font-game font-bold text-center"
                     />
                     <span className="text-xs text-foreground-muted font-game">
-                      題 (請輸入 1 ~ 100)
+                      {totalQuestionsCount > 0
+                        ? `題 (題庫上限 ${totalQuestionsCount} 題)`
+                        : "題 (請輸入有效題數)"}
                     </span>
                   </div>
                 )}
               </div>
             )}
+
+            {/* Time limit per question setting */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground-muted mb-1.5 flex items-center gap-1.5">
+                <Timer className="w-4 h-4 text-accent-bright" />
+                <span>每題答題限時模式</span>
+                <span className="text-[11px] text-foreground-muted/80 font-normal">
+                  (超時未送出將自動結算)
+                </span>
+              </label>
+              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                {[
+                  { label: "不限時", sec: 0 },
+                  { label: "10 秒", sec: 10 },
+                  { label: "15 秒", sec: 15 },
+                  { label: "20 秒", sec: 20 },
+                  { label: "30 秒", sec: 30 },
+                  { label: "60 秒", sec: 60 },
+                ].map(({ label, sec }) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => {
+                      setTimeLimitPerQuestion(sec);
+                      setIsCustomTimeLimit(false);
+                    }}
+                    className={`min-h-[44px] py-2 px-1 rounded-xl text-xs font-game font-bold border transition-all touch-tactile ${
+                      !isCustomTimeLimit && timeLimitPerQuestion === sec
+                        ? "bg-accent/30 text-white border-accent shadow-sm"
+                        : "bg-white/[0.02] text-foreground-muted border-white/[0.05] hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomTimeLimit(true);
+                    if (timeLimitPerQuestion === 0) setTimeLimitPerQuestion(25);
+                  }}
+                  className={`min-h-[44px] py-2 px-1 rounded-xl text-xs font-game font-bold border transition-all touch-tactile ${
+                    isCustomTimeLimit
+                      ? "bg-accent/30 text-white border-accent shadow-sm"
+                      : "bg-white/[0.02] text-foreground-muted border-white/[0.05] hover:bg-white/[0.05]"
+                  }`}
+                >
+                  自訂秒數
+                </button>
+              </div>
+
+              {isCustomTimeLimit && (
+                <div className="mt-2.5 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={5}
+                    max={300}
+                    value={timeLimitPerQuestion}
+                    onChange={(e) =>
+                      setTimeLimitPerQuestion(
+                        Math.max(5, Math.min(300, Number(e.target.value) || 5))
+                      )
+                    }
+                    placeholder="秒數..."
+                    className="w-32 min-h-[44px] px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.12] focus:border-accent text-base text-foreground font-game font-bold text-center"
+                  />
+                  <span className="text-xs text-foreground-muted font-game">
+                    秒 / 題 (請輸入 5 ~ 300 秒)
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Order mode */}
             <div>

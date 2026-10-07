@@ -21,6 +21,7 @@ import {
   X,
   BookOpen,
   Swords,
+  Timer,
 } from "lucide-react";
 import BattleReviewPanel from "./BattleReviewPanel";
 
@@ -78,9 +79,16 @@ export default function BattlePlayView({
     return orderIds.map((id) => qMap.get(id)).filter(Boolean) as BattleQuestion[];
   }, [room.questions, room.playerQuestionOrders, currentPlayerId]);
 
+  const timeLimit =
+    room.settings?.timeLimitPerQuestion && room.settings.timeLimitPerQuestion > 0
+      ? room.settings.timeLimitPerQuestion
+      : 0;
+
   const [currentIndex, setCurrentIndex] = useState(myPlayer?.currentIndex || 0);
   const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number>(timeLimit);
+  const [timeoutStatus, setTimeoutStatus] = useState<"NONE" | "MANUAL" | "TIMEOUT_AUTO" | "TIMEOUT_BLANK">("NONE");
   const [isMuted, setIsMuted] = useState(battleAudio.getMuted());
   const [submitting, setSubmitting] = useState(false);
   const [isFinishedLocal, setIsFinishedLocal] = useState(myPlayer?.isFinished || false);
@@ -104,8 +112,17 @@ export default function BattlePlayView({
 
   const currentQ = orderedQuestions[currentIndex] || orderedQuestions[0];
   const autoNextTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const questionStartTimeRef = useRef<number>(Date.now());
+  const selectedAnswersRef = useRef<string[]>([]);
+  const isSubmittingAnswerRef = useRef<boolean>(false);
   const syncedWrongQuestionIdsRef = useRef<Set<string>>(new Set());
   const lastSubmittedAtRef = useRef<number>(0);
+
+  // Keep selectedAnswersRef in sync to avoid closure staleness
+  useEffect(() => {
+    selectedAnswersRef.current = selectedAnswers;
+  }, [selectedAnswers]);
 
   // Reset synced wrong question tracking on new game session
   useEffect(() => {
@@ -160,10 +177,11 @@ export default function BattlePlayView({
     };
   }, [onRefreshRoom, onFinishBattle]);
 
-  // Clean timer on unmount
+  // Clean timers on unmount
   useEffect(() => {
     return () => {
       if (autoNextTimerRef.current) clearTimeout(autoNextTimerRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
@@ -233,6 +251,62 @@ export default function BattlePlayView({
     }
   }, [room.code, currentPlayerId]);
 
+  // Check if current question was already answered (reconnect / cached answers)
+  useEffect(() => {
+    if (!currentQ) return;
+    if (currentQ.id in localAnswers) {
+      const existing = localAnswers[currentQ.id] || [];
+      setSelectedAnswers(existing);
+      selectedAnswersRef.current = existing;
+      setHasSubmitted(true);
+      isSubmittingAnswerRef.current = true;
+      setTimeLeft(0);
+    }
+  }, [currentQ?.id, localAnswers]);
+
+  // Independent countdown timer per question
+  useEffect(() => {
+    if (hasSubmitted || isFinishedLocal || !currentQ || timeLimit <= 0) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
+    questionStartTimeRef.current = Date.now();
+    setTimeLeft(timeLimit);
+
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - questionStartTimeRef.current) / 1000);
+      const remaining = Math.max(0, timeLimit - elapsed);
+      setTimeLeft(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        timerRef.current = null;
+
+        if (isSubmittingAnswerRef.current) return;
+
+        const currentSelected = selectedAnswersRef.current;
+        if (currentSelected.length > 0) {
+          evaluateAnswer(currentSelected, "TIMEOUT_AUTO");
+        } else {
+          evaluateAnswer([], "TIMEOUT_BLANK");
+        }
+      }
+    }, 200);
+
+    timerRef.current = interval;
+
+    return () => {
+      clearInterval(interval);
+      if (timerRef.current === interval) {
+        timerRef.current = null;
+      }
+    };
+  }, [currentIndex, hasSubmitted, isFinishedLocal, timeLimit, currentQ?.id]);
+
   // Handle option click (single choice only selects, does NOT auto-submit)
   const handleOptionClick = (opt: string) => {
     if (hasSubmitted || isFinishedLocal) return;
@@ -249,9 +323,18 @@ export default function BattlePlayView({
   };
 
   // Evaluate Answer and submit progress
-  const evaluateAnswer = async (answers: string[]) => {
-    if (hasSubmitted || !currentQ) return;
+  const evaluateAnswer = async (
+    answers: string[],
+    reason: "MANUAL" | "TIMEOUT_AUTO" | "TIMEOUT_BLANK" = "MANUAL"
+  ) => {
+    if (isSubmittingAnswerRef.current || hasSubmitted || !currentQ) return;
+    isSubmittingAnswerRef.current = true;
     setHasSubmitted(true);
+    setTimeoutStatus(reason);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     lastSubmittedAtRef.current = Date.now();
 
     const updatedAnswers = { ...localAnswers, [currentQ.id]: answers };
@@ -334,16 +417,39 @@ export default function BattlePlayView({
   };
 
   const submitAnswer = () => {
-    if (selectedAnswers.length === 0 || hasSubmitted) return;
-    evaluateAnswer(selectedAnswers);
+    if (selectedAnswers.length === 0 || hasSubmitted || isSubmittingAnswerRef.current) return;
+    evaluateAnswer(selectedAnswers, "MANUAL");
   };
 
   const advanceNextQuestion = () => {
     if (autoNextTimerRef.current) clearTimeout(autoNextTimerRef.current);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    isSubmittingAnswerRef.current = false;
+    setTimeoutStatus("NONE");
+
     if (currentIndex + 1 < totalQuestions) {
-      setCurrentIndex((prev) => prev + 1);
-      setSelectedAnswers([]);
-      setHasSubmitted(false);
+      const nextIndex = currentIndex + 1;
+      const nextQ = orderedQuestions[nextIndex];
+      setCurrentIndex(nextIndex);
+
+      const isNextAnswered = nextQ && nextQ.id in localAnswers;
+      if (isNextAnswered) {
+        const existing = localAnswers[nextQ.id] || [];
+        setSelectedAnswers(existing);
+        selectedAnswersRef.current = existing;
+        setHasSubmitted(true);
+        isSubmittingAnswerRef.current = true;
+        setTimeLeft(0);
+      } else {
+        setSelectedAnswers([]);
+        selectedAnswersRef.current = [];
+        setHasSubmitted(false);
+        setTimeLeft(timeLimit);
+        questionStartTimeRef.current = Date.now();
+      }
     } else {
       setIsFinishedLocal(true);
       onFinishBattle();
@@ -377,6 +483,10 @@ export default function BattlePlayView({
           </span>
           <span className="text-xs text-foreground-muted hidden sm:inline">
             題目順序：{room.settings.orderMode === "RANDOM" ? "隨機亂序" : "全員同序"}
+          </span>
+          <span className="text-xs text-amber-300/90 hidden md:inline-flex items-center gap-1 font-game">
+            <Timer className="w-3.5 h-3.5 text-amber-400" />
+            <span>{timeLimit > 0 ? `每題限時 ${timeLimit} 秒` : "答題不限時"}</span>
           </span>
         </div>
 
@@ -415,7 +525,29 @@ export default function BattlePlayView({
         {/* Left Question Box */}
         <div className="flex-1 w-full space-y-4">
           {!isFinishedLocal && currentQ ? (
-            <div className="p-6 sm:p-8 rounded-3xl bg-white/[0.04] border border-white/[0.12] shadow-2xl backdrop-blur-xl relative overflow-hidden">
+            <div
+              className={`p-6 sm:p-8 rounded-3xl bg-white/[0.04] border shadow-2xl backdrop-blur-xl relative overflow-hidden transition-all duration-300 ${
+                !hasSubmitted && timeLimit > 0 && timeLeft <= 5
+                  ? "border-rose-500/50 ring-2 ring-rose-500/20 shadow-[0_0_30px_rgba(244,63,94,0.25)]"
+                  : "border-white/[0.12]"
+              }`}
+            >
+              {/* Dynamic Timer Progress Bar */}
+              {timeLimit > 0 && !hasSubmitted && (
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/[0.08] overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-200 ease-linear ${
+                      timeLeft <= 5
+                        ? "bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.8)] animate-pulse"
+                        : "bg-gradient-to-r from-accent via-indigo-400 to-amber-400 shadow-[0_0_10px_rgba(94,106,210,0.5)]"
+                    }`}
+                    style={{
+                      width: `${Math.min(100, Math.max(0, (timeLeft / timeLimit) * 100))}%`,
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Question Header */}
               <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <div className="flex items-center gap-2">
@@ -428,12 +560,52 @@ export default function BattlePlayView({
                   </span>
                 </div>
 
-                {currentQ.category && (
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-accent/15 text-[#8B96F8] font-bold">
-                    {currentQ.category}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {/* Countdown Timer Badge */}
+                  {timeLimit > 0 && (
+                    <div
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-game font-bold border transition-all ${
+                        hasSubmitted
+                          ? "bg-white/[0.04] text-foreground-muted border-white/[0.08]"
+                          : timeLeft <= 5
+                          ? "bg-rose-500/25 text-rose-300 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.5)] animate-pulse"
+                          : "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                      }`}
+                    >
+                      <Timer
+                        className={`w-3.5 h-3.5 ${
+                          !hasSubmitted && timeLeft <= 5
+                            ? "text-rose-400 animate-spin"
+                            : "text-amber-400"
+                        }`}
+                      />
+                      <span>
+                        {hasSubmitted ? "已停止計時" : `剩餘 ${timeLeft} 秒`}
+                      </span>
+                    </div>
+                  )}
+
+                  {currentQ.category && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-accent/15 text-[#8B96F8] font-bold">
+                      {currentQ.category}
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {/* Timeout Notification Banners */}
+              {hasSubmitted && selectedAnswers.length === 0 && (
+                <div className="mb-4 p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-game font-bold flex items-center gap-2 animate-fade-in shadow-sm">
+                  <Timer className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>作答時間已截止！超時未作答，本題計為錯誤。</span>
+                </div>
+              )}
+              {hasSubmitted && timeoutStatus === "TIMEOUT_AUTO" && (
+                <div className="mb-4 p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-game font-bold flex items-center gap-2 animate-fade-in shadow-sm">
+                  <Timer className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>作答時間已截止！已自動為你送出選取的答案。</span>
+                </div>
+              )}
 
               {/* Question Stem */}
               <h2 className="text-lg sm:text-xl font-bold text-foreground leading-relaxed mb-4">
