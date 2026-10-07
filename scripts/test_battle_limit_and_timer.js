@@ -17,7 +17,7 @@ const prisma = new PrismaClient();
 
 async function runTests() {
   console.log("==================================================");
-  console.log("⏱️ 開始執行對戰模式動態題數上限與每題限時自動化測試");
+  console.log("[測試] 開始執行對戰模式動態題數上限與每題限時自動化測試");
   console.log("==================================================");
 
   let passed = 0;
@@ -25,9 +25,9 @@ async function runTests() {
     try {
       fn();
       passed++;
-      console.log(`  ✓ [通過] ${name}`);
+      console.log(`  [PASS] ${name}`);
     } catch (err) {
-      console.error(`  ✗ [失敗] ${name}:`, err.message);
+      console.error(`  [FAIL] ${name}:`, err.message);
       process.exitCode = 1;
     }
   }
@@ -228,6 +228,27 @@ async function runTests() {
     assert(playViewContent.includes("setTimeLeft(0)"));
   });
 
+  test("BattlePlayView 掛載時直接導出 initialAnswered 避免計時器競態與閃爍", () => {
+    assert(playViewContent.includes("initialAnswered"));
+    assert(playViewContent.includes("initialAnswered ? 0 : timeLimit"));
+    assert(playViewContent.includes("hasSubmitted, setHasSubmitted] = useState<boolean>(initialAnswered)"));
+  });
+
+  test("BattlePlayView 答題結算時保留當前 currentIndex 防止刷新立即跳過解析", () => {
+    assert(playViewContent.includes("currentIndex: currentIndex"));
+    assert(playViewContent.includes("parsed.currentIndex = nextIndex"));
+  });
+
+  test("RoomLobbyView 具備當前對戰規則摘要卡片並呈現限時規則", () => {
+    const updatedLobbyContent = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/battle/RoomLobbyView.tsx"),
+      "utf-8"
+    );
+    assert(updatedLobbyContent.includes("當前對戰規則摘要"));
+    assert(updatedLobbyContent.includes("timeLimitPerQuestion"));
+    assert(updatedLobbyContent.includes("秒/題"));
+  });
+
   // 5. 全站零 Emoji 規範稽核
   console.log("\n--- 5. 全站規範零 Emoji 靜態稽核 ---");
   const emojiRegex = /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
@@ -240,6 +261,7 @@ async function runTests() {
     "src/lib/battleStore.ts",
     "src/app/api/battle/create/route.ts",
     "src/app/api/battle/[code]/route.ts",
+    "scripts/test_battle_limit_and_timer.js",
   ];
 
   for (const relPath of targetFiles) {

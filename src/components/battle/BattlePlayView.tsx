@@ -84,21 +84,6 @@ export default function BattlePlayView({
       ? room.settings.timeLimitPerQuestion
       : 0;
 
-  const [currentIndex, setCurrentIndex] = useState(myPlayer?.currentIndex || 0);
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<number>(timeLimit);
-  const [timeoutStatus, setTimeoutStatus] = useState<"NONE" | "MANUAL" | "TIMEOUT_AUTO" | "TIMEOUT_BLANK">("NONE");
-  const [isMuted, setIsMuted] = useState(battleAudio.getMuted());
-  const [submitting, setSubmitting] = useState(false);
-  const [isFinishedLocal, setIsFinishedLocal] = useState(myPlayer?.isFinished || false);
-  const [showMobileBoard, setShowMobileBoard] = useState(false);
-  const [stats, setStats] = useState({
-    correct: myPlayer?.correctCount || 0,
-    wrong: myPlayer?.wrongCount || 0,
-    score: myPlayer?.score || 0,
-  });
-
   // Track player answers locally for instant review availability
   const [localAnswers, setLocalAnswers] = useState<Record<string, string[]>>(() => ({
     ...userAnswers,
@@ -110,7 +95,49 @@ export default function BattlePlayView({
     }
   }, [userAnswers]);
 
+  // Determine initial question index: prefer local session active viewing index, fallback to myPlayer
+  const [currentIndex, setCurrentIndex] = useState<number>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const activeRaw = localStorage.getItem("quizmaster_active_battle");
+        if (activeRaw) {
+          const active = JSON.parse(activeRaw);
+          if (active && active.code === room.code && active.playerId === currentPlayerId) {
+            if (
+              typeof active.currentIndex === "number" &&
+              active.currentIndex >= 0 &&
+              active.currentIndex < totalQuestions
+            ) {
+              return active.currentIndex;
+            }
+          }
+        }
+      }
+    } catch {}
+    return Math.min(myPlayer?.currentIndex || 0, Math.max(0, totalQuestions - 1));
+  });
+
   const currentQ = orderedQuestions[currentIndex] || orderedQuestions[0];
+  const initialAnswered = Boolean(currentQ && currentQ.id in localAnswers);
+
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>(() => {
+    if (currentQ && currentQ.id in localAnswers) {
+      return localAnswers[currentQ.id] || [];
+    }
+    return [];
+  });
+  const [hasSubmitted, setHasSubmitted] = useState<boolean>(initialAnswered);
+  const [timeLeft, setTimeLeft] = useState<number>(initialAnswered ? 0 : timeLimit);
+  const [timeoutStatus, setTimeoutStatus] = useState<"NONE" | "MANUAL" | "TIMEOUT_AUTO" | "TIMEOUT_BLANK">("NONE");
+  const [isMuted, setIsMuted] = useState(battleAudio.getMuted());
+  const [submitting, setSubmitting] = useState(false);
+  const [isFinishedLocal, setIsFinishedLocal] = useState(myPlayer?.isFinished || false);
+  const [showMobileBoard, setShowMobileBoard] = useState(false);
+  const [stats, setStats] = useState({
+    correct: myPlayer?.correctCount || 0,
+    wrong: myPlayer?.wrongCount || 0,
+    score: myPlayer?.score || 0,
+  });
   const autoNextTimerRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const questionStartTimeRef = useRef<number>(Date.now());
@@ -261,6 +288,10 @@ export default function BattlePlayView({
       setHasSubmitted(true);
       isSubmittingAnswerRef.current = true;
       setTimeLeft(0);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
   }, [currentQ?.id, localAnswers]);
 
@@ -313,12 +344,14 @@ export default function BattlePlayView({
 
     battleAudio.playClick();
     if (currentQ.type === "SINGLE") {
+      selectedAnswersRef.current = [opt];
       setSelectedAnswers([opt]);
     } else {
-      // Multiple choice toggling
-      setSelectedAnswers((prev) =>
-        prev.includes(opt) ? prev.filter((x) => x !== opt) : [...prev, opt].sort()
-      );
+      setSelectedAnswers((prev) => {
+        const next = prev.includes(opt) ? prev.filter((x) => x !== opt) : [...prev, opt].sort();
+        selectedAnswersRef.current = next;
+        return next;
+      });
     }
   };
 
@@ -374,13 +407,14 @@ export default function BattlePlayView({
     const isLastQuestion = currentIndex + 1 >= totalQuestions;
 
     // Persist active battle progress to localStorage for reconnect resilience
+    // Preserve currentIndex so explanation remains visible upon refresh
     try {
       const activeSession = {
         code: room.code,
         playerId: currentPlayerId,
         nickname: myPlayer?.name || "玩家",
         avatar: myPlayer?.avatarId || "shiba",
-        currentIndex: isLastQuestion ? currentIndex : currentIndex + 1,
+        currentIndex: currentIndex,
         correctCount: newCorrect,
         wrongCount: newWrong,
         score: newScore,
@@ -435,6 +469,19 @@ export default function BattlePlayView({
       const nextQ = orderedQuestions[nextIndex];
       setCurrentIndex(nextIndex);
 
+      // Persist advancement to nextIndex in activeSession
+      try {
+        const raw = localStorage.getItem("quizmaster_active_battle");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.code === room.code && parsed.playerId === currentPlayerId) {
+            parsed.currentIndex = nextIndex;
+            parsed.updatedAt = Date.now();
+            localStorage.setItem("quizmaster_active_battle", JSON.stringify(parsed));
+          }
+        }
+      } catch {}
+
       const isNextAnswered = nextQ && nextQ.id in localAnswers;
       if (isNextAnswered) {
         const existing = localAnswers[nextQ.id] || [];
@@ -452,6 +499,18 @@ export default function BattlePlayView({
       }
     } else {
       setIsFinishedLocal(true);
+      try {
+        const raw = localStorage.getItem("quizmaster_active_battle");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.code === room.code && parsed.playerId === currentPlayerId) {
+            parsed.stage = "FINISHED";
+            parsed.finishedAt = Date.now();
+            parsed.updatedAt = Date.now();
+            localStorage.setItem("quizmaster_active_battle", JSON.stringify(parsed));
+          }
+        }
+      } catch {}
       onFinishBattle();
     }
   };
@@ -575,7 +634,7 @@ export default function BattlePlayView({
                       <Timer
                         className={`w-3.5 h-3.5 ${
                           !hasSubmitted && timeLeft <= 5
-                            ? "text-rose-400 animate-spin"
+                            ? "text-rose-400 animate-pulse"
                             : "text-amber-400"
                         }`}
                       />
@@ -594,13 +653,13 @@ export default function BattlePlayView({
               </div>
 
               {/* Timeout Notification Banners */}
-              {hasSubmitted && selectedAnswers.length === 0 && (
+              {hasSubmitted && timeLimit > 0 && (timeoutStatus === "TIMEOUT_BLANK" || selectedAnswers.length === 0) && (
                 <div className="mb-4 p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-game font-bold flex items-center gap-2 animate-fade-in shadow-sm">
                   <Timer className="w-4 h-4 text-rose-400 shrink-0" />
                   <span>作答時間已截止！超時未作答，本題計為錯誤。</span>
                 </div>
               )}
-              {hasSubmitted && timeoutStatus === "TIMEOUT_AUTO" && (
+              {hasSubmitted && timeLimit > 0 && timeoutStatus === "TIMEOUT_AUTO" && (
                 <div className="mb-4 p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-game font-bold flex items-center gap-2 animate-fade-in shadow-sm">
                   <Timer className="w-4 h-4 text-amber-400 shrink-0" />
                   <span>作答時間已截止！已自動為你送出選取的答案。</span>

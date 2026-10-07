@@ -79,19 +79,27 @@ export default function BattleRoomPage() {
         const me = updatedRoom.players.find((p) => p.id === playerId);
         if (me) {
           try {
+            const raw = localStorage.getItem("quizmaster_active_battle");
+            const existing = raw ? JSON.parse(raw) : null;
             const activeSession = {
               code: roomCode,
               playerId,
               nickname: me.name,
               avatar: me.avatarId,
-              currentIndex: me.currentIndex,
-              correctCount: me.correctCount,
-              wrongCount: me.wrongCount,
-              score: me.score,
-              userAnswers,
+              currentIndex:
+                typeof existing?.currentIndex === "number"
+                  ? existing.currentIndex
+                  : me.currentIndex,
+              correctCount: Math.max(me.correctCount, existing?.correctCount || 0),
+              wrongCount: Math.max(me.wrongCount, existing?.wrongCount || 0),
+              score: Math.max(me.score, existing?.score || 0),
+              userAnswers:
+                Object.keys(userAnswers).length > 0
+                  ? userAnswers
+                  : existing?.userAnswers || {},
               stage: updatedRoom.stage,
               startedAt: updatedRoom.playingStartTime || Date.now(),
-              finishedAt: me.finishedAt,
+              finishedAt: me.finishedAt || existing?.finishedAt,
               updatedAt: Date.now(),
             };
             localStorage.setItem("quizmaster_active_battle", JSON.stringify(activeSession));

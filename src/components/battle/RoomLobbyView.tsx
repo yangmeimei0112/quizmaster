@@ -58,6 +58,23 @@ export default function RoomLobbyView({
     room.settings.timeLimitPerQuestion !== undefined &&
       ![0, 10, 15, 20, 30, 60].includes(room.settings.timeLimitPerQuestion)
   );
+  const [customTimeLimitVal, setCustomTimeLimitVal] = useState<string>(
+    String(room.settings.timeLimitPerQuestion || 25)
+  );
+  const [customQuestionCountVal, setCustomQuestionCountVal] = useState<string>(
+    String(room.settings.questionCount || 10)
+  );
+
+  React.useEffect(() => {
+    setIsCustomCount(![5, 10, 20].includes(room.settings.questionCount));
+    setCustomQuestionCountVal(String(room.settings.questionCount || 10));
+  }, [room.settings.questionCount]);
+
+  React.useEffect(() => {
+    const limit = room.settings.timeLimitPerQuestion || 0;
+    setIsCustomTimeLimit(![0, 10, 15, 20, 30, 60].includes(limit));
+    setCustomTimeLimitVal(String(limit || 25));
+  }, [room.settings.timeLimitPerQuestion]);
 
   const myPlayer = room.players.find((p) => p.id === currentPlayerId);
   const isHost = myPlayer?.isHost || false;
@@ -358,13 +375,21 @@ export default function RoomLobbyView({
                       type="number"
                       min={1}
                       max={totalQuestionsCount && totalQuestionsCount > 0 ? totalQuestionsCount : undefined}
-                      value={room.settings.questionCount}
+                      value={customQuestionCountVal}
                       onChange={(e) => {
-                        const val = Number(e.target.value) || 1;
-                        const clamped =
-                          totalQuestionsCount && totalQuestionsCount > 0
-                            ? Math.min(Math.max(1, val), totalQuestionsCount)
-                            : Math.max(1, val);
+                        const str = e.target.value;
+                        setCustomQuestionCountVal(str);
+                        const num = Number(str);
+                        const maxLimit = totalQuestionsCount && totalQuestionsCount > 0 ? totalQuestionsCount : Infinity;
+                        if (!isNaN(num) && num >= 1 && num <= maxLimit) {
+                          onUpdateSettings({ questionCount: Math.floor(num) });
+                        }
+                      }}
+                      onBlur={() => {
+                        const num = Number(customQuestionCountVal);
+                        const maxLimit = totalQuestionsCount && totalQuestionsCount > 0 ? totalQuestionsCount : Infinity;
+                        const clamped = isNaN(num) || num < 1 ? 1 : num > maxLimit ? maxLimit : Math.floor(num);
+                        setCustomQuestionCountVal(String(clamped));
                         onUpdateSettings({ questionCount: clamped });
                       }}
                       placeholder="輸入題數..."
@@ -437,15 +462,21 @@ export default function RoomLobbyView({
                         type="number"
                         min={5}
                         max={300}
-                        value={room.settings.timeLimitPerQuestion || 25}
-                        onChange={(e) =>
-                          onUpdateSettings({
-                            timeLimitPerQuestion: Math.max(
-                              5,
-                              Math.min(300, Number(e.target.value) || 5)
-                            ),
-                          })
-                        }
+                        value={customTimeLimitVal}
+                        onChange={(e) => {
+                          const str = e.target.value;
+                          setCustomTimeLimitVal(str);
+                          const num = Number(str);
+                          if (!isNaN(num) && num >= 5 && num <= 300) {
+                            onUpdateSettings({ timeLimitPerQuestion: Math.floor(num) });
+                          }
+                        }}
+                        onBlur={() => {
+                          const num = Number(customTimeLimitVal);
+                          const clamped = isNaN(num) || num < 5 ? 5 : num > 300 ? 300 : Math.floor(num);
+                          setCustomTimeLimitVal(String(clamped));
+                          onUpdateSettings({ timeLimitPerQuestion: clamped });
+                        }}
                         className="w-24 min-h-[40px] px-3 py-1 rounded-xl bg-white/[0.04] border border-white/[0.12] focus:border-accent text-sm text-foreground font-game font-bold text-center"
                       />
                       <span className="text-xs text-foreground-muted font-game">
@@ -526,6 +557,54 @@ export default function RoomLobbyView({
                 </div>
               </div>
             )}
+
+            {/* Current Match Rules Summary Banner */}
+            <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-xs font-game space-y-1.5">
+              <div className="font-bold text-foreground flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-accent-bright">
+                <Swords className="w-3.5 h-3.5" />
+                <span>當前對戰規則摘要</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-foreground-muted pt-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                  <span>
+                    題數：
+                    <strong className="text-foreground">
+                      {room.settings.mode === "EXAM_50" ? "50 題" : `${room.settings.questionCount} 題`}
+                    </strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                  <span>
+                    限時：
+                    <strong className="text-amber-300">
+                      {room.settings.timeLimitPerQuestion && room.settings.timeLimitPerQuestion > 0
+                        ? `${room.settings.timeLimitPerQuestion} 秒/題`
+                        : "不限時"}
+                    </strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                  <span>
+                    順序：
+                    <strong className="text-foreground">
+                      {room.settings.orderMode === "RANDOM" ? "隨機亂序" : "全員同序"}
+                    </strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  <span>
+                    人數：
+                    <strong className="text-foreground">
+                      {room.players.length} / {room.settings.maxPlayers} 人
+                    </strong>
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Action Button: Ready / Start */}

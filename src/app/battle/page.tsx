@@ -125,10 +125,15 @@ export default function BattlePortalPage() {
           settings: {
             maxPlayers,
             mode,
-            questionCount: mode === "EXAM_50" ? 50 : questionCount,
+            questionCount:
+              mode === "EXAM_50"
+                ? 50
+                : totalQuestionsCount > 0
+                ? Math.min(Math.max(1, questionCount || 10), totalQuestionsCount)
+                : Math.max(1, questionCount || 10),
             orderMode,
             timeLimitPerQuestion: isCustomTimeLimit
-              ? Math.max(0, Number(timeLimitPerQuestion) || 0)
+              ? Math.max(5, Math.min(300, Number(timeLimitPerQuestion) || 25))
               : timeLimitPerQuestion,
           },
         }),
@@ -432,14 +437,24 @@ export default function BattlePortalPage() {
                       type="number"
                       min={1}
                       max={totalQuestionsCount > 0 ? totalQuestionsCount : undefined}
-                      value={questionCount}
+                      value={questionCount || ""}
                       onChange={(e) => {
-                        const val = Number(e.target.value) || 1;
-                        const clamped =
-                          totalQuestionsCount > 0
+                        const str = e.target.value;
+                        const num = Number(str);
+                        if (str === "") {
+                          setQuestionCount(0);
+                        } else if (!isNaN(num)) {
+                          const maxLimit = totalQuestionsCount > 0 ? totalQuestionsCount : Infinity;
+                          setQuestionCount(Math.min(Math.max(1, Math.floor(num)), maxLimit));
+                        }
+                      }}
+                      onBlur={() => {
+                        setQuestionCount((prev) => {
+                          const val = prev || 10;
+                          return totalQuestionsCount > 0
                             ? Math.min(Math.max(1, val), totalQuestionsCount)
                             : Math.max(1, val);
-                        setQuestionCount(clamped);
+                        });
                       }}
                       placeholder={totalQuestionsCount > 0 ? `1 ~ ${totalQuestionsCount}` : "輸入題數..."}
                       className="w-32 min-h-[44px] px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.12] focus:border-accent text-base text-foreground font-game font-bold text-center"
@@ -510,13 +525,24 @@ export default function BattlePortalPage() {
                     type="number"
                     min={5}
                     max={300}
-                    value={timeLimitPerQuestion}
-                    onChange={(e) =>
-                      setTimeLimitPerQuestion(
-                        Math.max(5, Math.min(300, Number(e.target.value) || 5))
-                      )
-                    }
-                    placeholder="秒數..."
+                    value={timeLimitPerQuestion || ""}
+                    onChange={(e) => {
+                      const str = e.target.value;
+                      if (str === "") {
+                        setTimeLimitPerQuestion(0);
+                      } else {
+                        const num = Number(str);
+                        if (!isNaN(num)) {
+                          setTimeLimitPerQuestion(Math.floor(num));
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      setTimeLimitPerQuestion((prev) =>
+                        Math.max(5, Math.min(300, prev || 25))
+                      );
+                    }}
+                    placeholder="25"
                     className="w-32 min-h-[44px] px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.12] focus:border-accent text-base text-foreground font-game font-bold text-center"
                   />
                   <span className="text-xs text-foreground-muted font-game">
