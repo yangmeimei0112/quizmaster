@@ -91,3 +91,16 @@ model UserQuestionProgress {
   @@index([questionId])
   @@index([isMastered])
 }
+
+model BattleRoomRecord {
+  code      String   @id
+  hostId    String
+  stage     String   @default("LOBBY")
+  payload   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+
+  @@index([stage])
+  @@index([expiresAt])
+}

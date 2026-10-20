@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateAvatar } from "@/lib/battleStore";
+import { updateAvatar, getRoomAsync, syncRoomToDb } from "@/lib/battleStore";
 
 interface RouteParams {
   params: {
@@ -17,7 +17,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "缺少玩家識別碼或頭像代號" }, { status: 400 });
     }
 
+    await getRoomAsync(code);
     const room = updateAvatar(code, playerId, avatarId);
+    await syncRoomToDb(room);
     return NextResponse.json({ room });
   } catch (error: any) {
     return NextResponse.json(

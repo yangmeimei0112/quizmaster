@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { joinRoom } from "@/lib/battleStore";
+import { joinRoom, getRoomAsync, syncRoomToDb } from "@/lib/battleStore";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +14,9 @@ export async function POST(req: NextRequest) {
     }
     const cleanName = (playerName || "冒險者").trim();
     const targetPlayerId = (existingPlayerId || playerId || "").trim() || undefined;
+    await getRoomAsync(cleanCode);
     const result = joinRoom(cleanCode, cleanName, playerAvatar || "panda", targetPlayerId);
+    await syncRoomToDb(result.room);
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {

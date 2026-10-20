@@ -1,22 +1,51 @@
 const fs = require("fs");
 const path = require("path");
 
-function syncProvider() {
-  const envPath = path.join(__dirname, "..", ".env");
-  let dbUrl = process.env.DATABASE_URL;
-
-  if (!dbUrl && fs.existsSync(envPath)) {
-    const envContent = fs.readFileSync(envPath, "utf8");
-    const match = envContent.match(/DATABASE_URL=["']?([^"'\r\n]+)["']?/);
-    if (match) {
-      dbUrl = match[1].trim();
+function parseEnvFile(envPath) {
+  const result = {};
+  if (!fs.existsSync(envPath)) return result;
+  const envContent = fs.readFileSync(envPath, "utf8");
+  const lines = envContent.split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    let val = trimmed.slice(eqIdx + 1).trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
+      val = val.slice(1, -1).trim();
     }
+    result[key] = val;
   }
+  return result;
+}
 
-  const schemaPath = path.join(__dirname, "..", "prisma", "schema.prisma");
+function syncProvider(options = {}) {
+  const envPath = options.envPath || path.join(__dirname, "..", ".env");
+  const schemaPath = options.schemaPath || path.join(__dirname, "..", "prisma", "schema.prisma");
+  const fileEnv = parseEnvFile(envPath);
+
+  const dbUrl =
+    options.databaseUrl !== undefined
+      ? options.databaseUrl
+      : process.env.DATABASE_URL !== undefined
+      ? process.env.DATABASE_URL
+      : fileEnv.DATABASE_URL;
+
+  const directUrl =
+    options.directUrl !== undefined
+      ? options.directUrl
+      : process.env.DIRECT_URL !== undefined
+      ? process.env.DIRECT_URL
+      : fileEnv.DIRECT_URL;
+
   if (!fs.existsSync(schemaPath)) {
     console.error("schema.prisma not found at", schemaPath);
-    return;
+    return null;
   }
 
   let schema = fs.readFileSync(schemaPath, "utf8");
@@ -27,17 +56,34 @@ function syncProvider() {
     'generator client {\n  provider = "prisma-client-js"'
   );
 
-  const isSqlite = dbUrl && (dbUrl.startsWith("file:") || dbUrl.startsWith("sqlite:"));
-  const targetProvider = isSqlite ? "sqlite" : "postgresql";
+  const isPostgres =
+    Boolean(dbUrl) &&
+    (dbUrl.startsWith("postgresql://") ||
+      dbUrl.startsWith("postgres://") ||
+      dbUrl.startsWith("prisma+postgres://"));
+  const isSqlite =
+    !dbUrl ||
+    dbUrl.startsWith("file:") ||
+    dbUrl.startsWith("sqlite:") ||
+    !isPostgres;
 
-  // Replace provider inside datasource db block
-  schema = schema.replace(
-    /(datasource\s+db\s+\{[\s\S]*?provider\s*=\s*)"[^"]+"/,
-    `$1"${targetProvider}"`
-  );
+  const targetProvider = isSqlite ? "sqlite" : "postgresql";
+  const hasDirectUrl = targetProvider === "postgresql" && Boolean(directUrl && directUrl.trim());
+
+  const datasourceBlock = hasDirectUrl
+    ? `datasource db {\n  provider  = "postgresql"\n  url       = env("DATABASE_URL")\n  directUrl = env("DIRECT_URL")\n}`
+    : `datasource db {\n  provider = "${targetProvider}"\n  url      = env("DATABASE_URL")\n}`;
+
+  schema = schema.replace(/datasource\s+db\s+\{[\s\S]*?\}/, datasourceBlock);
 
   fs.writeFileSync(schemaPath, schema, "utf8");
-  console.log(`[sync-db-provider] Prisma datasource provider set to '${targetProvider}' (DATABASE_URL: ${dbUrl || "default"})`);
+  console.log(
+    `[sync-db-provider] Prisma datasource provider set to '${targetProvider}'${
+      hasDirectUrl ? " (with directUrl)" : ""
+    } (DATABASE_URL: ${dbUrl ? dbUrl.replace(/:[^:@/]+@/, ":****@") : "default"})`
+  );
+
+  return { provider: targetProvider, hasDirectUrl, schema };
 }
 
 function patchNextBuildForWindows() {
@@ -74,5 +120,14 @@ function patchNextBuildForWindows() {
   }
 }
 
-syncProvider();
-patchNextBuildForWindows();
+if (require.main === module) {
+  syncProvider();
+  patchNextBuildForWindows();
+}
+
+module.exports = {
+  syncProvider,
+  patchNextBuildForWindows,
+  parseEnvFile,
+};
+

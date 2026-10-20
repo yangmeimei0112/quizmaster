@@ -1,4 +1,5 @@
-// Battle Room in-memory state store with cross-device real-time sync
+// Battle Room in-memory state store with cross-device real-time sync and Serverless DB persistence
+import { PrismaClient } from "@prisma/client";
 
 export type BattleStage = "LOBBY" | "DRAWING" | "PLAYING" | "FINISHED";
 
@@ -602,3 +603,332 @@ export function resetBattle(code: string, hostId: string): BattleRoom {
   room.updatedAt = Date.now();
   return room;
 }
+
+// ============================================================================
+// Serverless Database Persistence Layer (BattleRoomRecord)
+// ============================================================================
+
+const globalForBattlePrisma = globalThis as unknown as {
+  prisma?: PrismaClient;
+};
+
+function getPrismaClient(): PrismaClient {
+  if (!globalForBattlePrisma.prisma) {
+    globalForBattlePrisma.prisma = new PrismaClient();
+  }
+  return globalForBattlePrisma.prisma;
+}
+
+/**
+ * Clears the in-memory room Map (useful for simulating Serverless cold starts in tests).
+ */
+export function clearMemoryRooms(): void {
+  roomsStore.clear();
+}
+
+/**
+ * Persists a BattleRoom state to the database (BattleRoomRecord).
+ */
+export async function syncRoomToDb(
+  roomOrCode: BattleRoom | string
+): Promise<BattleRoom | null> {
+  const room =
+    typeof roomOrCode === "string"
+      ? roomsStore.get(roomOrCode.trim().toUpperCase()) || null
+      : roomOrCode;
+
+  if (!room) return null;
+
+  const upperCode = room.code.trim().toUpperCase();
+  roomsStore.set(upperCode, room);
+
+  try {
+    const prisma = getPrismaClient();
+    const expiresAt = new Date(room.updatedAt + 2 * 60 * 60 * 1000);
+    const payload = JSON.stringify(room);
+
+    await prisma.battleRoomRecord.upsert({
+      where: { code: upperCode },
+      update: {
+        hostId: room.hostId,
+        stage: room.stage,
+        payload,
+        expiresAt,
+      },
+      create: {
+        code: upperCode,
+        hostId: room.hostId,
+        stage: room.stage,
+        payload,
+        expiresAt,
+      },
+    });
+  } catch (err) {
+    console.error("[battleStore] syncRoomToDb error:", err);
+  }
+
+  return room;
+}
+
+/**
+ * Deletes a BattleRoomRecord from both memory and the database.
+ */
+export async function deleteRoomFromDb(code: string): Promise<void> {
+  const upperCode = code.trim().toUpperCase();
+  roomsStore.delete(upperCode);
+  try {
+    const prisma = getPrismaClient();
+    await prisma.battleRoomRecord.deleteMany({
+      where: { code: upperCode },
+    });
+  } catch (err) {
+    console.error("[battleStore] deleteRoomFromDb error:", err);
+  }
+}
+
+/**
+ * Loads a BattleRoom from the database into the in-memory Map.
+ */
+export async function loadRoomFromDb(code: string): Promise<BattleRoom | null> {
+  const upperCode = code.trim().toUpperCase();
+  try {
+    const prisma = getPrismaClient();
+    const record = await prisma.battleRoomRecord.findUnique({
+      where: { code: upperCode },
+    });
+    if (!record) return null;
+
+    const dbRoom = JSON.parse(record.payload) as BattleRoom;
+    const now = Date.now();
+
+    // Check expiration (2 hours inactive or empty > 5 mins)
+    if (
+      now - dbRoom.updatedAt > 2 * 60 * 60 * 1000 ||
+      (dbRoom.players.length === 0 && now - dbRoom.updatedAt > 5 * 60 * 1000)
+    ) {
+      await deleteRoomFromDb(upperCode);
+      return null;
+    }
+
+    let transitioned = false;
+    if (dbRoom.stage === "DRAWING" && dbRoom.drawingStartTime) {
+      if (now - dbRoom.drawingStartTime >= 5000) {
+        dbRoom.stage = "PLAYING";
+        dbRoom.playingStartTime = dbRoom.playingStartTime || now;
+        dbRoom.updatedAt = now;
+        transitioned = true;
+      }
+    }
+
+    roomsStore.set(upperCode, dbRoom);
+
+    if (transitioned) {
+      await syncRoomToDb(dbRoom);
+    }
+
+    return dbRoom;
+  } catch (err) {
+    console.error("[battleStore] loadRoomFromDb error:", err);
+    return null;
+  }
+}
+
+/**
+ * Retrieves a room with Serverless cross-instance consistency:
+ * reconciles in-memory state with the database record and hydrates roomsStore.
+ */
+export async function getRoomAsync(code: string): Promise<BattleRoom | null> {
+  cleanupStaleRooms();
+  const upperCode = code.trim().toUpperCase();
+  const memRoom = roomsStore.get(upperCode) || null;
+
+  let dbRoom: BattleRoom | null = null;
+  try {
+    const prisma = getPrismaClient();
+    const record = await prisma.battleRoomRecord.findUnique({
+      where: { code: upperCode },
+    });
+    if (record) {
+      dbRoom = JSON.parse(record.payload) as BattleRoom;
+    }
+  } catch (err) {
+    console.error("[battleStore] getRoomAsync DB read error:", err);
+  }
+
+  let activeRoom: BattleRoom | null = null;
+  let needsSync = false;
+
+  if (memRoom && dbRoom) {
+    if (memRoom.updatedAt > dbRoom.updatedAt) {
+      activeRoom = memRoom;
+      needsSync = true;
+    } else {
+      activeRoom = dbRoom;
+    }
+  } else if (dbRoom) {
+    activeRoom = dbRoom;
+  } else if (memRoom) {
+    activeRoom = memRoom;
+    needsSync = true;
+  }
+
+  if (!activeRoom) return null;
+
+  const now = Date.now();
+  if (
+    now - activeRoom.updatedAt > 2 * 60 * 60 * 1000 ||
+    (activeRoom.players.length === 0 && now - activeRoom.updatedAt > 5 * 60 * 1000)
+  ) {
+    await deleteRoomFromDb(upperCode);
+    return null;
+  }
+
+  if (activeRoom.stage === "DRAWING" && activeRoom.drawingStartTime) {
+    if (now - activeRoom.drawingStartTime >= 5000) {
+      activeRoom.stage = "PLAYING";
+      activeRoom.playingStartTime = activeRoom.playingStartTime || now;
+      activeRoom.updatedAt = now;
+      needsSync = true;
+    }
+  }
+
+  roomsStore.set(upperCode, activeRoom);
+
+  if (needsSync) {
+    await syncRoomToDb(activeRoom);
+  }
+
+  return activeRoom;
+}
+
+export async function createRoomAsync(
+  hostName: string,
+  hostAvatar: string,
+  settings: Partial<BattleSettings> = {}
+): Promise<{ room: BattleRoom; playerId: string }> {
+  const result = createRoom(hostName, hostAvatar, settings);
+  await syncRoomToDb(result.room);
+  return result;
+}
+
+export async function joinRoomAsync(
+  code: string,
+  playerName: string,
+  playerAvatar: string,
+  existingPlayerId?: string
+): Promise<{ room: BattleRoom; playerId: string }> {
+  await getRoomAsync(code);
+  const result = joinRoom(code, playerName, playerAvatar, existingPlayerId);
+  await syncRoomToDb(result.room);
+  return result;
+}
+
+export async function toggleReadyAsync(
+  code: string,
+  playerId: string,
+  explicitReady?: boolean
+): Promise<BattleRoom> {
+  await getRoomAsync(code);
+  const room = toggleReady(code, playerId, explicitReady);
+  await syncRoomToDb(room);
+  return room;
+}
+
+export async function updateAvatarAsync(
+  code: string,
+  playerId: string,
+  avatarId: string
+): Promise<BattleRoom> {
+  await getRoomAsync(code);
+  const room = updateAvatar(code, playerId, avatarId);
+  await syncRoomToDb(room);
+  return room;
+}
+
+export async function updateRoomSettingsAsync(
+  code: string,
+  hostId: string,
+  settings: Partial<BattleSettings>
+): Promise<BattleRoom> {
+  await getRoomAsync(code);
+  const room = updateRoomSettings(code, hostId, settings);
+  await syncRoomToDb(room);
+  return room;
+}
+
+export async function startBattleAsync(
+  code: string,
+  hostId: string,
+  drawnQuestions: BattleQuestion[],
+  samplePool?: Array<{ id: string; stem: string; category?: string | null; type: string }>
+): Promise<BattleRoom> {
+  await getRoomAsync(code);
+  const room = startBattle(code, hostId, drawnQuestions, samplePool);
+  await syncRoomToDb(room);
+  return room;
+}
+
+export async function updatePlayerProgressAsync(
+  code: string,
+  playerId: string,
+  progress: {
+    currentIndex: number;
+    correctCount: number;
+    wrongCount: number;
+    score: number;
+    isFinished: boolean;
+  }
+): Promise<BattleRoom> {
+  await getRoomAsync(code);
+  const room = updatePlayerProgress(code, playerId, progress);
+  await syncRoomToDb(room);
+  return room;
+}
+
+export async function reconnectPlayerAsync(
+  code: string,
+  playerId: string,
+  progress?: Partial<BattlePlayer> & { name?: string; avatarId?: string }
+): Promise<{ room: BattleRoom; player: BattlePlayer }> {
+  await getRoomAsync(code);
+  const result = reconnectPlayer(code, playerId, progress);
+  await syncRoomToDb(result.room);
+  return result;
+}
+
+export async function getPlayerProgressAsync(
+  code: string,
+  playerId: string
+): Promise<{ player: BattlePlayer; room: BattleRoom } | null> {
+  await getRoomAsync(code);
+  const result = getPlayerProgress(code, playerId);
+  if (result) {
+    await syncRoomToDb(result.room);
+  }
+  return result;
+}
+
+export async function leaveRoomAsync(
+  code: string,
+  playerId: string
+): Promise<{ success: boolean; room: BattleRoom | null }> {
+  await getRoomAsync(code);
+  const result = leaveRoom(code, playerId);
+  if (result.room) {
+    await syncRoomToDb(result.room);
+  } else {
+    await deleteRoomFromDb(code);
+  }
+  return result;
+}
+
+export async function resetBattleAsync(
+  code: string,
+  hostId: string
+): Promise<BattleRoom> {
+  await getRoomAsync(code);
+  const room = resetBattle(code, hostId);
+  await syncRoomToDb(room);
+  return room;
+}
+

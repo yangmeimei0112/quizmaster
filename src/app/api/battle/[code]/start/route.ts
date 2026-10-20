@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getRoom, startBattle, shuffleArray, BattleQuestion } from "@/lib/battleStore";
+import { getRoomAsync, startBattle, syncRoomToDb, shuffleArray, BattleQuestion } from "@/lib/battleStore";
 
 interface RouteParams {
   params: {
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "缺少房主身份識別" }, { status: 400 });
     }
 
-    const currentRoom = getRoom(code);
+    const currentRoom = await getRoomAsync(code);
     if (!currentRoom) {
       return NextResponse.json({ error: "查無此房間" }, { status: 404 });
     }
@@ -101,6 +101,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }));
 
     const updatedRoom = startBattle(code, hostId, selected, samplePool);
+    await syncRoomToDb(updatedRoom);
 
     return NextResponse.json({
       room: updatedRoom,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getRoom, updateRoomSettings } from "@/lib/battleStore";
+import { getRoomAsync, updateRoomSettings, syncRoomToDb } from "@/lib/battleStore";
 
 interface RouteParams {
   params: {
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "無效的房間代碼" }, { status: 400 });
     }
 
-    const room = getRoom(code);
+    const room = await getRoomAsync(code);
     if (!room) {
       return NextResponse.json({ error: "查無此房間或房間已關閉" }, { status: 404 });
     }
@@ -46,6 +46,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "缺少房主身份識別" }, { status: 400 });
     }
 
+    await getRoomAsync(code);
     const totalQuestionsCount = await prisma.question.count();
 
     if (settings && settings.questionCount !== undefined) {
@@ -67,6 +68,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     }
 
     const updatedRoom = updateRoomSettings(code, hostId, settings || {});
+    await syncRoomToDb(updatedRoom);
     return NextResponse.json({ room: updatedRoom, totalQuestionsCount });
   } catch (error: any) {
     const msg: string = error?.message || "更新房間設定失敗";

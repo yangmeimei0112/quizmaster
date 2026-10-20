@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { toggleReady } from "@/lib/battleStore";
+import { toggleReady, getRoomAsync, syncRoomToDb } from "@/lib/battleStore";
 
 interface RouteParams {
   params: {
@@ -21,7 +21,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "缺少玩家識別碼" }, { status: 400 });
     }
 
+    await getRoomAsync(code);
     const room = toggleReady(code, playerId, isReady);
+    await syncRoomToDb(room);
     return NextResponse.json({ room });
   } catch (error: any) {
     const msg: string = error?.message || "更新準備狀態失敗";

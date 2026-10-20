@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createRoom } from "@/lib/battleStore";
+import { createRoom, syncRoomToDb } from "@/lib/battleStore";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     const result = createRoom(trimmedName, hostAvatar || "shiba", cleanSettings);
+    await syncRoomToDb(result.room);
 
     return NextResponse.json({ ...result, totalQuestionsCount }, { status: 201 });
   } catch (error: any) {

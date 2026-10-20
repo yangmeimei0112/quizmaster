@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { leaveRoom } from "@/lib/battleStore";
+import { leaveRoom, getRoomAsync, syncRoomToDb, deleteRoomFromDb } from "@/lib/battleStore";
 
 interface RouteParams {
   params: {
@@ -17,7 +17,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "缺少玩家識別碼" }, { status: 400 });
     }
 
+    await getRoomAsync(code);
     const result = leaveRoom(code, playerId);
+    if (result.room) {
+      await syncRoomToDb(result.room);
+    } else {
+      await deleteRoomFromDb(code);
+    }
     return NextResponse.json(result);
   } catch (error: any) {
     return NextResponse.json(

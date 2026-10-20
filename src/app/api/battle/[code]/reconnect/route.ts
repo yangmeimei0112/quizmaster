@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { reconnectPlayer, getPlayerProgress } from "@/lib/battleStore";
+import { reconnectPlayer, getPlayerProgress, getRoomAsync, syncRoomToDb } from "@/lib/battleStore";
 
 interface RouteParams {
   params: {
@@ -21,11 +21,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "缺少玩家身分識別" }, { status: 400 });
     }
 
+    await getRoomAsync(code);
     const result = reconnectPlayer(code, playerId, {
       ...progress,
       name: playerName,
       avatarId: playerAvatar,
     });
+    await syncRoomToDb(result.room);
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     const msg: string = error?.message || "重連對戰失敗";
@@ -49,13 +51,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "缺少必要參數" }, { status: 400 });
     }
 
+    await getRoomAsync(code);
     const result = getPlayerProgress(code, playerId);
     if (!result) {
       return NextResponse.json({ error: "查無此對戰紀錄或玩家" }, { status: 404 });
     }
+    await syncRoomToDb(result.room);
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || "取得進度失敗" }, { status: 500 });
   }
 }
+

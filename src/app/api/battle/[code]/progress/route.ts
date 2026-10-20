@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updatePlayerProgress } from "@/lib/battleStore";
+import { updatePlayerProgress, getRoomAsync, syncRoomToDb } from "@/lib/battleStore";
 
 interface RouteParams {
   params: {
@@ -21,6 +21,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "缺少玩家識別碼" }, { status: 400 });
     }
 
+    await getRoomAsync(code);
     const room = updatePlayerProgress(code, playerId, {
       currentIndex: Number(currentIndex) || 0,
       correctCount: Number(correctCount) || 0,
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       score: Number(score) || 0,
       isFinished: Boolean(isFinished),
     });
+    await syncRoomToDb(room);
 
     return NextResponse.json({ room });
   } catch (error: any) {

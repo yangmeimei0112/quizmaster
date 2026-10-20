@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resetBattle } from "@/lib/battleStore";
+import { resetBattle, getRoomAsync, syncRoomToDb } from "@/lib/battleStore";
 
 interface RouteParams {
   params: {
@@ -17,7 +17,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "只有房主可以重置對戰" }, { status: 401 });
     }
 
+    await getRoomAsync(code);
     const room = resetBattle(code, hostId);
+    await syncRoomToDb(room);
     return NextResponse.json({ room });
   } catch (error: any) {
     return NextResponse.json(

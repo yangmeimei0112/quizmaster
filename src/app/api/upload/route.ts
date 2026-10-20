@@ -22,6 +22,23 @@ const EXTENSION_MAP: Record<string, string> = {
 // 限制上傳大小 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+function tryWriteLocalUpload(fileName: string, buffer: Buffer): void {
+  if (process.env.VERCEL === "1" || process.env.READONLY_FS === "1") {
+    return;
+  }
+  try {
+    const uploadDir = path.join(process.cwd(), "public", "uploads");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    const filePath = path.join(uploadDir, fileName);
+    fs.writeFileSync(filePath, buffer);
+  } catch {
+    // Serverless environments (e.g. Vercel) have a read-only filesystem (EROFS).
+    // Portable Base64 Data URL is returned directly as primary URL.
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -62,22 +79,17 @@ export async function POST(req: NextRequest) {
       const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       const fileName = `${sanitizedBase}_${uniqueSuffix}${ext}`;
 
-      // 儲存至 public/uploads
-      const uploadDir = path.join(process.cwd(), "public", "uploads");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      const filePath = path.join(uploadDir, fileName);
       const buffer = Buffer.from(await file.arrayBuffer());
-      await fs.promises.writeFile(filePath, buffer);
+      const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
 
-      const url = `/uploads/${fileName}`;
+      // 最佳努力本地寫入 (於 Vercel Serverless 唯讀環境自動略過且不報錯)
+      tryWriteLocalUpload(fileName, buffer);
 
       return NextResponse.json(
         {
           success: true,
-          url,
+          url: dataUrl,
+          dataUrl,
           fileName,
           size: file.size,
           type: file.type,
@@ -119,7 +131,7 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(base64Data, "base64");
       if (buffer.length > MAX_FILE_SIZE) {
         return NextResponse.json(
-          { error: `圖片容量過大，超過 10MB 限制` },
+          { error: "圖片容量過大，超過 10MB 限制" },
           { status: 400 }
         );
       }
@@ -128,20 +140,16 @@ export async function POST(req: NextRequest) {
       const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       const fileName = `${originalName ? path.basename(originalName, path.extname(originalName)) : "clipboard"}_${uniqueSuffix}${ext}`;
 
-      const uploadDir = path.join(process.cwd(), "public", "uploads");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
+      const portableDataUrl = `data:${mimeType};base64,${buffer.toString("base64")}`;
 
-      const filePath = path.join(uploadDir, fileName);
-      await fs.promises.writeFile(filePath, buffer);
-
-      const url = `/uploads/${fileName}`;
+      // 最佳努力本地寫入 (於 Vercel Serverless 唯讀環境自動略過且不報錯)
+      tryWriteLocalUpload(fileName, buffer);
 
       return NextResponse.json(
         {
           success: true,
-          url,
+          url: portableDataUrl,
+          dataUrl: portableDataUrl,
           fileName,
           size: buffer.length,
           type: mimeType,
@@ -162,3 +170,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
