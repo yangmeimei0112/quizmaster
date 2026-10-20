@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createRoom, syncRoomToDb } from "@/lib/battleStore";
+import { createRoomAsync } from "@/lib/battleStore";
 
 export const dynamic = "force-dynamic";
 
@@ -56,8 +56,7 @@ export async function POST(req: NextRequest) {
       cleanSettings.timeLimitPerQuestion = isNaN(tLimit) || tLimit < 0 ? 0 : Math.floor(tLimit);
     }
 
-    const result = createRoom(trimmedName, hostAvatar || "shiba", cleanSettings);
-    await syncRoomToDb(result.room);
+    const result = await createRoomAsync(trimmedName, hostAvatar || "shiba", cleanSettings);
 
     return NextResponse.json({ ...result, totalQuestionsCount }, { status: 201 });
   } catch (error: any) {

@@ -40,9 +40,10 @@ function convertLocalImageToDataUrl(imageUrl, publicDir) {
   }
 
   const basePublicDir = publicDir || path.join(__dirname, "..", "public");
-  let relPath = trimmed;
-  if (relPath.startsWith("/")) {
-    relPath = relPath.slice(1);
+  let relPath = trimmed.split(/[?#]/)[0];
+  relPath = relPath.replace(/^(?:\.\/|\/)+/, "");
+  if (relPath.startsWith("public/")) {
+    relPath = relPath.slice("public/".length);
   }
 
   const fullFilePath = path.join(basePublicDir, relPath);

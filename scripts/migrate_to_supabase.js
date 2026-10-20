@@ -7,6 +7,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { PrismaClient } = require("@prisma/client");
 const { convertLocalImageToDataUrl } = require("./backup_database.js");
 
@@ -29,6 +30,21 @@ async function migrateFromBackup(options = {}) {
     }
 
     const data = backupPayload.data || backupPayload;
+    if (
+      options.verifyChecksum !== false &&
+      backupPayload.metadata &&
+      typeof backupPayload.metadata.checksum === "string"
+    ) {
+      const actualChecksum = crypto
+        .createHash("sha256")
+        .update(JSON.stringify(data))
+        .digest("hex");
+      if (actualChecksum !== backupPayload.metadata.checksum) {
+        throw new Error(
+          `Backup checksum mismatch! Expected ${backupPayload.metadata.checksum}, got ${actualChecksum}`
+        );
+      }
+    }
     const questions = Array.isArray(data.questions) ? data.questions : [];
     const users = Array.isArray(data.users) ? data.users : [];
     const wrongQuestionRecords = Array.isArray(data.wrongQuestionRecords)

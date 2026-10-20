@@ -19,7 +19,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
     await getRoomAsync(code);
     const room = resetBattle(code, hostId);
-    await syncRoomToDb(room);
+    await syncRoomToDb(room, { isReset: true });
     return NextResponse.json({ room });
   } catch (error: any) {
     return NextResponse.json(

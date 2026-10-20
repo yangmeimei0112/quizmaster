@@ -74,8 +74,17 @@ if (!globalForBattle.__battleRoomsStore) {
 }
 
 const roomsStore = globalForBattle.__battleRoomsStore;
+const recentlyLeftPlayers = new Map<string, Set<string>>();
 
 let lastCleanupTime = 0;
+let lastIssuedTimestamp = 0;
+
+function bumpUpdatedAt(prev: number = 0): number {
+  const now = Date.now();
+  const next = Math.max(now, prev + 1, lastIssuedTimestamp + 1);
+  lastIssuedTimestamp = next;
+  return next;
+}
 
 // Clean up stale rooms older than 2 hours or empty rooms older than 5 minutes
 export function cleanupStaleRooms(force: boolean = false) {
@@ -95,6 +104,7 @@ export function cleanupStaleRooms(force: boolean = false) {
       (room.players.length === 0 && room.updatedAt < fiveMinutesAgo)
     ) {
       roomsStore.delete(code);
+      recentlyLeftPlayers.delete(code);
     }
   }
 }
@@ -146,6 +156,7 @@ export function createRoom(
     timeLimitPerQuestion: Math.max(0, Number(settings.timeLimitPerQuestion) || 0),
   };
 
+  const now = bumpUpdatedAt();
   const hostPlayer: BattlePlayer = {
     id: hostId,
     name: hostName.trim() || "房主",
@@ -157,7 +168,7 @@ export function createRoom(
     wrongCount: 0,
     score: 0,
     isFinished: false,
-    lastActiveAt: Date.now(),
+    lastActiveAt: now,
   };
 
   const room: BattleRoom = {
@@ -167,10 +178,11 @@ export function createRoom(
     stage: "LOBBY",
     players: [hostPlayer],
     questions: [],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
   };
 
+  recentlyLeftPlayers.delete(code);
   roomsStore.set(code, room);
   return { room, playerId: hostId };
 }
@@ -184,6 +196,7 @@ export function getRoom(code: string): BattleRoom | null {
   // Check if room has expired (> 2 hours inactive)
   if (Date.now() - room.updatedAt > 2 * 60 * 60 * 1000) {
     roomsStore.delete(upperCode);
+    recentlyLeftPlayers.delete(upperCode);
     return null;
   }
 
@@ -192,7 +205,7 @@ export function getRoom(code: string): BattleRoom | null {
     if (Date.now() - room.drawingStartTime >= 5000) {
       room.stage = "PLAYING";
       room.playingStartTime = room.playingStartTime || Date.now();
-      room.updatedAt = Date.now();
+      room.updatedAt = bumpUpdatedAt(room.updatedAt);
     }
   }
 
@@ -214,10 +227,11 @@ export function joinRoom(
 
   // If reconnecting with an existing player ID already present in the room
   if (existingPlayerId) {
+    recentlyLeftPlayers.get(upperCode)?.delete(existingPlayerId);
     let existingPlayer = room.players.find((p) => p.id === existingPlayerId);
     if (existingPlayer) {
       existingPlayer.lastActiveAt = Date.now();
-      room.updatedAt = Date.now();
+      room.updatedAt = bumpUpdatedAt(room.updatedAt);
       return { room, playerId: existingPlayer.id };
     } else if (
       room.stage === "PLAYING" ||
@@ -247,7 +261,7 @@ export function joinRoom(
           room.settings.orderMode === "RANDOM" ? shuffleArray(qIds) : [...qIds];
       }
       room.players.push(existingPlayer);
-      room.updatedAt = Date.now();
+      room.updatedAt = bumpUpdatedAt(room.updatedAt);
       return { room, playerId: existingPlayer.id };
     }
   }
@@ -285,7 +299,7 @@ export function joinRoom(
   };
 
   room.players.push(newPlayer);
-  room.updatedAt = Date.now();
+  room.updatedAt = bumpUpdatedAt(room.updatedAt);
   return { room, playerId };
 }
 
@@ -306,8 +320,11 @@ export function reconnectPlayer(
   playerId: string,
   progress?: Partial<BattlePlayer> & { name?: string; avatarId?: string }
 ): { room: BattleRoom; player: BattlePlayer } {
-  const room = getRoom(code);
+  const upperCode = code.trim().toUpperCase();
+  const room = getRoom(upperCode);
   if (!room) throw new Error("房間不存在");
+
+  recentlyLeftPlayers.get(upperCode)?.delete(playerId);
 
   let player = room.players.find((p) => p.id === playerId);
   if (!player) {
@@ -367,7 +384,7 @@ export function reconnectPlayer(
       player.finishedAt = progress.finishedAt;
     }
   }
-  room.updatedAt = Date.now();
+  room.updatedAt = bumpUpdatedAt(room.updatedAt);
   return { room, player };
 }
 
@@ -388,7 +405,7 @@ export function toggleReady(
 
   player.isReady = explicitReady !== undefined ? explicitReady : !player.isReady;
   player.lastActiveAt = Date.now();
-  room.updatedAt = Date.now();
+  room.updatedAt = bumpUpdatedAt(room.updatedAt);
   return room;
 }
 
@@ -409,7 +426,7 @@ export function updateAvatar(
 
   player.avatarId = avatarId;
   player.lastActiveAt = Date.now();
-  room.updatedAt = Date.now();
+  room.updatedAt = bumpUpdatedAt(room.updatedAt);
   return room;
 }
 
@@ -445,7 +462,7 @@ export function updateRoomSettings(
     room.settings.timeLimitPerQuestion = Math.max(0, Number(settings.timeLimitPerQuestion) || 0);
   }
 
-  room.updatedAt = Date.now();
+  room.updatedAt = bumpUpdatedAt(room.updatedAt);
   return room;
 }
 
@@ -499,7 +516,7 @@ export function startBattle(
     }
   });
 
-  room.updatedAt = Date.now();
+  room.updatedAt = bumpUpdatedAt(room.updatedAt);
   return room;
 }
 
@@ -539,7 +556,7 @@ export function updatePlayerProgress(
     room.stage = "FINISHED";
   }
 
-  room.updatedAt = Date.now();
+  room.updatedAt = bumpUpdatedAt(room.updatedAt);
   return room;
 }
 
@@ -547,7 +564,8 @@ export function leaveRoom(
   code: string,
   playerId: string
 ): { success: boolean; room: BattleRoom | null } {
-  const room = getRoom(code);
+  const upperCode = code.trim().toUpperCase();
+  const room = getRoom(upperCode);
   if (!room) return { success: true, room: null };
 
   const playerIndex = room.players.findIndex((p) => p.id === playerId);
@@ -556,8 +574,14 @@ export function leaveRoom(
   const leavingPlayer = room.players[playerIndex];
   room.players.splice(playerIndex, 1);
 
+  if (!recentlyLeftPlayers.has(upperCode)) {
+    recentlyLeftPlayers.set(upperCode, new Set());
+  }
+  recentlyLeftPlayers.get(upperCode)!.add(playerId);
+
   if (room.players.length === 0) {
     roomsStore.delete(room.code);
+    recentlyLeftPlayers.delete(upperCode);
     return { success: true, room: null };
   }
 
@@ -573,7 +597,7 @@ export function leaveRoom(
     room.stage = "FINISHED";
   }
 
-  room.updatedAt = Date.now();
+  room.updatedAt = bumpUpdatedAt(room.updatedAt);
   return { success: true, room };
 }
 
@@ -600,7 +624,7 @@ export function resetBattle(code: string, hostId: string): BattleRoom {
     p.lastActiveAt = Date.now();
   });
 
-  room.updatedAt = Date.now();
+  room.updatedAt = bumpUpdatedAt(room.updatedAt);
   return room;
 }
 
@@ -624,13 +648,107 @@ function getPrismaClient(): PrismaClient {
  */
 export function clearMemoryRooms(): void {
   roomsStore.clear();
+  recentlyLeftPlayers.clear();
+}
+
+/**
+ * Reconciles a target BattleRoom with a concurrent database snapshot (if both belong to the
+ * same room creation lifecycle), preventing Serverless multi-instance progress/join overwrites.
+ */
+function reconcileRoomWithDbSnapshot(
+  targetRoom: BattleRoom,
+  dbRoom: BattleRoom | null,
+  options?: { isLeave?: boolean; isReset?: boolean }
+): BattleRoom {
+  if (!dbRoom || dbRoom.createdAt !== targetRoom.createdAt) {
+    return targetRoom;
+  }
+
+  const upperCode = targetRoom.code.trim().toUpperCase();
+  const leftSet = recentlyLeftPlayers.get(upperCode);
+
+  // Case 1: Both rooms are in the same active battle round
+  if (
+    targetRoom.stage !== "LOBBY" &&
+    dbRoom.stage !== "LOBBY" &&
+    targetRoom.drawingStartTime === dbRoom.drawingStartTime &&
+    !options?.isReset
+  ) {
+    if (!options?.isLeave) {
+      for (const dbPlayer of dbRoom.players) {
+        if (leftSet?.has(dbPlayer.id)) continue;
+        if (!targetRoom.players.some((p) => p.id === dbPlayer.id)) {
+          targetRoom.players.push({ ...dbPlayer });
+        }
+      }
+      if (dbRoom.playerQuestionOrders) {
+        targetRoom.playerQuestionOrders = {
+          ...dbRoom.playerQuestionOrders,
+          ...(targetRoom.playerQuestionOrders || {}),
+        };
+      }
+    }
+
+    for (const player of targetRoom.players) {
+      const dbPlayer = dbRoom.players.find((p) => p.id === player.id);
+      if (!dbPlayer) continue;
+      player.currentIndex = Math.max(player.currentIndex, dbPlayer.currentIndex);
+      player.correctCount = Math.max(player.correctCount, dbPlayer.correctCount);
+      player.wrongCount = Math.max(player.wrongCount, dbPlayer.wrongCount);
+      player.score = Math.max(player.score, dbPlayer.score);
+      player.isFinished = Boolean(player.isFinished || dbPlayer.isFinished);
+      if (player.isFinished) {
+        if (player.finishedAt && dbPlayer.finishedAt) {
+          player.finishedAt = Math.min(player.finishedAt, dbPlayer.finishedAt);
+        } else {
+          player.finishedAt = player.finishedAt || dbPlayer.finishedAt || Date.now();
+        }
+      }
+      player.lastActiveAt = Math.max(player.lastActiveAt, dbPlayer.lastActiveAt);
+    }
+
+    if (dbRoom.stage === "PLAYING" && targetRoom.stage === "DRAWING") {
+      targetRoom.stage = "PLAYING";
+      targetRoom.playingStartTime =
+        targetRoom.playingStartTime || dbRoom.playingStartTime || Date.now();
+    }
+
+    if (targetRoom.players.length > 0 && targetRoom.players.every((p) => p.isFinished)) {
+      targetRoom.stage = "FINISHED";
+    }
+  } else if (
+    targetRoom.stage === "LOBBY" &&
+    dbRoom.stage === "LOBBY" &&
+    !options?.isLeave &&
+    !options?.isReset
+  ) {
+    // Case 2: Both rooms are in LOBBY (preserve concurrent joins across instances)
+    for (const dbPlayer of dbRoom.players) {
+      if (leftSet?.has(dbPlayer.id)) continue;
+      if (
+        !targetRoom.players.some((p) => p.id === dbPlayer.id) &&
+        targetRoom.players.length < targetRoom.settings.maxPlayers
+      ) {
+        let finalName = dbPlayer.name;
+        let counter = 2;
+        while (targetRoom.players.some((p) => p.name === finalName)) {
+          finalName = `${dbPlayer.name} (${counter})`;
+          counter++;
+        }
+        targetRoom.players.push({ ...dbPlayer, name: finalName });
+      }
+    }
+  }
+
+  return targetRoom;
 }
 
 /**
  * Persists a BattleRoom state to the database (BattleRoomRecord).
  */
 export async function syncRoomToDb(
-  roomOrCode: BattleRoom | string
+  roomOrCode: BattleRoom | string,
+  options?: { isLeave?: boolean; isReset?: boolean }
 ): Promise<BattleRoom | null> {
   const room =
     typeof roomOrCode === "string"
@@ -640,10 +758,22 @@ export async function syncRoomToDb(
   if (!room) return null;
 
   const upperCode = room.code.trim().toUpperCase();
-  roomsStore.set(upperCode, room);
 
   try {
     const prisma = getPrismaClient();
+    const existingRecord = await prisma.battleRoomRecord.findUnique({
+      where: { code: upperCode },
+    });
+    if (existingRecord) {
+      const dbRoom = JSON.parse(existingRecord.payload) as BattleRoom;
+      reconcileRoomWithDbSnapshot(room, dbRoom, options);
+      if (dbRoom.updatedAt >= room.updatedAt) {
+        room.updatedAt = bumpUpdatedAt(dbRoom.updatedAt);
+      }
+    }
+
+    roomsStore.set(upperCode, room);
+
     const expiresAt = new Date(room.updatedAt + 2 * 60 * 60 * 1000);
     const payload = JSON.stringify(room);
 
@@ -664,6 +794,7 @@ export async function syncRoomToDb(
       },
     });
   } catch (err) {
+    roomsStore.set(upperCode, room);
     console.error("[battleStore] syncRoomToDb error:", err);
   }
 
@@ -676,6 +807,7 @@ export async function syncRoomToDb(
 export async function deleteRoomFromDb(code: string): Promise<void> {
   const upperCode = code.trim().toUpperCase();
   roomsStore.delete(upperCode);
+  recentlyLeftPlayers.delete(upperCode);
   try {
     const prisma = getPrismaClient();
     await prisma.battleRoomRecord.deleteMany({
@@ -715,7 +847,7 @@ export async function loadRoomFromDb(code: string): Promise<BattleRoom | null> {
       if (now - dbRoom.drawingStartTime >= 5000) {
         dbRoom.stage = "PLAYING";
         dbRoom.playingStartTime = dbRoom.playingStartTime || now;
-        dbRoom.updatedAt = now;
+        dbRoom.updatedAt = bumpUpdatedAt(dbRoom.updatedAt);
         transitioned = true;
       }
     }
@@ -760,10 +892,10 @@ export async function getRoomAsync(code: string): Promise<BattleRoom | null> {
 
   if (memRoom && dbRoom) {
     if (memRoom.updatedAt > dbRoom.updatedAt) {
-      activeRoom = memRoom;
+      activeRoom = reconcileRoomWithDbSnapshot(memRoom, dbRoom);
       needsSync = true;
     } else {
-      activeRoom = dbRoom;
+      activeRoom = reconcileRoomWithDbSnapshot(dbRoom, memRoom);
     }
   } else if (dbRoom) {
     activeRoom = dbRoom;
@@ -787,7 +919,7 @@ export async function getRoomAsync(code: string): Promise<BattleRoom | null> {
     if (now - activeRoom.drawingStartTime >= 5000) {
       activeRoom.stage = "PLAYING";
       activeRoom.playingStartTime = activeRoom.playingStartTime || now;
-      activeRoom.updatedAt = now;
+      activeRoom.updatedAt = bumpUpdatedAt(activeRoom.updatedAt);
       needsSync = true;
     }
   }
@@ -806,6 +938,31 @@ export async function createRoomAsync(
   hostAvatar: string,
   settings: Partial<BattleSettings> = {}
 ): Promise<{ room: BattleRoom; playerId: string }> {
+  try {
+    const prisma = getPrismaClient();
+    const now = new Date();
+    // Clean up expired DB room records opportunistically
+    await prisma.battleRoomRecord.deleteMany({
+      where: { expiresAt: { lt: now } },
+    });
+    // Hydrate active room codes from DB so generateRoomCode never collides after a cold start
+    const activeRecords = await prisma.battleRoomRecord.findMany({
+      where: { expiresAt: { gte: now } },
+      select: { code: true, payload: true },
+    });
+    for (const rec of activeRecords) {
+      if (!roomsStore.has(rec.code)) {
+        try {
+          roomsStore.set(rec.code, JSON.parse(rec.payload) as BattleRoom);
+        } catch {
+          // Ignore malformed payload
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[battleStore] createRoomAsync pre-check error:", err);
+  }
+
   const result = createRoom(hostName, hostAvatar, settings);
   await syncRoomToDb(result.room);
   return result;
@@ -915,7 +1072,7 @@ export async function leaveRoomAsync(
   await getRoomAsync(code);
   const result = leaveRoom(code, playerId);
   if (result.room) {
-    await syncRoomToDb(result.room);
+    await syncRoomToDb(result.room, { isLeave: true });
   } else {
     await deleteRoomFromDb(code);
   }
@@ -928,7 +1085,8 @@ export async function resetBattleAsync(
 ): Promise<BattleRoom> {
   await getRoomAsync(code);
   const room = resetBattle(code, hostId);
-  await syncRoomToDb(room);
+  await syncRoomToDb(room, { isReset: true });
   return room;
 }
+
 

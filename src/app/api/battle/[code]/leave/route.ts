@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     await getRoomAsync(code);
     const result = leaveRoom(code, playerId);
     if (result.room) {
-      await syncRoomToDb(result.room);
+      await syncRoomToDb(result.room, { isLeave: true });
     } else {
       await deleteRoomFromDb(code);
     }

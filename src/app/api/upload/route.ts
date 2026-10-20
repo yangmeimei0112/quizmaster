@@ -64,6 +64,13 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      if (file.size <= 0) {
+        return NextResponse.json(
+          { error: "上傳的檔案內容為空，請選擇有效的圖片檔案" },
+          { status: 400 }
+        );
+      }
+
       if (file.size > MAX_FILE_SIZE) {
         return NextResponse.json(
           { error: `檔案容量過大 (${(file.size / (1024 * 1024)).toFixed(1)}MB)，請小於 10MB` },
@@ -80,6 +87,12 @@ export async function POST(req: NextRequest) {
       const fileName = `${sanitizedBase}_${uniqueSuffix}${ext}`;
 
       const buffer = Buffer.from(await file.arrayBuffer());
+      if (buffer.length === 0) {
+        return NextResponse.json(
+          { error: "上傳的檔案內容為空，請選擇有效的圖片檔案" },
+          { status: 400 }
+        );
+      }
       const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
 
       // 最佳努力本地寫入 (於 Vercel Serverless 唯讀環境自動略過且不報錯)
@@ -91,7 +104,7 @@ export async function POST(req: NextRequest) {
           url: dataUrl,
           dataUrl,
           fileName,
-          size: file.size,
+          size: buffer.length,
           type: file.type,
         },
         { status: 201 }
@@ -110,7 +123,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const match = dataUrl.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-+.]+);base64,(.+)$/);
+      const match = dataUrl.trim().match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-+.]+);base64,([\s\S]+)$/);
       if (!match) {
         return NextResponse.json(
           { error: "無效的 Data URL 格式，必須符合 data:image/...;base64,..." },
@@ -119,7 +132,7 @@ export async function POST(req: NextRequest) {
       }
 
       const mimeType = match[1];
-      const base64Data = match[2];
+      const base64Data = match[2].replace(/\s+/g, "");
 
       if (!ALLOWED_MIME_TYPES.has(mimeType)) {
         return NextResponse.json(
@@ -128,7 +141,21 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      if (!base64Data || !/^[A-Za-z0-9+/_-]+={0,2}$/.test(base64Data)) {
+        return NextResponse.json(
+          { error: "無效的 Base64 圖片資料內容" },
+          { status: 400 }
+        );
+      }
+
       const buffer = Buffer.from(base64Data, "base64");
+      if (buffer.length === 0) {
+        return NextResponse.json(
+          { error: "圖片內容為空，請提供有效的圖片" },
+          { status: 400 }
+        );
+      }
+
       if (buffer.length > MAX_FILE_SIZE) {
         return NextResponse.json(
           { error: "圖片容量過大，超過 10MB 限制" },

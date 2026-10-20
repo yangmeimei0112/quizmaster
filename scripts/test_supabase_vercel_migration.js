@@ -103,6 +103,16 @@ async function runMigrationTests() {
       const converted = convertLocalImageToDataUrl(`/uploads/${tempFileName}`);
       assert.equal(converted, `data:image/png;base64,${dummyPngBase64}`);
 
+      // Query string, hash fragment, and ./ or public/ prefixes
+      assert.equal(
+        convertLocalImageToDataUrl(`/uploads/${tempFileName}?v=123#section`),
+        `data:image/png;base64,${dummyPngBase64}`
+      );
+      assert.equal(
+        convertLocalImageToDataUrl(`public/uploads/${tempFileName}`),
+        `data:image/png;base64,${dummyPngBase64}`
+      );
+
       // External URLs and existing Data URLs remain untouched
       assert.equal(
         convertLocalImageToDataUrl("https://example.com/chart.png"),
@@ -215,6 +225,27 @@ async function runMigrationTests() {
       await prisma.user.deleteMany({ where: { id: tempUId } });
       await prisma.question.deleteMany({ where: { id: tempQId } });
     }
+  });
+
+  await test("2.2 Verify migrateFromBackup rejects corrupted backup with mismatched SHA-256 checksum", async () => {
+    const corruptedBackup = {
+      metadata: {
+        checksum: "0000000000000000000000000000000000000000000000000000000000000000",
+      },
+      data: {
+        questions: [],
+        users: [],
+        wrongQuestionRecords: [],
+        userQuestionProgress: [],
+      },
+    };
+
+    await assert.rejects(
+      async () => {
+        await migrateFromBackup({ prisma, backupData: corruptedBackup });
+      },
+      /Backup checksum mismatch/
+    );
   });
 
   // =========================================================================
@@ -388,12 +419,91 @@ async function runMigrationTests() {
     }
   });
 
+  await test("4.2 Concurrent multi-instance battle progress updates reconcile without clobbering and advance to FINISHED", async () => {
+    const battleStorePath = path.resolve(__dirname, "../src/lib/battleStore.ts");
+    const battleStore = await import("file://" + battleStorePath.replace(/\\/g, "/"));
+    const {
+      createRoomAsync,
+      joinRoomAsync,
+      toggleReadyAsync,
+      startBattleAsync,
+      syncRoomToDb,
+      getRoomAsync,
+      clearMemoryRooms,
+      deleteRoomFromDb,
+    } = battleStore;
+
+    const { room: createdRoom, playerId: hostId } = await createRoomAsync(
+      "ConcHost",
+      "shiba",
+      { maxPlayers: 4, mode: "CUSTOM", questionCount: 1 }
+    );
+    const code = createdRoom.code;
+
+    try {
+      const { playerId: guestId } = await joinRoomAsync(code, "ConcGuest", "panda");
+      await toggleReadyAsync(code, guestId, true);
+
+      await startBattleAsync(code, hostId, [
+        {
+          id: "conc_q1",
+          stem: "Concurrent Q1",
+          type: "SINGLE",
+          optionA: "A",
+          optionB: "B",
+          optionC: "C",
+          optionD: "D",
+          correctAnswers: "A",
+        },
+      ]);
+
+      // Both Instance 1 and Instance 2 read the same initial state from DB before either writes back
+      const baseRoom = await getRoomAsync(code);
+      const instance1Snapshot = JSON.parse(JSON.stringify(baseRoom));
+      const instance2Snapshot = JSON.parse(JSON.stringify(baseRoom));
+
+      // Instance 1 updates Host progress (score 20, finished) and writes to DB
+      const hostInInst1 = instance1Snapshot.players.find((p) => p.id === hostId);
+      hostInInst1.currentIndex = 1;
+      hostInInst1.correctCount = 1;
+      hostInInst1.score = 20;
+      hostInInst1.isFinished = true;
+      hostInInst1.finishedAt = Date.now();
+      await syncRoomToDb(instance1Snapshot);
+
+      // Instance 2 (which still has Host at score 0, isFinished: false in its snapshot!)
+      // updates Guest progress (score 10, finished) and writes to DB
+      const guestInInst2 = instance2Snapshot.players.find((p) => p.id === guestId);
+      guestInInst2.currentIndex = 1;
+      guestInInst2.correctCount = 1;
+      guestInInst2.score = 10;
+      guestInInst2.isFinished = true;
+      guestInInst2.finishedAt = Date.now();
+      await syncRoomToDb(instance2Snapshot);
+
+      // Verify after cold start that BOTH players' progress was preserved and stage advanced to FINISHED
+      clearMemoryRooms();
+      const finalRoom = await getRoomAsync(code);
+      assert.ok(finalRoom);
+      const finalHost = finalRoom.players.find((p) => p.id === hostId);
+      const finalGuest = finalRoom.players.find((p) => p.id === guestId);
+
+      assert.equal(finalHost.score, 20, "Host score must not be clobbered by concurrent Instance 2 write");
+      assert.equal(finalHost.isFinished, true, "Host finished state must be preserved");
+      assert.equal(finalGuest.score, 10, "Guest score must be saved");
+      assert.equal(finalGuest.isFinished, true, "Guest finished state must be saved");
+      assert.equal(finalRoom.stage, "FINISHED", "Room stage must advance to FINISHED when reconciled players all finish");
+    } finally {
+      await deleteRoomFromDb(code);
+    }
+  });
+
   // =========================================================================
   // Part 5: Stateless Image Upload on Read-Only Filesystem (/api/upload)
   // =========================================================================
   console.log("\n--- Part 5: Stateless Image Upload on Read-Only Filesystem ---");
 
-  await test("5.1 /api/upload works in read-only mode (VERCEL=1) for both multipart and Base64 JSON", async () => {
+  await test("5.1 /api/upload works in read-only mode (VERCEL=1) for multipart, multi-line Base64 JSON, and rejects invalid/empty/oversized inputs", async () => {
     const ts = require("typescript");
     const uploadRoutePath = path.resolve(__dirname, "../src/app/api/upload/route.ts");
     const tsCode = fs.readFileSync(uploadRoutePath, "utf8");
@@ -435,18 +545,19 @@ async function runMigrationTests() {
       assert.equal(json1.success, true);
       assert.equal(json1.url, `data:image/png;base64,${dummyPngBase64}`);
 
-      // Test Mode 2: application/json Base64 Data URL
-      const dataUrlInput = `data:image/png;base64,${dummyPngBase64}`;
+      // Test Mode 2: application/json Base64 Data URL (including multi-line wrapped Base64)
+      const wrappedBase64 = dummyPngBase64.slice(0, 30) + "\r\n" + dummyPngBase64.slice(30);
+      const dataUrlInput = `  data:image/png;base64,${wrappedBase64}  `;
       const mockJsonReq = {
         headers: new Headers({ "content-type": "application/json" }),
         json: async () => ({ dataUrl: dataUrlInput, fileName: "clipboard.png" }),
       };
 
       const res2 = await POST(mockJsonReq);
-      assert.equal(res2.status, 201, "JSON Base64 upload in read-only mode should return 201");
+      assert.equal(res2.status, 201, "Multi-line JSON Base64 upload in read-only mode should return 201");
       const json2 = await res2.json();
       assert.equal(json2.success, true);
-      assert.equal(json2.url, dataUrlInput);
+      assert.equal(json2.url, `data:image/png;base64,${dummyPngBase64}`);
 
       // Test Invalid MIME rejection
       const badFormData = new FormData();
@@ -457,6 +568,38 @@ async function runMigrationTests() {
       };
       const resBad = await POST(mockBadReq);
       assert.equal(resBad.status, 400, "Unsupported MIME type must return 400");
+
+      // Test 0-byte empty file rejection
+      const emptyFormData = new FormData();
+      emptyFormData.append("file", new Blob([], { type: "image/png" }), "empty.png");
+      const mockEmptyReq = {
+        headers: new Headers({ "content-type": "multipart/form-data" }),
+        formData: async () => emptyFormData,
+      };
+      const resEmpty = await POST(mockEmptyReq);
+      assert.equal(resEmpty.status, 400, "0-byte multipart file must return 400");
+
+      // Test corrupted non-base64 JSON payload rejection
+      const mockCorruptJsonReq = {
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({ dataUrl: "data:image/png;base64,$$$!!!" }),
+      };
+      const resCorrupt = await POST(mockCorruptJsonReq);
+      assert.equal(resCorrupt.status, 400, "Corrupted non-base64 payload must return 400");
+
+      // Test >10MB oversized file rejection
+      const oversizedFormData = new FormData();
+      oversizedFormData.append(
+        "file",
+        new Blob([Buffer.alloc(10 * 1024 * 1024 + 64)], { type: "image/png" }),
+        "huge.png"
+      );
+      const mockOversizedReq = {
+        headers: new Headers({ "content-type": "multipart/form-data" }),
+        formData: async () => oversizedFormData,
+      };
+      const resOversized = await POST(mockOversizedReq);
+      assert.equal(resOversized.status, 400, "File > 10MB must return 400");
     } finally {
       if (prevVercel === undefined) delete process.env.VERCEL;
       else process.env.VERCEL = prevVercel;
