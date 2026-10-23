@@ -61,7 +61,7 @@ async function runMigrationTests() {
     assert.ok(statBin.size > 10000, "dev_backup.db should be a non-empty SQLite file");
   });
 
-  await test("1.2 Verify backup JSON contains all 72 questions, metadata counts, and valid SHA-256 checksum", async () => {
+  await test("1.2 Verify backup JSON contains all 418 production questions, metadata counts, and valid SHA-256 checksum", async () => {
     const rawJson = fs.readFileSync(latestBackupPath, "utf8");
     const parsed = JSON.parse(rawJson);
 
@@ -70,13 +70,13 @@ async function runMigrationTests() {
     const dbWrongCount = await prisma.wrongQuestionRecord.count();
     const dbProgressCount = await prisma.userQuestionProgress.count();
 
-    assert.equal(parsed.metadata.counts.questions, dbQuestionCount);
-    assert.ok(parsed.metadata.counts.questions >= 72, `Expected at least 72 questions, got ${parsed.metadata.counts.questions}`);
+    assert.equal(dbQuestionCount, 418, `Expected exactly 418 production questions in DB, got ${dbQuestionCount}`);
+    assert.equal(parsed.metadata.counts.questions, 418, `Expected 418 questions in backup metadata, got ${parsed.metadata.counts.questions}`);
     assert.equal(parsed.metadata.counts.users, dbUserCount);
     assert.equal(parsed.metadata.counts.wrongQuestionRecords, dbWrongCount);
     assert.equal(parsed.metadata.counts.userQuestionProgress, dbProgressCount);
 
-    assert.equal(parsed.data.questions.length, dbQuestionCount);
+    assert.equal(parsed.data.questions.length, 418);
     const recomputedHash = crypto
       .createHash("sha256")
       .update(JSON.stringify(parsed.data))

@@ -7,7 +7,7 @@
 ## 一、已完成的安全防護與 Serverless 架構升級
 
 1. **雙重全量本地資料庫備份 (`backups/`)**：
-   - `backups/latest_backup.json`：結構化全量 JSON 備份（包含 `Question` 72 題、`User`、`WrongQuestionRecord`、`UserQuestionProgress` 所有記錄與 SHA-256 校驗碼）。
+   - `backups/latest_backup.json`：結構化全量 JSON 備份（包含 `Question` 418 題、`User`、`WrongQuestionRecord`、`UserQuestionProgress` 所有記錄與 SHA-256 校驗碼）。
    - `backups/dev_backup.db`：原始 SQLite 二進位資料庫完整快照。
    - **歷史附圖可攜化**：備份與遷移工具會自動將指向 `/uploads/...` 的本地圖片轉換為標準 Base64 Data URL，確保上雲後不破圖。
 2. **雙環境智慧 Prisma Provider 切換 (`scripts/sync-db-provider.js`)**：

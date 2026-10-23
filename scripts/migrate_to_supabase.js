@@ -62,6 +62,18 @@ async function migrateFromBackup(options = {}) {
     console.log(`  Source UserQuestionProgress: ${userQuestionProgress.length}`);
     console.log("==================================================");
 
+    // If restoring from the full backup file (not a partial synthetic test payload),
+    // prune any stale questions not present in the backup so old 72 test questions don't linger.
+    if (!options.backupData && questions.length > 0 && options.pruneStaleQuestions !== false) {
+      const backupQuestionIds = questions.map((q) => q.id).filter(Boolean);
+      const pruned = await prisma.question.deleteMany({
+        where: { id: { notIn: backupQuestionIds } },
+      });
+      if (pruned.count > 0) {
+        console.log(`  Pruned stale questions:      ${pruned.count}`);
+      }
+    }
+
     // 1. Upsert Questions
     let upsertedQuestions = 0;
     for (const q of questions) {
