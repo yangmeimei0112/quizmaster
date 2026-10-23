@@ -45,6 +45,7 @@ async function runMigrationTests() {
   const backupDir = path.join(rootDir, "backups");
   const latestBackupPath = path.join(backupDir, "latest_backup.json");
   const binaryBackupPath = path.join(backupDir, "dev_backup.db");
+  const tempBackupDir = path.join(backupDir, ".tmp_test_backup");
 
   // =========================================================================
   // Part 1: Full Database Backup & Portable Image Conversion
@@ -52,13 +53,38 @@ async function runMigrationTests() {
   console.log("\n--- Part 1: Full Database Backup & Checksum Verification ---");
 
   await test("1.1 Execute backupDatabase and verify JSON + binary backup files exist", async () => {
-    const res = await backupDatabase({ prisma, writeTimestamped: false });
-    assert.equal(res.success, true);
-    assert.ok(fs.existsSync(latestBackupPath), "backups/latest_backup.json must exist");
-    assert.ok(fs.existsSync(binaryBackupPath), "backups/dev_backup.db must exist");
+    try {
+      const res = await backupDatabase({
+        prisma,
+        backupDir: tempBackupDir,
+        writeTimestamped: false,
+      });
+      assert.equal(res.success, true);
+      assert.ok(
+        fs.existsSync(path.join(tempBackupDir, "latest_backup.json")),
+        "temp latest_backup.json must be created by backupDatabase"
+      );
+      assert.ok(
+        fs.existsSync(path.join(tempBackupDir, "dev_backup.db")),
+        "temp dev_backup.db must be created by backupDatabase"
+      );
+      assert.ok(fs.existsSync(latestBackupPath), "backups/latest_backup.json must exist");
+      assert.ok(fs.existsSync(binaryBackupPath), "backups/dev_backup.db must exist");
 
-    const statBin = fs.statSync(binaryBackupPath);
-    assert.ok(statBin.size > 10000, "dev_backup.db should be a non-empty SQLite file");
+      const committedBackup = JSON.parse(fs.readFileSync(latestBackupPath, "utf8"));
+      assert.equal(
+        res.backupObject.metadata.checksum,
+        committedBackup.metadata.checksum,
+        "Live DB backup SHA-256 checksum must match committed backups/latest_backup.json checksum"
+      );
+
+      const statBin = fs.statSync(binaryBackupPath);
+      assert.ok(statBin.size > 10000, "dev_backup.db should be a non-empty SQLite file");
+    } finally {
+      if (fs.existsSync(tempBackupDir)) {
+        fs.rmSync(tempBackupDir, { recursive: true, force: true });
+      }
+    }
   });
 
   await test("1.2 Verify backup JSON contains all 418 production questions, metadata counts, and valid SHA-256 checksum", async () => {
@@ -246,6 +272,33 @@ async function runMigrationTests() {
       },
       /Backup checksum mismatch/
     );
+  });
+
+  await test("2.3 Verify full backup restore from backups/latest_backup.json prunes stale questions and preserves strictly 418 questions", async () => {
+    const staleId = `stale_seed_q_${Date.now()}`;
+    await prisma.question.create({
+      data: {
+        id: staleId,
+        stem: "[Stale Question] Old local 72-question seed item",
+        normalizedStem: "[stalequestion]oldlocal72questionseeditem",
+        type: "SINGLE",
+        optionA: "A",
+        optionB: "B",
+        optionC: "C",
+        optionD: "D",
+        correctAnswers: "A",
+      },
+    });
+
+    const countWithStale = await prisma.question.count();
+    assert.equal(countWithStale, 419);
+
+    const res = await migrateFromBackup({ prisma, backupPath: latestBackupPath });
+    assert.equal(res.success, true);
+    assert.equal(res.targetCounts.questions, 418);
+
+    const lingeringStale = await prisma.question.findUnique({ where: { id: staleId } });
+    assert.equal(lingeringStale, null, "Stale non-backup question must be pruned");
   });
 
   // =========================================================================
@@ -607,9 +660,6 @@ async function runMigrationTests() {
       else process.env.READONLY_FS = prevReadonly;
     }
   });
-
-  // Refresh final backup to ensure backups/latest_backup.json and backups/dev_backup.db are 100% clean
-  await backupDatabase({ prisma, writeTimestamped: false });
 
   console.log("\n==================================================");
   console.log(`[Summary] Passed: ${passed}, Failed: ${failed}`);

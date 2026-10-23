@@ -57,6 +57,73 @@ function convertLocalImageToDataUrl(imageUrl, publicDir) {
   return trimmed;
 }
 
+function sleepSync(ms) {
+  try {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  } catch {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+      // busy wait fallback
+    }
+  }
+}
+
+function writeFileSafe(filePath, content, encoding = "utf8") {
+  let lastErr;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    try {
+      if (fs.existsSync(filePath)) {
+        try {
+          const existing = fs.readFileSync(filePath, encoding);
+          if (existing === content) return;
+        } catch {
+          // ignore read error and proceed to write
+        }
+      }
+      fs.writeFileSync(filePath, content, encoding);
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (
+        err &&
+        (err.code === "UNKNOWN" ||
+          err.code === "EBUSY" ||
+          err.code === "EPERM" ||
+          err.code === "EACCES")
+      ) {
+        sleepSync(40 * (attempt + 1));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
+function copyFileSafe(srcPath, destPath) {
+  let lastErr;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    try {
+      fs.copyFileSync(srcPath, destPath);
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (
+        err &&
+        (err.code === "UNKNOWN" ||
+          err.code === "EBUSY" ||
+          err.code === "EPERM" ||
+          err.code === "EACCES")
+      ) {
+        sleepSync(40 * (attempt + 1));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
 async function backupDatabase(options = {}) {
   const ownPrisma = !options.prisma;
   const prisma = options.prisma || new PrismaClient();
@@ -74,7 +141,7 @@ async function backupDatabase(options = {}) {
     const binaryBackupPath = path.join(backupDir, "dev_backup.db");
     let binaryCopied = false;
     if (fs.existsSync(sqliteDbPath)) {
-      fs.copyFileSync(sqliteDbPath, binaryBackupPath);
+      copyFileSafe(sqliteDbPath, binaryBackupPath);
       binaryCopied = true;
     }
 
@@ -146,9 +213,9 @@ async function backupDatabase(options = {}) {
     const latestBackupPath = path.join(backupDir, "latest_backup.json");
     const timestampedBackupPath = path.join(backupDir, `backup_${safeTimestamp}.json`);
 
-    fs.writeFileSync(latestBackupPath, jsonString, "utf8");
+    writeFileSafe(latestBackupPath, jsonString, "utf8");
     if (options.writeTimestamped !== false) {
-      fs.writeFileSync(timestampedBackupPath, jsonString, "utf8");
+      writeFileSafe(timestampedBackupPath, jsonString, "utf8");
     }
 
     console.log("==================================================");

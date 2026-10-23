@@ -53,11 +53,13 @@ function extractDocumentXmlFromDocx(docxBuffer) {
 
 function decodeXmlEntities(str) {
   return str
-    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&amp;/g, "&");
 }
 
 /**
@@ -126,6 +128,8 @@ async function import418Questions(options = {}) {
   const prisma = options.prisma || new PrismaClient();
   const docxPath = options.docxPath || DEFAULT_DOCX_PATH;
   const jsonFallbackPath = options.jsonFallbackPath || DEFAULT_JSON_FALLBACK_PATH;
+  const backupJsonPath =
+    options.backupJsonPath || path.resolve(__dirname, "../backups/latest_backup.json");
 
   try {
     const similarityModulePath = path.resolve(__dirname, "../src/lib/similarity.ts");
@@ -138,6 +142,19 @@ async function import418Questions(options = {}) {
       "file://" + explanationParserModulePath.replace(/\\/g, "/")
     );
 
+    let existingBackupIds = [];
+    if (fs.existsSync(backupJsonPath)) {
+      try {
+        const backupObj = JSON.parse(fs.readFileSync(backupJsonPath, "utf8"));
+        const bQuestions = backupObj?.data?.questions;
+        if (Array.isArray(bQuestions) && bQuestions.length === 418) {
+          existingBackupIds = bQuestions.map((q) => q.id);
+        }
+      } catch {
+        // ignore invalid backup JSON
+      }
+    }
+
     let parsedQuestions = [];
     let sourceUsed = "";
 
@@ -149,9 +166,17 @@ async function import418Questions(options = {}) {
     } else if (fs.existsSync(jsonFallbackPath)) {
       parsedQuestions = JSON.parse(fs.readFileSync(jsonFallbackPath, "utf8"));
       sourceUsed = jsonFallbackPath;
+    } else if (fs.existsSync(backupJsonPath)) {
+      const backupObj = JSON.parse(fs.readFileSync(backupJsonPath, "utf8"));
+      const bQuestions = backupObj?.data?.questions || [];
+      parsedQuestions = bQuestions.map((q, idx) => ({
+        ...q,
+        num: idx + 1,
+      }));
+      sourceUsed = backupJsonPath;
     } else {
       throw new Error(
-        `Neither DOCX (${docxPath}) nor JSON fallback (${jsonFallbackPath}) could be found.`
+        `Neither DOCX (${docxPath}), JSON fallback (${jsonFallbackPath}), nor backup (${backupJsonPath}) could be found.`
       );
     }
 
@@ -196,6 +221,10 @@ async function import418Questions(options = {}) {
 
     for (let i = 0; i < parsedQuestions.length; i++) {
       const q = parsedQuestions[i];
+      const deterministicId =
+        q.id ||
+        existingBackupIds[i] ||
+        `q_prod_${String(i + 1).padStart(3, "0")}`;
       const stem = q.stem.trim();
       const optionA = q.optionA.trim();
       const optionB = q.optionB.trim();
@@ -227,6 +256,7 @@ async function import418Questions(options = {}) {
 
       await prisma.question.create({
         data: {
+          id: deterministicId,
           stem,
           normalizedStem,
           type,

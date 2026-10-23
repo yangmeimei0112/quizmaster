@@ -49,6 +49,7 @@ async function resetMistakeRecordsAndStats(customPrisma) {
           countD: 0,
         },
       }),
+      prisma.$executeRawUnsafe('UPDATE "Question" SET "updatedAt" = "createdAt"'),
     ]);
 
     // 3. 驗證重置後不變性 (Invariants Verification)
