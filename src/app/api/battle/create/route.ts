@@ -20,10 +20,11 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { hostName, hostAvatar, settings } = body;
+    const { hostName, hostAvatar, settings, deviceId } = body;
 
     const trimmedName = (hostName || "房主").trim();
     const cleanSettings = { ...(settings || {}) };
+    const cleanDeviceId = typeof deviceId === "string" ? deviceId.trim() : undefined;
 
     const totalQuestionsCount = await prisma.question.count();
 
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
       cleanSettings.timeLimitPerQuestion = isNaN(tLimit) || tLimit < 0 ? 0 : Math.floor(tLimit);
     }
 
-    const result = await createRoomAsync(trimmedName, hostAvatar || "shiba", cleanSettings);
+    const result = await createRoomAsync(trimmedName, hostAvatar || "shiba", cleanSettings, cleanDeviceId);
 
     return NextResponse.json({ ...result, totalQuestionsCount }, { status: 201 });
   } catch (error: any) {

@@ -21,6 +21,24 @@ import {
 import AnimalAvatarPicker from "@/components/battle/AnimalAvatarPicker";
 import { battleAudio } from "@/lib/battleAudio";
 
+function getOrCreateDeviceId(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    let id = localStorage.getItem("quizmaster_device_id");
+    if (!id || typeof id !== "string" || !id.trim()) {
+      if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        id = crypto.randomUUID();
+      } else {
+        id = "dev_" + Math.random().toString(36).substring(2, 10) + "_" + Date.now().toString(36);
+      }
+      localStorage.setItem("quizmaster_device_id", id);
+    }
+    return id.trim();
+  } catch {
+    return "dev_fallback_" + Math.random().toString(36).substring(2, 10);
+  }
+}
+
 export default function BattlePortalPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"CREATE" | "JOIN">("CREATE");
@@ -136,6 +154,7 @@ export default function BattlePortalPage() {
               ? Math.max(5, Math.min(300, Number(timeLimitPerQuestion) || 25))
               : timeLimitPerQuestion,
           },
+          deviceId: getOrCreateDeviceId(),
         }),
       });
 
@@ -185,6 +204,7 @@ export default function BattlePortalPage() {
           code: cleanCode,
           playerName: joinName.trim() || "冒險者",
           playerAvatar: joinAvatar,
+          deviceId: getOrCreateDeviceId(),
         }),
       });
 

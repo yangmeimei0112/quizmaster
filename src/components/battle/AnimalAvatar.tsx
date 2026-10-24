@@ -646,6 +646,248 @@ export default function AnimalAvatar({
           </g>
         );
 
+      case "kinmen_otter":
+      case "otter":
+        // 金門水獺：湖水水藍清爽色系、俏皮小圓耳、白軟雙頰、小巧粉紅鼻、靈動鬍鬚、水花萌感
+        return (
+          <g>
+            <defs>
+              <radialGradient id={`${uid}-otter-blush`} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#FB7185" stopOpacity="0.65" />
+                <stop offset="100%" stopColor="#FB7185" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            {/* Cute Round Otter Ears */}
+            <circle cx="23" cy="30" r="10" fill="#0284C7" />
+            <circle cx="23" cy="30" r="5.5" fill="#BAE6FD" />
+            <circle cx="77" cy="30" r="10" fill="#0284C7" />
+            <circle cx="77" cy="30" r="5.5" fill="#BAE6FD" />
+
+            {/* Chubby Aqua Head */}
+            <ellipse cx="50" cy="55" rx="36" ry="31" fill="#0EA5E9" />
+
+            {/* Forehead Shiny Waterdrop (湖水水花萌感) */}
+            <path d="M 50,31 Q 46,38 50,42 Q 54,38 50,31 Z" fill="#E0F2FE" opacity="0.9" />
+
+            {/* Soft White Mochi Cheeks & Chin */}
+            <path
+              d="M 22,56 C 20,74 36,84 50,84 C 64,84 80,74 78,56 C 76,48 64,53 50,55 C 36,53 24,48 22,56 Z"
+              fill="#F0F9FF"
+            />
+
+            {/* Soft Rosy Blushes */}
+            <ellipse cx="25" cy="64" rx="6.5" ry="4" fill={`url(#${uid}-otter-blush)`} />
+            <ellipse cx="75" cy="64" rx="6.5" ry="4" fill={`url(#${uid}-otter-blush)`} />
+
+            {/* Big Sparkling Anime Eyes */}
+            <g id="otter-left-eye">
+              <ellipse cx="36" cy="48" rx="4.8" ry="5.5" fill="#0F172A" />
+              <circle cx="34.5" cy="46" r="2" fill="#FFFFFF" />
+              <circle cx="38" cy="51" r="1" fill="#FFFFFF" opacity="0.85" />
+            </g>
+            <g id="otter-right-eye">
+              <ellipse cx="64" cy="48" rx="4.8" ry="5.5" fill="#0F172A" />
+              <circle cx="62.5" cy="46" r="2" fill="#FFFFFF" />
+              <circle cx="66" cy="51" r="1" fill="#FFFFFF" opacity="0.85" />
+            </g>
+
+            {/* Small Pink Button Nose */}
+            <path d="M 46,58 Q 50,56 54,58 Q 50,63 46,58 Z" fill="#F472B6" />
+
+            {/* Cute :3 Smile */}
+            <path
+              d="M 45,64 Q 48,67 50,65 Q 52,67 55,64"
+              stroke="#0F172A"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              fill="none"
+            />
+
+            {/* Lively Whiskers (靈動翹鬍鬚 - 3 on each side) */}
+            <path d="M 20,61 Q 30,62 36,63" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M 18,66 Q 30,66 36,66" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M 21,71 Q 31,69 36,68" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+
+            <path d="M 80,61 Q 70,62 64,63" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M 82,66 Q 70,66 64,66" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M 79,71 Q 69,69 64,68" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+          </g>
+        );
+
+      case "muntjac":
+        // 台灣山羌：溫暖琥珀棕色、大葉型靈動雙耳、額前黑色縱紋、小巧山羌角、無辜水汪大眼
+        return (
+          <g>
+            <defs>
+              <radialGradient id={`${uid}-muntjac-blush`} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#FB7185" stopOpacity="0.65" />
+                <stop offset="100%" stopColor="#FB7185" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            {/* Small Muntjac Horns (小巧後彎山羌角) */}
+            <path d="M 36,28 C 33,18 29,11 27,7 C 31,10 36,17 38,26 Z" fill="#451A03" />
+            <path d="M 64,28 C 67,18 71,11 73,7 C 69,10 64,17 62,26 Z" fill="#451A03" />
+
+            {/* Large Alert Muntjac Ears */}
+            <ellipse cx="18" cy="36" rx="12" ry="6" fill="#B45309" transform="rotate(-35 18 36)" />
+            <ellipse cx="18" cy="36" rx="7.5" ry="3.5" fill="#FED7AA" transform="rotate(-35 18 36)" />
+            <ellipse cx="82" cy="36" rx="12" ry="6" fill="#B45309" transform="rotate(35 82 36)" />
+            <ellipse cx="82" cy="36" rx="7.5" ry="3.5" fill="#FED7AA" transform="rotate(35 82 36)" />
+
+            {/* Warm Amber Brown Head */}
+            <ellipse cx="50" cy="56" rx="34" ry="30" fill="#D97706" />
+
+            {/* Forehead Dark Vertical Facial Markings (額前特徵黑色縱紋) */}
+            <path d="M 37,27 Q 44,38 46,46" stroke="#451A03" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M 63,27 Q 56,38 54,46" stroke="#451A03" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M 50,33 L 50,42" stroke="#451A03" strokeWidth="2" strokeLinecap="round" />
+
+            {/* Creamy Muzzle */}
+            <ellipse cx="50" cy="68" rx="15" ry="10" fill="#FEF3C7" />
+
+            {/* Warm Peach Blushes */}
+            <ellipse cx="27" cy="64" rx="6" ry="4" fill={`url(#${uid}-muntjac-blush)`} />
+            <ellipse cx="73" cy="64" rx="6" ry="4" fill={`url(#${uid}-muntjac-blush)`} />
+
+            {/* Giant Innocent Doe Eyes (楚楚動人圓滾大眼) */}
+            <g id="muntjac-left-eye">
+              <ellipse cx="37" cy="50" rx="5" ry="6" fill="#1E293B" />
+              <circle cx="35" cy="48" r="2.2" fill="#FFFFFF" />
+              <circle cx="39" cy="53" r="1.1" fill="#FFFFFF" opacity="0.85" />
+            </g>
+            <g id="muntjac-right-eye">
+              <ellipse cx="63" cy="50" rx="5" ry="6" fill="#1E293B" />
+              <circle cx="61" cy="48" r="2.2" fill="#FFFFFF" />
+              <circle cx="65" cy="53" r="1.1" fill="#FFFFFF" opacity="0.85" />
+            </g>
+
+            {/* Dark Button Nose & Gentle Smile */}
+            <ellipse cx="50" cy="64" rx="3.5" ry="2.2" fill="#451A03" />
+            <path d="M 46,69 Q 50,72 54,69" stroke="#451A03" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          </g>
+        );
+
+      case "goat":
+        // 山羊：石青灰綠色調、微彎螺旋山羊角、靈巧尖耳、帥氣小山羊鬍、純真大眼
+        return (
+          <g>
+            <defs>
+              <radialGradient id={`${uid}-goat-blush`} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#FB7185" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#FB7185" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            {/* Curved Spiral Goat Horns (微彎螺旋山羊角) */}
+            <path
+              d="M 37,28 C 27,16 19,8 13,14 C 9,18 16,27 31,33 Z"
+              fill="#E2E8F0"
+              stroke="#94A3B8"
+              strokeWidth="1.2"
+            />
+            <path d="M 23,17 Q 27,23 31,21" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M 17,14 Q 21,20 25,18" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+
+            <path
+              d="M 63,28 C 73,16 81,8 87,14 C 91,18 84,27 69,33 Z"
+              fill="#E2E8F0"
+              stroke="#94A3B8"
+              strokeWidth="1.2"
+            />
+            <path d="M 77,17 Q 73,23 69,21" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M 83,14 Q 79,20 75,18" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+
+            {/* Pointed Sideways Goat Ears (靈巧尖耳) */}
+            <path d="M 22,44 C 10,40 7,49 19,53 Z" fill="#64748B" />
+            <path d="M 20,45 C 13,42 11,48 18,51 Z" fill="#FED7AA" />
+            <path d="M 78,44 C 90,40 93,49 81,53 Z" fill="#64748B" />
+            <path d="M 80,45 C 87,42 89,48 82,51 Z" fill="#FED7AA" />
+
+            {/* Slate Sage Green Head */}
+            <ellipse cx="50" cy="56" rx="34" ry="29" fill="#64748B" />
+
+            {/* Light Muzzle & Cheeks */}
+            <ellipse cx="50" cy="67" rx="16" ry="11" fill="#F8FAFC" />
+
+            {/* Cute Goatee Chin Tuft (俏皮小山羊鬍) */}
+            <path d="M 47,77 Q 50,85 53,77 Z" fill="#F8FAFC" />
+
+            {/* Cheeks Blush */}
+            <ellipse cx="26" cy="63" rx="6" ry="4" fill={`url(#${uid}-goat-blush)`} />
+            <ellipse cx="74" cy="63" rx="6" ry="4" fill={`url(#${uid}-goat-blush)`} />
+
+            {/* Sparkling Anime Goat Eyes */}
+            <g id="goat-left-eye">
+              <ellipse cx="37" cy="49" rx="4.8" ry="5.5" fill="#1E293B" />
+              <circle cx="35.5" cy="47" r="2" fill="#FFFFFF" />
+              <circle cx="38.5" cy="52" r="1" fill="#FFFFFF" opacity="0.8" />
+            </g>
+            <g id="goat-right-eye">
+              <ellipse cx="63" cy="49" rx="4.8" ry="5.5" fill="#1E293B" />
+              <circle cx="61.5" cy="47" r="2" fill="#FFFFFF" />
+              <circle cx="64.5" cy="52" r="1" fill="#FFFFFF" opacity="0.8" />
+            </g>
+
+            {/* Dark Triangle Nose & Playful Smile */}
+            <path d="M 47,61 Q 50,59 53,61 Q 50,65 47,61 Z" fill="#334155" />
+            <path d="M 45,67 Q 50,71 55,67" stroke="#334155" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          </g>
+        );
+
+      case "sheep":
+        // 綿羊：柔和米白雲朵毛、垂垂軟耳、害羞粉嫩大腮紅、頭頂蓬鬆雲朵瀏海、水汪萌眼
+        return (
+          <g>
+            <defs>
+              <radialGradient id={`${uid}-sheep-blush`} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#F472B6" stopOpacity="0.75" />
+                <stop offset="100%" stopColor="#F472B6" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            {/* Puffy Cloud Fleece Ring (蓬鬆捲捲雲朵毛背景) */}
+            <circle cx="28" cy="30" r="13" fill="#FFF7ED" />
+            <circle cx="50" cy="22" r="14" fill="#FFF7ED" />
+            <circle cx="72" cy="30" r="13" fill="#FFF7ED" />
+            <circle cx="18" cy="48" r="12" fill="#FFF7ED" />
+            <circle cx="82" cy="48" r="12" fill="#FFF7ED" />
+            <circle cx="28" cy="72" r="11" fill="#FFF7ED" />
+            <circle cx="72" cy="72" r="11" fill="#FFF7ED" />
+
+            {/* Droopy Soft Ears (垂垂軟耳) */}
+            <ellipse cx="18" cy="52" rx="6" ry="12" fill="#FDA4AF" transform="rotate(22 18 52)" />
+            <ellipse cx="18" cy="52" rx="3.5" ry="8" fill="#FFF1F2" transform="rotate(22 18 52)" />
+            <ellipse cx="82" cy="52" rx="6" ry="12" fill="#FDA4AF" transform="rotate(-22 82 52)" />
+            <ellipse cx="82" cy="52" rx="3.5" ry="8" fill="#FFF1F2" transform="rotate(-22 82 52)" />
+
+            {/* Gentle Peach Head */}
+            <ellipse cx="50" cy="58" rx="28" ry="24" fill="#FED7AA" />
+
+            {/* Forehead Cloud Bangs (頭頂捲捲雲朵瀏海) */}
+            <circle cx="42" cy="38" r="8" fill="#FFFFFF" />
+            <circle cx="58" cy="38" r="8" fill="#FFFFFF" />
+            <circle cx="50" cy="34" r="9" fill="#FFFFFF" />
+
+            {/* Shy Extra-Large Rosy Blushes (害羞大腮紅) */}
+            <ellipse cx="32" cy="65" rx="7" ry="4.5" fill={`url(#${uid}-sheep-blush)`} />
+            <ellipse cx="68" cy="65" rx="7" ry="4.5" fill={`url(#${uid}-sheep-blush)`} />
+
+            {/* Innocent Wide Sweet Eyes */}
+            <g id="sheep-left-eye">
+              <ellipse cx="38" cy="52" rx="4.5" ry="5.5" fill="#1E293B" />
+              <circle cx="36.5" cy="50" r="2" fill="#FFFFFF" />
+              <circle cx="39.5" cy="55" r="1" fill="#FFFFFF" opacity="0.85" />
+            </g>
+            <g id="sheep-right-eye">
+              <ellipse cx="62" cy="52" rx="4.5" ry="5.5" fill="#1E293B" />
+              <circle cx="60.5" cy="50" r="2" fill="#FFFFFF" />
+              <circle cx="63.5" cy="55" r="1" fill="#FFFFFF" opacity="0.85" />
+            </g>
+
+            {/* Soft Pink Nose & Y-Shaped Mouth */}
+            <ellipse cx="50" cy="63" rx="3" ry="2" fill="#F43F5E" />
+            <path d="M 46,67 Q 50,70 54,67" stroke="#F43F5E" strokeWidth="2" strokeLinecap="round" fill="none" />
+          </g>
+        );
+
       default:
         return null;
     }

@@ -33,6 +33,7 @@ async function runBattleTests() {
     leaveRoom,
     resetBattle,
     generateRoomCode,
+    isRoomDissolved,
   } = battleStore;
 
   const { ANIMAL_AVATARS, getAnimalAvatar } = avatars;
@@ -47,16 +48,28 @@ async function runBattleTests() {
   }
 
   // -------------------------------------------------------------
-  // 測試 1：12 款同風格動物頭像系統檢驗
+  // 測試 1：16 款同風格動物頭像系統檢驗
   // -------------------------------------------------------------
-  console.log("\n[測試 1] 驗證 12 款日系動物頭像規格與主題色設定...");
-  assert(ANIMAL_AVATARS.length === 12, "頭像清單剛好為 12 款動物");
-  const expectedAnimals = ["shiba", "panda", "fox", "lion", "tiger", "koala", "penguin", "rabbit", "cat", "owl", "deer", "monkey"];
+  console.log("\n[測試 1] 驗證 16 款日系動物頭像規格與主題色設定...");
+  assert(ANIMAL_AVATARS.length === 16, "頭像清單剛好為 16 款動物");
+  const expectedAnimals = [
+    "shiba", "panda", "fox", "lion", "tiger", "koala", "penguin", "rabbit",
+    "cat", "owl", "deer", "monkey", "otter", "muntjac", "goat", "sheep"
+  ];
   expectedAnimals.forEach((animalId) => {
     const avatar = getAnimalAvatar(animalId);
     assert(avatar && avatar.id === animalId, `動物 ${animalId} (${avatar.name}) 存在且設定完備`);
     assert(avatar.primaryColor && avatar.primaryColor.startsWith("#"), `動物 ${animalId} 主題色為有效 HEX 色碼`);
   });
+  const aliasAvatar = getAnimalAvatar("kinmen_otter");
+  assert(aliasAvatar && aliasAvatar.id === "otter", "kinmen_otter 正確別名映射至 otter");
+
+  // 驗證 16 款動物頭像色彩唯一性
+  const primarySet = new Set(ANIMAL_AVATARS.map((a) => a.primaryColor));
+  assert(primarySet.size === 16, `16 款動物 primaryColor 需具備唯一性 (目前 unique: ${primarySet.size})`);
+
+  const secondarySet = new Set(ANIMAL_AVATARS.map((a) => a.secondaryColor));
+  assert(secondarySet.size === 16, `16 款動物 secondaryColor 需具備唯一性 (目前 unique: ${secondarySet.size})`);
 
   // -------------------------------------------------------------
   // 測試 2：4 碼純數字 (1000~9999) 房間代碼生成
@@ -245,13 +258,45 @@ async function runBattleTests() {
   assert(resetRoom.players.filter((p) => !p.isHost).every((p) => !p.isReady), "其他玩家已重設為未準備");
 
   // -------------------------------------------------------------
-  // 測試 9：玩家離開與房主轉移
+  // 測試 9：大廳房主離開自動解散，與進行中房主退出標記棄賽
   // -------------------------------------------------------------
-  console.log("\n[測試 9] 驗證房主離開時繼承房主身分與房間釋放...");
+  console.log("\n[測試 9] 驗證大廳房主離開時房間自動解散，與進行中房主退出標記棄賽...");
+  // 9.1 LOBBY 房主退出 -> 房間直接解散
   const leaveResult = leaveRoom(room.code, hostId);
-  assert(leaveResult.room.players.length === 3, "房主離開後剩餘 3 人");
-  assert(leaveResult.room.players[0].isHost === true, "第一順位玩家自動晉升為新房主");
-  assert(leaveResult.room.hostId === leaveResult.room.players[0].id, "hostId 成功同步更新");
+  assert(leaveResult.room === null, "房主在大廳離開後房間直接解散 (room === null)");
+  assert(getRoom(room.code) === null, "記憶體中房間已被完全移除");
+  assert(isRoomDissolved(room.code) === true, "解散墓碑標記成功記錄 (isRoomDissolved: true)");
+
+  // 9.2 PLAYING 進行中房主退出 -> 房間不解散，房主標記為 isFinished，轉移房主身分
+  const { room: activeBattleRoom, playerId: playingHostId } = createRoom("對戰房主", "lion", {
+    questionCount: 5,
+    mode: "CUSTOM",
+  });
+  const { playerId: playingGuestId } = joinRoom(activeBattleRoom.code, "對戰隊友", "cat");
+  toggleReady(activeBattleRoom.code, playingGuestId, true);
+  startBattle(activeBattleRoom.code, playingHostId, mockQuestions.slice(0, 5));
+  activeBattleRoom.stage = "PLAYING";
+
+  const activeLeaveResult = leaveRoom(activeBattleRoom.code, playingHostId);
+  assert(activeLeaveResult.room !== null, "對戰進行中房主退出，房間不解散");
+  assert(activeLeaveResult.room.players.length === 2, "房主仍保留於選手陣容中以記錄戰績");
+  const hostPlayerRecord = activeLeaveResult.room.players.find((p) => p.id === playingHostId);
+  assert(hostPlayerRecord.isFinished === true, "離開的房主被標記為棄賽完賽 (isFinished: true)");
+  assert(activeLeaveResult.room.hostId === playingGuestId, "房主資格順延移交給仍在場的隊友");
+  const guestPlayerRecord = activeLeaveResult.room.players.find((p) => p.id === playingGuestId);
+  assert(guestPlayerRecord.isHost === true, "在場隊友成為新房主");
+  assert(activeLeaveResult.room.stage === "PLAYING", "房間維持 PLAYING 階段供其他玩家作答");
+
+  // 隊友完賽後正常推進至 FINISHED
+  updatePlayerProgress(activeBattleRoom.code, playingGuestId, {
+    currentIndex: 5,
+    correctCount: 5,
+    wrongCount: 0,
+    score: 500,
+    isFinished: true,
+  });
+  const afterGuestFinish = getRoom(activeBattleRoom.code);
+  assert(afterGuestFinish.stage === "FINISHED", "全員完賽後自動結算進入 FINISHED 頒獎台");
 
   // -------------------------------------------------------------
   // 測試 10：50 題全真模擬考模式規格

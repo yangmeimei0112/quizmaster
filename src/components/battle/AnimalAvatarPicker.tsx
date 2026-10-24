@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ANIMAL_AVATARS, AnimalAvatarInfo } from "@/lib/avatars";
+import { ANIMAL_AVATARS, AnimalAvatarInfo, getAnimalAvatar } from "@/lib/avatars";
 import AnimalAvatar from "./AnimalAvatar";
 
 interface AnimalAvatarPickerProps {
@@ -15,7 +15,7 @@ export default function AnimalAvatarPicker({
   onSelect,
   className = "",
 }: AnimalAvatarPickerProps) {
-  const currentAvatar = ANIMAL_AVATARS.find((a) => a.id === selectedId) || ANIMAL_AVATARS[0];
+  const currentAvatar = getAnimalAvatar(selectedId);
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -49,14 +49,14 @@ export default function AnimalAvatarPicker({
         </div>
       </div>
 
-      {/* 12-Animal Grid Selection */}
+      {/* 16-Animal Grid Selection */}
       <div>
         <label className="block text-xs font-semibold text-foreground-muted mb-2">
-          選擇出戰動物頭像 (共 12 款日系遊戲風格)
+          選擇出戰動物頭像 (共 16 款日系遊戲風格)
         </label>
         <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5">
           {ANIMAL_AVATARS.map((avatar) => {
-            const isSelected = avatar.id === selectedId;
+            const isSelected = avatar.id === currentAvatar.id;
             return (
               <button
                 key={avatar.id}
@@ -80,7 +80,7 @@ export default function AnimalAvatarPicker({
                     isSelected ? "text-white" : "text-foreground-muted group-hover:text-foreground"
                   }`}
                 >
-                  {avatar.name.replace(/(元氣|呆萌|機靈|王者|閃電|悠哉|滑雪|活力|喵星|智者|森之|敏捷)/, "") || avatar.name}
+                  {avatar.name.replace(/(元氣|呆萌|機靈|王者|閃電|悠哉|滑雪|活力|喵星|智者|森之|敏捷|水岸|山林|石峰|雲朵)/, "") || avatar.name}
                 </span>
 
                 {/* Selection indicator pill */}

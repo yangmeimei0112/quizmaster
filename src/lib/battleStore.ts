@@ -16,6 +16,7 @@ export interface BattlePlayer {
   isFinished: boolean;
   finishedAt?: number;
   lastActiveAt: number;
+  deviceId?: string;
 }
 
 export interface BattleSettings {
@@ -67,14 +68,38 @@ export interface BattleRoom {
 // Global persistence across Next.js dev & node worker
 const globalForBattle = globalThis as unknown as {
   __battleRoomsStore?: Map<string, BattleRoom>;
+  __battleDissolvedRooms?: Map<string, { dissolvedAt: number; reason: string }>;
 };
 
 if (!globalForBattle.__battleRoomsStore) {
   globalForBattle.__battleRoomsStore = new Map<string, BattleRoom>();
 }
 
+if (!globalForBattle.__battleDissolvedRooms) {
+  globalForBattle.__battleDissolvedRooms = new Map<
+    string,
+    { dissolvedAt: number; reason: string }
+  >();
+}
+
 const roomsStore = globalForBattle.__battleRoomsStore;
-const recentlyLeftPlayers = new Map<string, Set<string>>();
+const dissolvedRooms = globalForBattle.__battleDissolvedRooms;
+export const recentlyLeftPlayers = new Map<string, Set<string>>();
+
+export function markRoomDissolved(code: string, reason = "HOST_LEFT"): void {
+  dissolvedRooms.set(code.trim().toUpperCase(), { dissolvedAt: Date.now(), reason });
+}
+
+export function isRoomDissolved(code: string): boolean {
+  const upperCode = code.trim().toUpperCase();
+  const item = dissolvedRooms.get(upperCode);
+  if (!item) return false;
+  if (Date.now() - item.dissolvedAt > 120000) {
+    dissolvedRooms.delete(upperCode);
+    return false;
+  }
+  return true;
+}
 
 let lastCleanupTime = 0;
 let lastIssuedTimestamp = 0;
@@ -107,6 +132,12 @@ export function cleanupStaleRooms(force: boolean = false) {
       recentlyLeftPlayers.delete(code);
     }
   }
+
+  for (const [code, item] of dissolvedRooms.entries()) {
+    if (now - item.dissolvedAt > 120000) {
+      dissolvedRooms.delete(code);
+    }
+  }
 }
 
 // 4-digit numeric code generator (1000 ~ 9999, non-zero first digit, purely numeric)
@@ -114,14 +145,14 @@ export function generateRoomCode(): string {
   cleanupStaleRooms(true);
   for (let attempt = 0; attempt < 1000; attempt++) {
     const code = String(Math.floor(Math.random() * 9000) + 1000);
-    if (!roomsStore.has(code)) {
+    if (!roomsStore.has(code) && !dissolvedRooms.has(code)) {
       return code;
     }
   }
   // Fallback: scan available 1000~9999 sequentially if dense
   for (let c = 1000; c <= 9999; c++) {
     const code = String(c);
-    if (!roomsStore.has(code)) {
+    if (!roomsStore.has(code) && !dissolvedRooms.has(code)) {
       return code;
     }
   }
@@ -141,7 +172,8 @@ export function shuffleArray<T>(arr: T[]): T[] {
 export function createRoom(
   hostName: string,
   hostAvatar: string,
-  settings: Partial<BattleSettings> = {}
+  settings: Partial<BattleSettings> = {},
+  deviceId?: string
 ): { room: BattleRoom; playerId: string } {
   const code = generateRoomCode();
   const hostId = "p_" + Math.random().toString(36).substring(2, 10);
@@ -169,6 +201,7 @@ export function createRoom(
     score: 0,
     isFinished: false,
     lastActiveAt: now,
+    deviceId: deviceId?.trim() || undefined,
   };
 
   const room: BattleRoom = {
@@ -183,6 +216,7 @@ export function createRoom(
   };
 
   recentlyLeftPlayers.delete(code);
+  dissolvedRooms.delete(code);
   roomsStore.set(code, room);
   return { room, playerId: hostId };
 }
@@ -216,7 +250,8 @@ export function joinRoom(
   code: string,
   playerName: string,
   playerAvatar: string,
-  existingPlayerId?: string
+  existingPlayerId?: string,
+  deviceId?: string
 ): { room: BattleRoom; playerId: string } {
   const upperCode = code.trim().toUpperCase();
   const room = getRoom(upperCode);
@@ -225,12 +260,17 @@ export function joinRoom(
     throw new Error("查無此房間代碼，請確認代碼是否正確");
   }
 
+  const cleanDeviceId = deviceId?.trim() || undefined;
+
   // If reconnecting with an existing player ID already present in the room
   if (existingPlayerId) {
     recentlyLeftPlayers.get(upperCode)?.delete(existingPlayerId);
     let existingPlayer = room.players.find((p) => p.id === existingPlayerId);
     if (existingPlayer) {
       existingPlayer.lastActiveAt = Date.now();
+      if (cleanDeviceId) {
+        existingPlayer.deviceId = cleanDeviceId;
+      }
       room.updatedAt = bumpUpdatedAt(room.updatedAt);
       return { room, playerId: existingPlayer.id };
     } else if (
@@ -250,6 +290,7 @@ export function joinRoom(
         score: 0,
         isFinished: false,
         lastActiveAt: Date.now(),
+        deviceId: cleanDeviceId,
       };
       if (
         room.questions.length > 0 &&
@@ -270,6 +311,44 @@ export function joinRoom(
     throw new Error("對戰已在進行中或已結束，無法加入此房間");
   }
 
+  // Duplicate device kick and host succession logic
+  let willBeHost = false;
+  if (cleanDeviceId) {
+    const oldIndex = room.players.findIndex(
+      (p) => p.deviceId && p.deviceId === cleanDeviceId && p.id !== existingPlayerId
+    );
+    if (oldIndex !== -1) {
+      const oldPlayer = room.players[oldIndex];
+      const wasHost = oldPlayer.isHost;
+
+      // Remove old player from room.players
+      room.players.splice(oldIndex, 1);
+
+      // Register old player ID into recentlyLeftPlayers to prevent Serverless DB snapshot reconciliation
+      if (!recentlyLeftPlayers.has(upperCode)) {
+        recentlyLeftPlayers.set(upperCode, new Set());
+      }
+      recentlyLeftPlayers.get(upperCode)!.add(oldPlayer.id);
+
+      // Host succession logic
+      if (wasHost) {
+        if (room.players.length > 0) {
+          // Transfer host role to the first remaining player
+          room.players[0].isHost = true;
+          room.players[0].isReady = true;
+          room.hostId = room.players[0].id;
+        } else {
+          // No other players remain; incoming new player becomes host
+          willBeHost = true;
+        }
+      }
+    }
+  }
+
+  if (room.players.length === 0) {
+    willBeHost = true;
+  }
+
   if (room.players.length >= room.settings.maxPlayers) {
     throw new Error(`房間人數已達上限 (${room.settings.maxPlayers} 人)`);
   }
@@ -288,15 +367,20 @@ export function joinRoom(
     id: playerId,
     name: finalName,
     avatarId: playerAvatar || "panda",
-    isHost: false,
-    isReady: false,
+    isHost: willBeHost,
+    isReady: willBeHost ? true : false,
     currentIndex: 0,
     correctCount: 0,
     wrongCount: 0,
     score: 0,
     isFinished: false,
     lastActiveAt: Date.now(),
+    deviceId: cleanDeviceId,
   };
+
+  if (willBeHost) {
+    room.hostId = playerId;
+  }
 
   room.players.push(newPlayer);
   room.updatedAt = bumpUpdatedAt(room.updatedAt);
@@ -572,28 +656,55 @@ export function leaveRoom(
   if (playerIndex === -1) return { success: true, room };
 
   const leavingPlayer = room.players[playerIndex];
-  room.players.splice(playerIndex, 1);
+  const isHost = leavingPlayer.isHost || room.hostId === playerId;
 
   if (!recentlyLeftPlayers.has(upperCode)) {
     recentlyLeftPlayers.set(upperCode, new Set());
   }
   recentlyLeftPlayers.get(upperCode)!.add(playerId);
 
-  if (room.players.length === 0) {
-    roomsStore.delete(room.code);
-    recentlyLeftPlayers.delete(upperCode);
-    return { success: true, room: null };
+  // CASE 1: Room is in waiting lobby (stage === "LOBBY")
+  if (room.stage === "LOBBY") {
+    // If host leaves in LOBBY -> dissolve room completely
+    if (isHost) {
+      markRoomDissolved(upperCode, "HOST_LEFT");
+      roomsStore.delete(upperCode);
+      recentlyLeftPlayers.delete(upperCode);
+      return { success: true, room: null };
+    }
+
+    // A regular player leaves in LOBBY -> splice player
+    room.players.splice(playerIndex, 1);
+    if (room.players.length === 0) {
+      roomsStore.delete(upperCode);
+      recentlyLeftPlayers.delete(upperCode);
+      return { success: true, room: null };
+    }
+
+    room.updatedAt = bumpUpdatedAt(room.updatedAt);
+    return { success: true, room };
   }
 
-  // If host leaves, transfer host to next player
-  if (leavingPlayer.isHost && room.players.length > 0) {
-    room.players[0].isHost = true;
-    room.players[0].isReady = true;
-    room.hostId = room.players[0].id;
+  // CASE 2: Room is in active match or podium (PLAYING / DRAWING / FINISHED)
+  // Do NOT splice player from room.players. Mark isFinished = true.
+  leavingPlayer.isFinished = true;
+  if (!leavingPlayer.finishedAt) {
+    leavingPlayer.finishedAt = Date.now();
+  }
+  leavingPlayer.lastActiveAt = Date.now();
+
+  // If host leaves mid-game, transfer host role to the first remaining player
+  if (isHost) {
+    const nextPlayer = room.players.find((p) => p.id !== playerId);
+    if (nextPlayer) {
+      nextPlayer.isHost = true;
+      room.hostId = nextPlayer.id;
+      leavingPlayer.isHost = false;
+    }
   }
 
-  // If during battle, check if remaining players finished
-  if (room.stage === "PLAYING" && room.players.every((p) => p.isFinished)) {
+  // Check if all players in room are now finished
+  if (room.players.length > 0 && room.players.every((p) => p.isFinished)) {
     room.stage = "FINISHED";
   }
 
@@ -649,13 +760,14 @@ function getPrismaClient(): PrismaClient {
 export function clearMemoryRooms(): void {
   roomsStore.clear();
   recentlyLeftPlayers.clear();
+  dissolvedRooms.clear();
 }
 
 /**
  * Reconciles a target BattleRoom with a concurrent database snapshot (if both belong to the
  * same room creation lifecycle), preventing Serverless multi-instance progress/join overwrites.
  */
-function reconcileRoomWithDbSnapshot(
+export function reconcileRoomWithDbSnapshot(
   targetRoom: BattleRoom,
   dbRoom: BattleRoom | null,
   options?: { isLeave?: boolean; isReset?: boolean }
@@ -936,7 +1048,8 @@ export async function getRoomAsync(code: string): Promise<BattleRoom | null> {
 export async function createRoomAsync(
   hostName: string,
   hostAvatar: string,
-  settings: Partial<BattleSettings> = {}
+  settings: Partial<BattleSettings> = {},
+  deviceId?: string
 ): Promise<{ room: BattleRoom; playerId: string }> {
   try {
     const prisma = getPrismaClient();
@@ -963,7 +1076,7 @@ export async function createRoomAsync(
     console.error("[battleStore] createRoomAsync pre-check error:", err);
   }
 
-  const result = createRoom(hostName, hostAvatar, settings);
+  const result = createRoom(hostName, hostAvatar, settings, deviceId);
   await syncRoomToDb(result.room);
   return result;
 }
@@ -972,10 +1085,11 @@ export async function joinRoomAsync(
   code: string,
   playerName: string,
   playerAvatar: string,
-  existingPlayerId?: string
+  existingPlayerId?: string,
+  deviceId?: string
 ): Promise<{ room: BattleRoom; playerId: string }> {
   await getRoomAsync(code);
-  const result = joinRoom(code, playerName, playerAvatar, existingPlayerId);
+  const result = joinRoom(code, playerName, playerAvatar, existingPlayerId, deviceId);
   await syncRoomToDb(result.room);
   return result;
 }

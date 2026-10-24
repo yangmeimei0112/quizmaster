@@ -143,9 +143,54 @@ export const ANIMAL_AVATARS: AnimalAvatarInfo[] = [
     borderGlow: "shadow-[0_0_20px_rgba(217,119,6,0.45)] border-amber-600/50",
     description: "超大圓圓招風耳、愛心桃子面盤、調皮眨單眼(Wink)與酒窩笑臉！",
   },
+  {
+    id: "otter",
+    name: "水岸水獺",
+    emoji: "",
+    title: "金門水獺寶",
+    primaryColor: "#0EA5E9",
+    secondaryColor: "#0284C7",
+    accentBg: "from-sky-500/20 via-sky-600/10 to-transparent",
+    borderGlow: "shadow-[0_0_20px_rgba(14,165,233,0.45)] border-sky-400/50",
+    description: "湖水水藍清爽色系、俏皮小圓耳、小巧粉紅鼻與靈動翹鬍鬚，水性極佳的金門國寶小水獺！",
+  },
+  {
+    id: "muntjac",
+    name: "山林山羌",
+    emoji: "",
+    title: "台灣小山羌",
+    primaryColor: "#B45309",
+    secondaryColor: "#78350F",
+    accentBg: "from-amber-700/20 via-amber-800/10 to-transparent",
+    borderGlow: "shadow-[0_0_20px_rgba(180,83,9,0.45)] border-amber-600/50",
+    description: "溫暖琥珀棕色毛色、額前俏皮黑色縱紋、小巧山羌角與圓滾大眼，靈動害羞的台灣特有小精靈！",
+  },
+  {
+    id: "goat",
+    name: "石峰山羊",
+    emoji: "",
+    title: "攀岩小山羊",
+    primaryColor: "#475569",
+    secondaryColor: "#334155",
+    accentBg: "from-slate-600/20 via-slate-700/10 to-transparent",
+    borderGlow: "shadow-[0_0_20px_rgba(71,85,105,0.45)] border-slate-500/50",
+    description: "石青灰綠色調、微彎螺旋山羊角、靈巧尖尖雙耳與俏皮小山羊鬍，身手矯健的山中岩壁之王！",
+  },
+  {
+    id: "sheep",
+    name: "雲朵綿羊",
+    emoji: "",
+    title: "棉花糖小羊",
+    primaryColor: "#F472B6",
+    secondaryColor: "#BE185D",
+    accentBg: "from-pink-400/20 via-pink-500/10 to-transparent",
+    borderGlow: "shadow-[0_0_20px_rgba(244,114,182,0.45)] border-pink-300/50",
+    description: "柔和米白雲朵毛、垂垂軟萌小耳、害羞粉嫩大腮紅與水潤雙眸，像棉花糖般軟萌療癒的雲朵綿羊！",
+  },
 ];
 
 export function getAnimalAvatar(id: string): AnimalAvatarInfo {
-  const found = ANIMAL_AVATARS.find((a) => a.id === id);
+  const normalizedId = id === "kinmen_otter" ? "otter" : id;
+  const found = ANIMAL_AVATARS.find((a) => a.id === normalizedId);
   return found || ANIMAL_AVATARS[0];
 }

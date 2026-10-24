@@ -12,6 +12,24 @@ import { Swords, ArrowLeft, RefreshCw, AlertCircle, LogIn } from "lucide-react";
 import Link from "next/link";
 import { battleAudio } from "@/lib/battleAudio";
 
+function getOrCreateDeviceId(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    let id = localStorage.getItem("quizmaster_device_id");
+    if (!id || typeof id !== "string" || !id.trim()) {
+      if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        id = crypto.randomUUID();
+      } else {
+        id = "dev_" + Math.random().toString(36).substring(2, 10) + "_" + Date.now().toString(36);
+      }
+      localStorage.setItem("quizmaster_device_id", id);
+    }
+    return id.trim();
+  } catch {
+    return "dev_fallback_" + Math.random().toString(36).substring(2, 10);
+  }
+}
+
 export default function BattleRoomPage() {
   const params = useParams();
   const router = useRouter();
@@ -24,6 +42,26 @@ export default function BattleRoomPage() {
   const [totalQuestionsCount, setTotalQuestionsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+
+  // Room Dissolution State & Refs
+  const [isDissolved, setIsDissolved] = useState<boolean>(false);
+  const [dissolvedReason, setDissolvedReason] = useState<string>("房主已離開，房間已解散");
+  const isDissolvedRef = useRef<boolean>(false);
+  const isLeavingRef = useRef<boolean>(false);
+  const roomRef = useRef<BattleRoom | null>(null);
+
+  // Duplicate Device Kick State & Refs
+  const [isKicked, setIsKicked] = useState<boolean>(false);
+  const isKickedRef = useRef<boolean>(false);
+  const playerIdRef = useRef<string>("");
+
+  useEffect(() => {
+    playerIdRef.current = playerId;
+  }, [playerId]);
+
+  useEffect(() => {
+    roomRef.current = room;
+  }, [room]);
 
   // Client-side idempotency replay barrier for arcade drawing animation
   const completedDrawingSessionsRef = useRef<Set<number>>(new Set());
@@ -43,9 +81,41 @@ export default function BattleRoomPage() {
   // Fetch latest room state
   const fetchRoom = useCallback(async (): Promise<BattleRoom | null> => {
     if (!isValidCode) return null;
+    if (isDissolvedRef.current || isKickedRef.current) return null;
     try {
       const res = await fetch(`/api/battle/${roomCode}`);
       if (!res.ok) {
+        let errData: any = null;
+        try {
+          errData = await res.json();
+        } catch {}
+
+        // Detect dissolution:
+        // 1. Explicit server response code ROOM_DISSOLVED
+        // 2. Error message mentioning dissolution
+        // 3. Status 404 while the user was previously waiting in LOBBY
+        const isDissolvedEvent =
+          res.status === 404 &&
+          (errData?.code === "ROOM_DISSOLVED" ||
+            errData?.error?.includes("解散") ||
+            (roomRef.current && roomRef.current.stage === "LOBBY"));
+
+        if (isDissolvedEvent && !isLeavingRef.current) {
+          isDissolvedRef.current = true;
+          setIsDissolved(true);
+          if (errData?.error) {
+            setDissolvedReason(errData.error);
+          }
+          try {
+            localStorage.removeItem(`battle_player_${roomCode}`);
+            localStorage.removeItem("quizmaster_active_battle");
+            if (roomCode && playerId) {
+              localStorage.removeItem(`battle_user_answers_${roomCode}_${playerId}`);
+            }
+          } catch {}
+          return null;
+        }
+
         if (res.status === 404) {
           setError("查無此房間，可能已關閉或代碼不正確。");
         } else {
@@ -57,6 +127,35 @@ export default function BattleRoomPage() {
       let updatedRoom: BattleRoom = data.room;
       if (typeof data.totalQuestionsCount === "number") {
         setTotalQuestionsCount(data.totalQuestionsCount);
+      }
+
+      // Check if client was kicked due to duplicate device join
+      let currentStoredPlayerId = playerIdRef.current || "";
+      if (!currentStoredPlayerId && typeof window !== "undefined") {
+        try {
+          currentStoredPlayerId = localStorage.getItem(`battle_player_${roomCode}`) || "";
+        } catch {}
+      }
+
+      if (
+        currentStoredPlayerId &&
+        updatedRoom &&
+        Array.isArray(updatedRoom.players) &&
+        !updatedRoom.players.some((p) => p.id === currentStoredPlayerId) &&
+        !isLeavingRef.current &&
+        !isDissolvedRef.current &&
+        !isKickedRef.current
+      ) {
+        isKickedRef.current = true;
+        setIsKicked(true);
+        try {
+          localStorage.removeItem(`battle_player_${roomCode}`);
+          localStorage.removeItem("quizmaster_active_battle");
+          if (roomCode && currentStoredPlayerId) {
+            localStorage.removeItem(`battle_user_answers_${roomCode}_${currentStoredPlayerId}`);
+          }
+        } catch {}
+        return null;
       }
 
       // Clean slate on LOBBY: When room transitions to LOBBY (e.g. host resets battle),
@@ -271,7 +370,7 @@ export default function BattleRoomPage() {
     let isActive = true;
 
     const poll = async () => {
-      if (!isActive || isFetchingRoomRef.current) return;
+      if (!isActive || isFetchingRoomRef.current || isDissolvedRef.current || isKickedRef.current) return;
       if (typeof document !== "undefined" && document.visibilityState === "hidden") {
         timer = setTimeout(poll, 4000);
         return;
@@ -284,7 +383,7 @@ export default function BattleRoomPage() {
         // Silently tolerate network hiccups
       } finally {
         isFetchingRoomRef.current = false;
-        if (isActive) {
+        if (isActive && !isDissolvedRef.current && !isKickedRef.current) {
           timer = setTimeout(poll, 1500);
         }
       }
@@ -293,7 +392,7 @@ export default function BattleRoomPage() {
     timer = setTimeout(poll, 1500);
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && isActive) {
+      if (document.visibilityState === "visible" && isActive && !isDissolvedRef.current && !isKickedRef.current) {
         poll();
       }
     };
@@ -306,6 +405,24 @@ export default function BattleRoomPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [room?.stage, fetchRoom]);
+
+  // Auto-redirect timer when room is dissolved (3.5s)
+  useEffect(() => {
+    if (!isDissolved) return;
+    const timer = setTimeout(() => {
+      router.push("/battle");
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [isDissolved, router]);
+
+  // Auto-redirect timer when kicked due to duplicate device (3.5s)
+  useEffect(() => {
+    if (!isKicked) return;
+    const timer = setTimeout(() => {
+      router.push("/battle");
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [isKicked, router]);
 
   // Handle direct join modal submit
   const handleDirectJoinSubmit = async (e: React.FormEvent) => {
@@ -321,6 +438,7 @@ export default function BattleRoomPage() {
           code: roomCode,
           playerName: directName.trim() || "冒險者",
           playerAvatar: directAvatar,
+          deviceId: getOrCreateDeviceId(),
         }),
       });
 
@@ -410,7 +528,13 @@ export default function BattleRoomPage() {
         setRoom(data.room);
         setError("");
       } else {
-        setError(data.error || "更新準備狀態失敗");
+        const errText = data.error || "更新準備狀態失敗";
+        if (errText.includes("玩家不存在") || errText.includes("玩家不在")) {
+          isKickedRef.current = true;
+          setIsKicked(true);
+          return;
+        }
+        setError(errText);
       }
     } catch (err: any) {
       const msg: string = err?.message || "";
@@ -444,7 +568,13 @@ export default function BattleRoomPage() {
         setRoom(data.room);
         setError("");
       } else {
-        setError(data.error || "更新頭像失敗");
+        const errText = data.error || "更新頭像失敗";
+        if (errText.includes("玩家不存在") || errText.includes("玩家不在")) {
+          isKickedRef.current = true;
+          setIsKicked(true);
+          return;
+        }
+        setError(errText);
       }
     } catch (err: any) {
       const msg: string = err?.message || "";
@@ -478,7 +608,13 @@ export default function BattleRoomPage() {
         setRoom(data.room);
         setError("");
       } else {
-        setError(data.error || "更新房間設定失敗");
+        const errText = data.error || "更新房間設定失敗";
+        if (errText.includes("玩家不存在") || errText.includes("玩家不在")) {
+          isKickedRef.current = true;
+          setIsKicked(true);
+          return;
+        }
+        setError(errText);
       }
     } catch (err: any) {
       const msg: string = err?.message || "";
@@ -499,6 +635,7 @@ export default function BattleRoomPage() {
   // Leave room
   const handleLeaveRoom = async () => {
     battleAudio.playClick();
+    isLeavingRef.current = true;
     if (room && playerId) {
       try {
         await fetch(`/api/battle/${roomCode}/leave`, {
@@ -586,6 +723,80 @@ export default function BattleRoomPage() {
       stage: "FINISHED",
     });
   };
+
+  // Duplicate Device Kick Friendly Dialog
+  if (isKicked) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fade-in">
+        <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-[#0a0a0e] border border-white/20 shadow-2xl text-center space-y-6">
+          <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl sm:text-2xl font-black font-game text-foreground">
+              連線已中斷
+            </h2>
+            <p className="text-sm text-foreground-muted leading-relaxed">
+              此裝置已在另一視窗進入，原連線已中斷
+            </p>
+            <p className="text-xs text-foreground-muted/70">
+              即將自動返回對戰首頁...
+            </p>
+          </div>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                battleAudio.playClick();
+                router.push("/battle");
+              }}
+              className="w-full min-h-[48px] px-6 py-2.5 rounded-xl text-sm font-game font-bold bg-accent hover:bg-accent-bright text-white shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>確認並返回對戰首頁</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Room Dissolution Friendly Dialog
+  if (isDissolved) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fade-in">
+        <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-[#0a0a0e] border border-white/20 shadow-2xl text-center space-y-6">
+          <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl sm:text-2xl font-black font-game text-foreground">
+              房間已解散
+            </h2>
+            <p className="text-sm text-foreground-muted leading-relaxed">
+              {dissolvedReason || "房主已離開，房間已解散"}
+            </p>
+            <p className="text-xs text-foreground-muted/70">
+              即將自動返回對戰首頁...
+            </p>
+          </div>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                battleAudio.playClick();
+                router.push("/battle");
+              }}
+              className="w-full min-h-[48px] px-6 py-2.5 rounded-xl text-sm font-game font-bold bg-accent hover:bg-accent-bright text-white shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>確認並返回對戰首頁</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 1. Loading state
   if (loading) {

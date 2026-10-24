@@ -4,7 +4,7 @@ import { joinRoom, getRoomAsync, syncRoomToDb } from "@/lib/battleStore";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { code, playerName, playerAvatar, existingPlayerId, playerId } = body;
+    const { code, playerName, playerAvatar, existingPlayerId, playerId, deviceId } = body;
 
     const rawCode = (typeof code === "string" || typeof code === "number") ? String(code).trim() : "";
     const cleanCode = rawCode.replace(/\D/g, "");
@@ -14,8 +14,9 @@ export async function POST(req: NextRequest) {
     }
     const cleanName = (playerName || "冒險者").trim();
     const targetPlayerId = (existingPlayerId || playerId || "").trim() || undefined;
+    const cleanDeviceId = typeof deviceId === "string" ? deviceId.trim() : undefined;
     await getRoomAsync(cleanCode);
-    const result = joinRoom(cleanCode, cleanName, playerAvatar || "panda", targetPlayerId);
+    const result = joinRoom(cleanCode, cleanName, playerAvatar || "panda", targetPlayerId, cleanDeviceId);
     await syncRoomToDb(result.room);
 
     return NextResponse.json(result, { status: 200 });

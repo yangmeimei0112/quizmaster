@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getRoomAsync, updateRoomSettings, syncRoomToDb } from "@/lib/battleStore";
+import { getRoomAsync, updateRoomSettings, syncRoomToDb, isRoomDissolved } from "@/lib/battleStore";
 
 interface RouteParams {
   params: {
@@ -30,6 +30,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     const room = await getRoomAsync(code);
     if (!room) {
+      if (isRoomDissolved(code)) {
+        return NextResponse.json(
+          { code: "ROOM_DISSOLVED", error: "房主已離開，房間已解散" },
+          { status: 404 }
+        );
+      }
       return NextResponse.json({ error: "查無此房間或房間已關閉" }, { status: 404 });
     }
 
