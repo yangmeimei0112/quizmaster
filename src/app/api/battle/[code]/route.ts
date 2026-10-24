@@ -8,6 +8,18 @@ interface RouteParams {
   };
 }
 
+let cachedTotalQuestionsCount: number | null = null;
+let lastTotalQuestionsCountFetchTime = 0;
+
+async function getCachedTotalQuestionsCount(): Promise<number> {
+  const now = Date.now();
+  if (cachedTotalQuestionsCount === null || now - lastTotalQuestionsCountFetchTime > 60000) {
+    cachedTotalQuestionsCount = await prisma.question.count();
+    lastTotalQuestionsCountFetchTime = now;
+  }
+  return cachedTotalQuestionsCount;
+}
+
 // GET: 查詢房間狀態
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
@@ -21,7 +33,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "查無此房間或房間已關閉" }, { status: 404 });
     }
 
-    const totalQuestionsCount = await prisma.question.count();
+    const totalQuestionsCount = await getCachedTotalQuestionsCount();
     return NextResponse.json({ room, totalQuestionsCount });
   } catch (error: any) {
     return NextResponse.json(
@@ -47,7 +59,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     }
 
     await getRoomAsync(code);
-    const totalQuestionsCount = await prisma.question.count();
+    const totalQuestionsCount = await getCachedTotalQuestionsCount();
 
     if (settings && settings.questionCount !== undefined) {
       const qCount = Number(settings.questionCount);

@@ -13,7 +13,7 @@ import {
   BarChart3,
 } from "lucide-react";
 
-export const revalidate = 0; // Dynamic server page
+export const revalidate = 60; // Incremental Static Regeneration (ISR) 60s for instant edge response
 
 export default async function HomePage() {
   const [total, singleCount, multipleCount, recentQuestions] =

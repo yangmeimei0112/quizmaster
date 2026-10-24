@@ -11,6 +11,10 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ChevronsUpDown,
   Trash2,
   Edit3,
@@ -396,6 +400,69 @@ export default function QuestionsPage() {
   searchTermRef.current = searchTerm;
   const selectedTypeRef = useRef(selectedType);
   selectedTypeRef.current = selectedType;
+
+  // 分頁控制狀態 (預設每頁 25 題，大幅降低 DOM 節點數量消除點擊卡頓)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(25);
+  const questionsListTopRef = useRef<HTMLDivElement>(null);
+
+  // 當搜尋關鍵字或題型過濾條件變動時，重設分頁至第 1 頁
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedType]);
+
+  const totalPages = pageSize <= 0 ? 1 : Math.max(1, Math.ceil(questions.length / pageSize));
+
+  // 當題目總數減少導致當前頁碼溢出時，自動校正
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedQuestions = useMemo(() => {
+    if (pageSize <= 0) return questions;
+    const start = (currentPage - 1) * pageSize;
+    return questions.slice(start, start + pageSize);
+  }, [questions, currentPage, pageSize]);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    setCurrentPage(newPage);
+    if (questionsListTopRef.current) {
+      questionsListTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
+
+  // 智慧頁碼數列產生 (例: 1 ... 4 5 6 ... 17)
+  const paginationRange = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const delta = 1;
+    const range: (number | string)[] = [];
+    const rangeWithDots: (number | string)[] = [];
+    let l: number | undefined;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+        range.push(i);
+      }
+    }
+
+    for (const i of range) {
+      if (l) {
+        if (typeof i === "number" && i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (typeof i === "number" && i - l !== 1) {
+          rangeWithDots.push("...");
+        }
+      }
+      rangeWithDots.push(i);
+      if (typeof i === "number") l = i;
+    }
+
+    return rangeWithDots;
+  }, [currentPage, totalPages]);
 
   // 編輯 Modal 狀態
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
@@ -839,16 +906,26 @@ export default function QuestionsPage() {
       </div>
 
       {/* 搜尋結果筆數與載入狀態 */}
-      <div className="flex items-center justify-between text-xs text-foreground-muted px-1 animate-fade-in-up stagger-2">
+      <div
+        ref={questionsListTopRef}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-foreground-muted px-1 animate-fade-in-up stagger-2"
+      >
         {isLoading && questions.length === 0 ? (
           <span className="flex items-center gap-2 text-[#9AA5FF] font-medium">
             <RefreshCw className="w-3.5 h-3.5 animate-spin text-accent" />
             <span>載入題庫題目中...</span>
           </span>
         ) : (
-          <span>
-            共找到 <strong className="text-foreground font-bold">{questions.length}</strong> 道題目
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>
+              共找到 <strong className="text-foreground font-bold">{questions.length}</strong> 道題目
+            </span>
+            {pageSize > 0 && totalPages > 1 && (
+              <span className="text-white/40 text-[11px] font-game">
+                (第 {currentPage} / {totalPages} 頁)
+              </span>
+            )}
+          </div>
         )}
         {isLoading && questions.length > 0 && (
           <span className="flex items-center gap-1.5 text-[#9AA5FF] font-medium animate-fade-in">
@@ -885,25 +962,164 @@ export default function QuestionsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {questions.map((q, idx) => (
-            <QuestionCardItem
-              key={q.id}
-              question={q}
-              index={idx}
-              isExpanded={expandedCardIds.has(q.id)}
-              isExplanationOpen={expandedExplanations.has(q.id)}
-              isAnswerShown={customAnswerVisibility[q.id] ?? showAnswersGlobal}
-              showAnswersGlobal={showAnswersGlobal}
-              isDeleting={deletingId === q.id}
-              isDeferred={idx > 10}
-              onToggleCard={toggleCard}
-              onToggleExplanation={toggleExplanation}
-              onToggleAnswer={toggleQuestionAnswer}
-              handleOpenEdit={handleOpenEdit}
-              handleDelete={handleDelete}
-              onOpenImage={setLightboxImageUrl}
-            />
-          ))}
+          {paginatedQuestions.map((q, idx) => {
+            const actualIndex = pageSize > 0 ? (currentPage - 1) * pageSize + idx : idx;
+            return (
+              <QuestionCardItem
+                key={q.id}
+                question={q}
+                index={actualIndex}
+                isExpanded={expandedCardIds.has(q.id)}
+                isExplanationOpen={expandedExplanations.has(q.id)}
+                isAnswerShown={customAnswerVisibility[q.id] ?? showAnswersGlobal}
+                showAnswersGlobal={showAnswersGlobal}
+                isDeleting={deletingId === q.id}
+                isDeferred={idx > 10}
+                onToggleCard={toggleCard}
+                onToggleExplanation={toggleExplanation}
+                onToggleAnswer={toggleQuestionAnswer}
+                handleOpenEdit={handleOpenEdit}
+                handleDelete={handleDelete}
+                onOpenImage={setLightboxImageUrl}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* 分頁導航控制器 (僅在題目數大於 0 時展示) */}
+      {questions.length > 0 && (
+        <div className="bg-[#0a0a0c]/80 border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-linear-card flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in-up">
+          {/* 左側：項目範圍指示 */}
+          <div className="text-xs text-foreground-muted flex items-center gap-2">
+            <Layers className="w-4 h-4 text-accent" />
+            <span>
+              顯示第{" "}
+              <strong className="text-foreground font-semibold">
+                {pageSize <= 0 ? 1 : (currentPage - 1) * pageSize + 1}
+              </strong>{" "}
+              至{" "}
+              <strong className="text-foreground font-semibold">
+                {pageSize <= 0 ? questions.length : Math.min(currentPage * pageSize, questions.length)}
+              </strong>{" "}
+              題，共{" "}
+              <strong className="text-foreground font-semibold">{questions.length}</strong> 題
+            </span>
+          </div>
+
+          {/* 中間：頁碼按鈕 */}
+          {pageSize > 0 && totalPages > 1 && (
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap justify-center">
+              {/* 首頁 */}
+              <button
+                type="button"
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] disabled:opacity-30 disabled:pointer-events-none transition-all duration-200 active:scale-95 touch-manipulation"
+                title="第一頁"
+                aria-label="第一頁"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+
+              {/* 上一頁 */}
+              <button
+                type="button"
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] disabled:opacity-30 disabled:pointer-events-none transition-all duration-200 active:scale-95 touch-manipulation"
+                title="上一頁"
+                aria-label="上一頁"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {/* 頁碼清單 */}
+              {paginationRange.map((pageItem, pIdx) => {
+                if (pageItem === "...") {
+                  return (
+                    <span
+                      key={`dots-${pIdx}`}
+                      className="w-8 h-9 flex items-center justify-center text-xs text-white/30 select-none"
+                    >
+                      •••
+                    </span>
+                  );
+                }
+
+                const pageNum = Number(pageItem);
+                const isCurrent = pageNum === currentPage;
+
+                return (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`min-w-[36px] h-9 px-2.5 rounded-xl text-xs font-semibold font-game transition-all duration-200 ease-expo-out touch-manipulation active:scale-95 ${
+                      isCurrent
+                        ? "bg-accent text-white shadow-glow border border-accent font-bold"
+                        : "text-foreground-muted hover:text-foreground bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/[0.10]"
+                    }`}
+                    aria-current={isCurrent ? "page" : undefined}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+
+              {/* 下一頁 */}
+              <button
+                type="button"
+                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] disabled:opacity-30 disabled:pointer-events-none transition-all duration-200 active:scale-95 touch-manipulation"
+                title="下一頁"
+                aria-label="下一頁"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* 末頁 */}
+              <button
+                type="button"
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] disabled:opacity-30 disabled:pointer-events-none transition-all duration-200 active:scale-95 touch-manipulation"
+                title="最後一頁"
+                aria-label="最後一頁"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* 右側：每頁題數設定 */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-foreground-muted whitespace-nowrap">每頁顯示：</span>
+            <div className="flex items-center gap-1 bg-white/[0.03] p-1 rounded-xl border border-white/[0.08]">
+              {[25, 50, 100, -1].map((size) => {
+                const isSelected = pageSize === size;
+                const label = size === -1 ? "全部" : `${size} 題`;
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      setPageSize(size);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-game transition-all duration-150 ${
+                      isSelected
+                        ? "bg-accent/80 text-white font-bold shadow-sm"
+                        : "text-foreground-muted hover:text-foreground hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 

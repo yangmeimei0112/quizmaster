@@ -138,15 +138,25 @@ export async function GET(req: NextRequest) {
         })
       : questions;
 
-    return NextResponse.json({
-      questions: formattedQuestions,
-      stats: {
-        total: totalCount,
-        singleCount,
-        multipleCount,
-        categories,
+    const responseHeaders: Record<string, string> = {};
+    if (!user && !q && type === "ALL" && category === "ALL" && difficulty === "ALL" && !mode) {
+      responseHeaders["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=300";
+    } else {
+      responseHeaders["Cache-Control"] = "private, no-cache";
+    }
+
+    return NextResponse.json(
+      {
+        questions: formattedQuestions,
+        stats: {
+          total: totalCount,
+          singleCount,
+          multipleCount,
+          categories,
+        },
       },
-    });
+      { headers: responseHeaders }
+    );
   } catch (error: any) {
     console.error("Fetch questions error:", error);
     return NextResponse.json(
