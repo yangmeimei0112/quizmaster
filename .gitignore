@@ -17,3 +17,5 @@ prisma/dev.db-journal
 backups/backup_*.json
 !backups/latest_backup.json
 !backups/dev_backup.db
+# Separate mobile app project (not part of this site)
+study_notes_tracker/
