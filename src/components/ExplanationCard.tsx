@@ -11,6 +11,7 @@ import {
   XCircle,
   HelpCircle,
   Lightbulb,
+  ChevronRight,
 } from "lucide-react";
 import {
   parseExplanation,
@@ -109,6 +110,16 @@ export interface ExplanationCardProps {
    * Custom header title override (default: "題目詳解與考點").
    */
   title?: string;
+
+  /**
+   * Optional callback triggered when user clicks "前往下一題" below Section 4 【考試記憶重點】.
+   */
+  onNextQuestion?: () => void;
+
+  /**
+   * Optional custom label for the next question button (default: "前往下一題").
+   */
+  nextQuestionLabel?: string;
 }
 
 const STORAGE_KEY = "quizmaster_explanation_font_size";
@@ -169,6 +180,8 @@ export function ExplanationCard({
   hideModeBadge = false,
   className = "",
   title = "題目詳解與考點",
+  onNextQuestion,
+  nextQuestionLabel,
 }: ExplanationCardProps) {
   // SSR-safe state: initialize with default, sync with localStorage inside useEffect
   const [fontSize, setFontSize] = useState<ExplanationFontSize>(defaultFontSize);
@@ -576,6 +589,23 @@ export function ExplanationCard({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* 前往下一題動作按鈕 (位於第四區【考試記憶重點】下方) */}
+        {onNextQuestion && (
+          <div className="pt-3.5 mt-3 border-t border-white/[0.06] flex items-center justify-end">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onNextQuestion();
+              }}
+              className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 rounded-xl bg-accent hover:bg-accent-bright text-white text-xs font-bold font-game shadow-glow flex items-center justify-center gap-2 transition-all duration-200 active:scale-95 touch-manipulation touch-tactile cursor-pointer"
+            >
+              <span>{nextQuestionLabel || "前往下一題"}</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>

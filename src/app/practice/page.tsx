@@ -787,6 +787,10 @@ export default function PracticePage() {
                   questionType={currentQ.type}
                   showModeBadge={false}
                   className="animate-fade-in-up"
+                  onNextQuestion={handleNextQuestion}
+                  nextQuestionLabel={
+                    currentIndex + 1 < quizQueue.length ? "前往下一題" : "查看測驗結算"
+                  }
                 />
               )}
             </div>

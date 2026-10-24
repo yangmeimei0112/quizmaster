@@ -90,6 +90,8 @@ interface QuestionCardItemProps {
   handleOpenEdit: (q: Question) => void;
   handleDelete: (id: string) => void;
   onOpenImage?: (url: string) => void;
+  onGoToNextQuestion?: () => void;
+  nextQuestionLabel?: string;
 }
 
 const QuestionCardItem = memo(function QuestionCardItem({
@@ -107,6 +109,8 @@ const QuestionCardItem = memo(function QuestionCardItem({
   handleOpenEdit,
   handleDelete,
   onOpenImage,
+  onGoToNextQuestion,
+  nextQuestionLabel,
 }: QuestionCardItemProps) {
   const correctSet = useMemo(() => new Set(normalizeAnswers(q.correctAnswers)), [q.correctAnswers]);
 
@@ -135,6 +139,7 @@ const QuestionCardItem = memo(function QuestionCardItem({
 
   return (
     <div
+      id={`question-card-${q.id}`}
       style={
         shouldAnimate
           ? {
@@ -363,6 +368,8 @@ const QuestionCardItem = memo(function QuestionCardItem({
                   correctAnswers={q.correctAnswers}
                   options={optionsMap}
                   questionType={q.type}
+                  onNextQuestion={onGoToNextQuestion}
+                  nextQuestionLabel={nextQuestionLabel}
                 />
               )}
             </div>
@@ -964,6 +971,34 @@ export default function QuestionsPage() {
         <div className="space-y-4">
           {paginatedQuestions.map((q, idx) => {
             const actualIndex = pageSize > 0 ? (currentPage - 1) * pageSize + idx : idx;
+            const hasNextInPage = idx + 1 < paginatedQuestions.length;
+            const hasNextPage = pageSize > 0 && currentPage < totalPages;
+            const canGoNext = hasNextInPage || hasNextPage;
+
+            const handleGoNext = canGoNext
+              ? () => {
+                  if (hasNextInPage) {
+                    const nextQ = paginatedQuestions[idx + 1];
+                    setExpandedCardIds((prev) => new Set(prev).add(nextQ.id));
+                    setExpandedExplanations((prev) => new Set(prev).add(nextQ.id));
+                    setTimeout(() => {
+                      document.getElementById(`question-card-${nextQ.id}`)?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "nearest",
+                      });
+                    }, 50);
+                  } else if (hasNextPage) {
+                    handlePageChange(currentPage + 1);
+                  }
+                }
+              : undefined;
+
+            const nextLabel = hasNextInPage
+              ? "前往下一題"
+              : hasNextPage
+              ? "前往下一頁"
+              : undefined;
+
             return (
               <QuestionCardItem
                 key={q.id}
@@ -981,6 +1016,8 @@ export default function QuestionsPage() {
                 handleOpenEdit={handleOpenEdit}
                 handleDelete={handleDelete}
                 onOpenImage={setLightboxImageUrl}
+                onGoToNextQuestion={handleGoNext}
+                nextQuestionLabel={nextLabel}
               />
             );
           })}

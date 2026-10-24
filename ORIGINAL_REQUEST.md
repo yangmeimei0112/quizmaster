@@ -145,3 +145,100 @@ Integrity mode: development
 - [ ] `npm run build` 通過編譯打包，Exit Code 0。
 - [ ] 完成後執行 `git add -A; git commit -m "..."; git push origin main`。
 
+
+
+## 2026-10-24T16:13:22Z
+
+針對已正式部署於 Vercel 與 Supabase 的線上生產環境網站（https://meiquizmaster.vercel.app/），使用瀏覽器工具與自動化診斷腳本進行全方位實機端對端驗證，檢驗首頁載入、題庫分頁切換、點擊反應速度、自測刷題、多人對戰與文件匯出功能，確保生產環境穩定流暢、零錯誤且延遲顯著降低。
+
+Working directory: c:/Users/yaco9/Documents/antigravity/lively-galileo
+Integrity mode: development
+
+## Requirements
+
+### R1. 全站首頁與題庫清單分頁實機驗證 (Homepage & Questions Pagination Verification)
+- 透過瀏覽器實機訪問 `https://meiquizmaster.vercel.app/` 首頁與 `/questions` 題庫頁面。
+- 驗證題庫 418 道題目完整呈現，且全新設計的分頁控制器（每頁預設 25 題）運作正常。
+- 測試點擊「下一頁」、「最後一頁」、「第 2 頁」以及切換「每頁 50 題」之流暢度。
+- 測試點擊題目卡片手風琴展開、點擊「顯示解答/隱藏解答」與搜尋框關鍵字即時篩選，確認操作反應時間瞬時無卡頓（< 100ms），無主線程卡死（Jank），且瀏覽器 Console 零錯誤。
+
+### R2. 刷題自測與模擬考流程實機驗證 (Practice Quiz & Mock Exam Workflow)
+- 訪問 `https://meiquizmaster.vercel.app/practice` 自測練習大廳。
+- 測試「即時刷題」模式：隨機抽題、點擊選取選項、提交答案、查看四段式解析展開。
+- 測試「60分鐘模擬考」模式：檢驗考卷生成、計時器倒數、逐題作答、批次交卷與成績統計儀表板。
+
+### R3. 多人對戰房間 Serverless 持久化實機驗證 (Real-time Battle Room Verification)
+- 訪問 `https://meiquizmaster.vercel.app/battle` 多人對戰大廳。
+- 創建對戰房間，驗證成功生成 4 碼純數字房間代碼（1000~9999）。
+- 檢驗房間設定面板（題數、時間限制、題型範圍）更新功能。
+- 驗證 Serverless 環境下的輪詢穩定度（`/api/battle/[code]` 回應 HTTP 200，無 404 斷線，記憶體快取與 Supabase 資料庫同步正常）。
+
+### R4. 試卷匯出與題庫附圖可攜性驗證 (Export & Image Verification)
+- 測試 `/questions` 頁面「匯出 Google 文件」彈窗，確認可複製 Rich Text 排版並能正常下載 .docx 檔案。
+- 檢驗含有題目附圖之卡片在線上環境是否正常加載顯示，確認無破圖或 404 情況。
+
+## Acceptance Criteria
+
+### Performance & Page Rendering Verification
+- [ ] 訪問首頁 `https://meiquizmaster.vercel.app/`，頁面秒開載入完成（HTTP 200），儀表板統計數據正確顯示（題庫基準 418 題）。
+- [ ] 訪問 `/questions` 題庫頁，分頁導航列清晰渲染（顯示「第 1 至 25 題，共 418 題」），點擊「下一頁」與切換「每頁 50 題」能流暢翻頁並自動平滑滾動回頂部。
+- [ ] 點擊「顯示解答/隱藏解答」與卡片手風琴展開，畫面即時響應（操作無感知延遲，Console 零報錯）。
+
+### Feature & Serverless Reliability Verification
+- [ ] 訪問 `/practice`，隨機練習抽題與交卷流程正常，解析能正常以四段式結構展開。
+- [ ] 訪問 `/battle`，成功建立對戰房間並取得合法 4 碼純數字代碼，房間等待室輪詢順暢。
+- [ ] 訪問 `/questions`，Google 文件試卷匯出功能運作正常，附圖題目能清晰渲染圖片。
+- [ ] 產出完整的端對端實測報告（包含各項功能的 HTTP 延遲數據、操作響應時間與檢驗結果清單）。
+
+
+## 2026-10-24T17:55:51Z
+
+為多人對戰模式新增四款專屬精美動物角色（金門水獺、台灣山羌、山羊、綿羊），並重構對戰生命週期機制：房主於等待大廳退出時自動解散房間並通知其他玩家，且實施單一設備防多開限制（同一裝置再次進入時自動移除上一位舊選手，以最新進房者為準，若舊選手為房主則依序順延給既有選手）。
+
+Working directory: c:/Users/yaco9/Documents/antigravity/lively-galileo
+Integrity mode: development
+
+## Requirements
+
+### R1. 四款全新台灣/金門在地特色動物頭像向量設計與選角整合 (New Animal Avatars)
+- 在 `src/lib/avatars.ts` 新增四款專屬動物頭像常數（總數由 12 款擴充為 16 款）：
+  1. 金門水獺 (`otter` / `kinmen_otter`，如「水岸水獺」、「金門水獺寶」，藍綠/湖水水藍色系、俏皮圓耳、小巧粉鼻與靈動鬍鬚)
+  2. 台灣山羌 (`muntjac`，如「山林山羌」、「台灣小山羌」，溫暖琥珀棕色系、圓滾大眼、小巧山羌角與額前額紋)
+  3. 山羊 (`goat`，如「石峰山羊」、「攀岩小山羊」，石青/灰綠色調、微彎螺旋山羊角、靈巧尖耳與俏皮羊角造型)
+  4. 綿羊 (`sheep`，如「雲朵綿羊」、「棉花糖小羊」，柔和米白/雲朵淡粉色調、蓬鬆捲捲雲朵毛、垂垂軟耳與害羞小腮紅)
+- 在 `src/components/battle/AnimalAvatar.tsx` 實作對應之原創純 SVG 向量圖形渲染（維持日系 Chibi/Kawaii 精緻風格，具備高光、漸層、腮紅與陰影幾何），在所有頭像尺寸（`xs` 至 `2xl`）下均清晰銳利。
+- 確保在選角器 `AnimalAvatarPicker.tsx`、對戰等待室 `RoomLobbyView.tsx`、作答即時榜 `CompetitorLiveBoard.tsx` 與頒獎台 `BattlePodiumView.tsx` 中完美適配。
+
+### R2. 房主退出之差異化解散與防斷線機制 (Host Leave Lifecycle: Lobby vs Playing)
+- 後端 `src/lib/battleStore.ts`（`leaveRoom` / `leaveRoomAsync`）升級：
+  - **等待大廳（`stage === "LOBBY"`）**：當房主退出時，直接將該房間判定為解散，自記憶體快取與資料庫徹底刪除（`deleteRoomFromDb(code)`）。
+  - **對戰進行中（`stage === "PLAYING" | "DRAWING" | "FINISHED"`）**：若房主中途退出，房間**不解散**，僅將房主標記為已結束/棄賽（`isFinished: true`），其餘選手可繼續正常作答並完成該局對戰結算。
+- 前端 `src/app/battle/[code]/page.tsx`：
+  - 輪詢或 API 回應若偵測到房間已在等待大廳解散（HTTP 404 或 `ROOM_DISSOLVED`），跳出友善對話框提示「房主已離開，房間已解散」，確認後自動平滑導航返回對戰首頁 `/battle`。
+
+### R3. 單一機器防多開進入限制 (Single Device Constraint per Room)
+- 前端在進入或建立房間時，由 `localStorage` 讀取或生成全域唯一裝置識別碼 `deviceId`（如 `quizmaster_device_id`），並隨 `/api/battle/create` 與 `/api/battle/join` API 請求傳送。
+- 後端 `BattlePlayer` 擴充 `deviceId?: string` 屬性持久化。
+- 當同一個房間內再次接收到相同 `deviceId` 且非相同 `playerId` 之加入請求時（同一機器另開分頁、換名字進入）：
+  - 自動將「上一個進房間的舊選手」自 `room.players` 陣列中移除，僅保留最新進房之選手記錄。
+  - **房主身分順延邏輯**：若被移除的舊選手原本為房主，房主身分依序順延給房間內現有的第一位其他選手；若房間無其他選手，新選手即為房主。
+  - 舊分頁或被剔除之連線在下一次輪詢或操作時，偵測到自身已不在房間選手清單中，提示「此裝置已在另一視窗進入，原連線已中斷」並退回大廳。
+
+## Acceptance Criteria
+
+### Avatar Integration Verification
+- [ ] `ANIMAL_AVATARS` 總數為 16 款，包含金門水獺（`otter`）、台灣山羌（`muntjac`）、山羊（`goat`）、綿羊（`sheep`），且皆具備合法的顏色配置與文字描述。
+- [ ] `AnimalAvatar` 元件對上述 4 款新角色能正確渲染出專屬 SVG 幾何圖形，無拋錯、無破版。
+
+### Room Dissolution Verification
+- [ ] 房主在 `LOBBY` 階段呼叫離開房間 API 後，房間記錄完全自資料庫與記憶體抹除，其他玩家查詢該房間時收到解散或 404 狀態，前端能友善彈窗並跳回 `/battle`。
+- [ ] 房主在 `PLAYING` 階段呼叫離開房間 API 後，房間狀態不被銷毀，其餘選手能正常完成最後一題並看到排行榜結算。
+
+### Single Device Constraint Verification
+- [ ] 相同 `deviceId` 第二次呼叫 `joinRoom` 進入同房間時，房間中上一位相同 `deviceId` 之玩家被自動剔除，最終選手名單僅保留最新一位選手。
+- [ ] 若被踢除的舊選手原本為房主，房間房主資格正確順延給既有的其他選手，避免房間失去房主。
+- [ ] 舊連線分頁偵測到被踢出後，主動提示並跳離房間。
+
+### Build & Test Regression Guard
+- [ ] 全站自動化測試（`npm test`）100% 通過（包含新增之 4 款角色、房主解散與單一設備測試）。
+- [ ] Next.js 14 生產建置（`npm run build`）Exit Code 0 零錯誤通過。
